@@ -1,0 +1,351 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc} % pour le format de sortie
+\usepackage[a4paper]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel} % pour les accents
+\usepackage{enumitem}
+\usepackage{amssymb,amsmath,amsthm, amsfonts} % math libraries (amsthm : unumbered theorems)
+\usepackage{mathtools} % for psmallmatrix
+\usepackage{fancyhdr,multicol,accents, bbm,subcaption,caption,float,verbatim}
+\usepackage[all]{xy} % for diagrams with arrows
+\usepackage{tikz-cd} % for diagrams with arrows
+\usepackage{graphicx} % to manage images
+\usepackage{titlesec}
+\usepackage{biblatex} % for bibliography
+\usepackage{hyperref} % for hyperlinks to refs or bibliography
+\usepackage{indentfirst} % for indenting the first line of a paragraph
+\usepackage{optidef}
+
+% Margins, font size =====================================================================================================================
+%\oddsidemargin = 0.5cm \evensidemargin = 0.5cm \textwidth = 6.3in
+%\oddsidemargin = 1.2cm \evensidemargin = 1.2cm \textwidth = 6.3in
+%\textheight =8.6in
+\geometry{
+	a4paper,
+	total={170mm,257mm},
+	left=20mm,
+	top=20mm,
+}
+
+% Sections (theorems, propositions, lemmas…) =====================================================================================================================
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem*{conjecture}{\bf Conjecture}
+\newtheorem{proposition}[theorem]{Proposition}
+\numberwithin{theorem}{section} % To display the section number in the theorem
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{exercise}{Exercise}
+\newtheorem*{solution}{Solution}
+\newtheorem*{answer}{Answer}
+\newtheorem*{claim}{Claim}
+
+\theoremstyle{remark}
+\newtheorem*{theoremno}{{\bf Theorem}}
+\newtheorem*{remark}{Remark}
+\newtheorem*{example}{Example}
+\newtheorem*{hint}{Hint}
+
+
+
+% Commands =====================================================================================================================
+\def\bb#1{\mathbb{#1}}
+\def\cal#1{\mathcal{#1}}
+\def\frak#1{\mathfrak{#1}}
+\def\rm#1{\mathrm{#1}}
+\def\bf#1{\mathbf{#1}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\K}{\mathbb{K}}
+\newcommand{\bbP}{\mathbb{P}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\calP}{\mathcal{P}}
+\newcommand{\G}{\mathcal{G}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\calC}{\mathcal{C}}
+\newcommand{\calN}{\mathcal{N}}
+\newcommand{\calF}{\mathcal{F}}
+\newcommand{\calE}{\mathcal{E}}
+\newcommand{\frakA}{\mathfrak{A}}
+\newcommand{\frakS}{\mathfrak{S}}
+\newcommand{\esp}{\mathbb{E}}
+% \P = caracs spéciaux,\S = paragraphe, \L = L barre
+
+% Existe déjà : ker, partie Im, Re, min, max, inf, sup, log, exp, sin, sinh, cos, cosh,, tan lim, liminf, limsup
+\DeclareMathOperator{\Id}{Id}
+\DeclareMathOperator{\Hom}{Hom}
+\DeclareMathOperator{\Ima}{Im}
+\DeclareMathOperator{\Homeo}{Homeo}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Bij}{Bij}
+\DeclareMathOperator{\Isom}{Isom}
+\DeclareMathOperator{\GL}{GL}
+\DeclareMathOperator{\End}{End}
+\DeclareMathOperator{\rang}{rang}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\vol}{vol}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\var}{Var}
+\DeclareMathOperator{\erf}{erf}
+\DeclareMathOperator{\spec}{spec}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\pgcd}{pgcd}
+\DeclareMathOperator{\pgdc}{pgdc}
+
+% Lois de probabilités
+\DeclareMathOperator{\Geom}{Geom}
+\DeclareMathOperator{\Bin}{Bin}
+\DeclareMathOperator{\Exp}{Exp}
+\DeclareMathOperator{\Ber}{Ber}
+\DeclareMathOperator{\Student}{Student}
+\DeclareMathOperator{\Poi}{Poi}
+\newcommand{\czero}{\calC^0}
+\newcommand{\cone}{\calC^1}
+\newcommand{\ctwo}{\calC^2}
+\newcommand{\cinf}{\calC^{\infty}}
+\newcommand{\bigpeter}[1]{\Big\langle#1\Big\rangle}
+\newcommand{\peter}[1]{\langle#1\rangle}
+\newcommand{\transp}[1]{#1^t}
+\newcommand{\series}[2]{\sum_{#1}^{\infty}#2}
+\newcommand{\intt}[4]{\int_{#1}^{#2}#3\mathrm{d}#4}
+\newcommand{\ddt}[1]{\frac{\mathrm{d}#1}{\mathrm{dt}}}
+\newcommand{\deldt}[1]{\frac{\partial#1}{\partial\mathrm{t}}}
+\newcommand{\rmd}[1]{\mathrm{d}#1}
+\newcommand{\inv}[1]{#1^{-1}}
+\newcommand{\dx}{\rmd x}
+\newcommand{\dy}{\rmd y}
+\newcommand{\dz}{\rmd z}
+\newcommand{\dt}{\rmd t}
+\newcommand{\du}{\rmd u}
+\newcommand{\dv}{\rmd v}
+\newcommand{\ds}{\rmd s}
+\newcommand{\dxy}{\rmd xy}
+\newcommand{\dyz}{\rmd yz}
+\newcommand{\dyx}{\rmd yx}
+\newcommand{\dzy}{\rmd zy}
+\newcommand{\dzx}{\rmd zx}
+\newcommand{\dxz}{\rmd xz}
+\newcommand{\gtinf}[1]{\underset{#1\to\infty}{\longrightarrow}}
+\newcommand{\sm}[4]{\begin{psmallmatrix}#1&#2\\#3&#4\end{psmallmatrix}}
+\newcommand{\map}[4]{
+	\begin{matrix}
+		#1&\to&#2\\#3&\mapsto&#4
+	\end{matrix}
+}
+
+\newcommand{\Head}[1]{
+	\noindent
+	Analysis MATH-3 \hfill Tudor OANCEA\newline
+	\hfill SCIPER : 310705
+	\vskip10mm\centerline{\huge #1} \vskip05mm
+}
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{4}
+
+\title{Intro to project}
+\author{Tudor Oancea}
+\date{}
+
+\begin{document}
+\maketitle
+\section{What is an MPC ?}
+We are given a discrete-time dynamical system of the form $x(k+1)=f(x(k),u(k))$
+where $x(k)$ is the state at time $k$, $u(k)$ is the control we apply to the system at time $k$, and $f$ is some nonlinear function.
+Such a system is also sometimes written as $x^+=f(x,u)$.
+
+We are also given a set of constraints on the state $x(k)$ and the control $u(k)$ which are often polytopic : $x(k)\in\cal{X}=\{x\in\R^{n_x}~|~C_xx\leq d_x\},~~u(k)\in\cal{U}=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\right\}$
+
+Our goal is to control, to steer the system to a certain target state, which in our case will be constant in time : we talk about \textit{stabilizing} the system.
+(see \ref{stability-NMPC} for more details).
+To this end we solve the following optimal control problem:
+\begin{align*}\label{NMPC}
+	V_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad J_N(\mathbf{x},\mathbf{u})\\
+	\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
+	&\quad x_k\in\cal{X},~k=0,\dots,N\\
+	&\quad u_k\in\cal{U},~k=0,\dots,N-1
+\end{align*}
+
+where the cost function $J_N$ is defined using stage costs $l:\cal{X}\times\cal{U}\to\R$ and final cost $F:\cal{X}\to\R$:
+$$J_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$$
+We denote $\mathbf{u}^*(x)$ (or just $\mathbf{u}^*$ when it's clear) the minimizer of the previous problem.
+The control law of the MPC is then defined by $\mu_{MPC}(x)=u^*_0(x)$.
+
+\section{Classical stability results for Nonlinear MPC (NMPC)}
+\label{stability-NMPC}
+Our goal is to find a feedback control law $\mu:\cal{X}\to\cal{U}$ s.t. a certain point $x^*$ is asymptotically stable for the controlled system $x^+=f(x,\mu(x))$.
+Proving that a control law $\mu$ has this property is usually done by finding a Lyapunov function for the dynamical system.
+We cite here without proof the import stability theorem we need for our results.
+
+\begin{definition}
+	For a dynamical system $x^+=\phi(x)$, a global Lyapunov function is a function $V:\R^{n_x}\to\R$ such that there exists positive constant $a,b$ and $c$ verifying $\forall x\in\R^{n_x}$:
+	\begin{subequations}
+		\label{eq:bruh}
+		\begin{align}
+			
+			a\|x\|^2&\leq V(x)\leq b\|x\|^2\label{eq:1a}\\
+			V(\phi(x))-V(x)&\leq -c\|x\|^2\label{eq:1b}
+		\end{align}
+	\end{subequations}
+\end{definition}
+
+The one usually used is the optimal value function $V_N(x)$.
+\begin{theorem}
+	Under the following assumptions :
+	\begin{enumerate}
+		\item \label{ass1} $x^*$ is an equilibrium point for the dynamics with 0 control : $f(x^*,0)=x^*$
+		
+		\item \label{ass2} The costs are 0 at $x^*$ with 0 control : $l(x^*,0)=0$
+		
+		\item \label{ass3} $\exists c\geq 0$ s.t. $\forall x\in\cal{X},\forall u\in\cal{U}~:~l(x,u)\geq c(||x-x^*||^2+||u||^2)$
+		
+		\item \label{ass4} There exists a control law $\kappa:\cal{X}\to\cal{U}$ s.t. the terminal set $\cal{X}_f\in\cal{X}$ is forward invariant for the dynamical system $x^+=f(x,\kappa(x))$.
+		
+		\item \label{ass5} For the same control law $\kappa$, the terminal cost $F:\cal{X}_f\to\R$ is a \textbf{local} Lyapunov function compatible with the stage cost, i.e. $\exists\epsilon>0$ s.t. $\forall x\in\cal{X}_f\cap B_n(0,\epsilon):~F(f(x,\kappa(x)))\leq F(x)-l(x,\kappa(x))$
+
+		\item $x^*\in\mathrm{int}(\cal{X}),\mathrm{int}(\cal{X}_f)$ and $0\in\mathrm{int}(\cal{U})$
+	\end{enumerate}
+	the state $x^*$ is asymptotically stable for the controlled system $x^+=f(x,\mu_{MPC}(x))$.
+\end{theorem}
+
+\begin{proof}
+	Let $x\in\cal{X}$ and let the sequence $(\mathbf{x}^*,\mathbf{u}^*)=((x^*_0=x,x^*_1,\dots,x^*_N),(u_0^*,\dots,u^*_{N-1}))$ be the optimal sequence of states and controls found by solving the NMPC with initial state $x$ (ie when looking for $V_N(x)$).
+	Then the sequence $(\mathbf{x}',\mathbf{u}')=((x^*_1,\dots,x^*_N,f(x^*_N,\kappa(x^*_N))),(u_1^*,\dots,u^*_{N-1},\kappa(x^*_{N})))$ 
+	is a feasible sequence of states and controls for the NMPC with initial state $x^*_1$.
+	Therefore :
+	\begin{align*}
+		&V_N(x^*_1)\leq J_N(\mathbf{x}',\mathbf{u}')=V_N(x)-l(x,u^*_0)\underbrace{-F(x^*_N)+l(x^*_N,\kappa(x^*_N))+F(f(x^*_N,\kappa(x^*_N)))}_{\leq 0\text{ by \ref{ass5}}}\\
+		\Longrightarrow &V_N(f(x,\mu_{MPC}(x)))\leq V_N(x)-l(x,u^*_0)
+	\end{align*}
+	% Now some more details on why $V$ is indeed a Lyapunov function (see definitions and use \ref{ass2}).
+\end{proof}
+
+% Under certain additional conditions, we can show that the objective value function $V$ is a Lyapunov function.
+
+% \subsection{Terminal costs and constraints}
+% We add a term in the objective function : $J_N(x,\mathbf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+F(x_N)$
+% and we add the constraint $x_N\in\cal{X}_f$.
+
+% We assume that there is a control law $\gamma:\cal{X}\to\cal{U}$ s.t. $\cal{X}_f$ is forward invariant for $x^+=f(x,\gamma(x))$, that $F$ is a Lyapunov function for the same dynamical system, and that $\forall x\in\cal{X}_f~:~F(f(x,\gamma(x)))\leq F(x)-l(x,\gamma(x))$.
+% Under these conditions, we can show that the objective value function $V$ is indeed a Lyapunov function.
+
+\section{Relaxed log-barrier functions in MPC}
+In optimization it is often desired to eliminate the inequality constraints in a optimization problem by using a \textit{log-barrier function}.
+For example an inequality constraint of the form $c^Tx\leq d$ (with $c,x\in\R^{n_x}$ and $d\in\R$) is replaced with a term of the form $-\log(-c^Tx+d)$ added in the objective function of the optimization problem.
+The intuition behind such a function is that the cost will become infinite when approaching the boundary of the feasible set (domain where the constraints are satisified).
+
+In the case of a set of polytopic constraints (which are the most common kind of constraints in MPC) of the form $\cal{X}=\left\{x\in\R^{n_x}~:~Cx\leq d\right\}$ (with $C,x\in\R^{n\times r}$ and $d\in\R$), we can transform every constraint into $B_{x,i}(x)=-\log(-\mathrm{row}_i(C)x+d_i)$ and sum everything into $B_x(x)=\sum_{i=1}^rB_{x,i}(x)$\,.
+
+
+Usually such functions are \textit{weight-recentered} in order to ... idk % TODO : why ?
+
+What's more, one other important limitation of these log-barrier are that they are only defined on the interior of the domain where the constraints are satisfied : $\mathrm{int}(\cal{X})$\,.
+This can cause infeasiblity in some numerical algorithms, but can be avoided by using a \textit{relaxed} barrier-function.
+Given a relaxation parameter $\delta$ and a function $\beta(\cdot;\delta):(-\infty,\delta]\to\R$ that is monotone, continuous, and s.t. $\beta(\delta;\delta)=-\log(\delta)$, we can define the relaxed log-barrier function (for a simple constraint of the form $c^Tx\leq d$)
+$$B_{x}(x)=\begin{cases}
+	-\log(-c^Tx+d)&\text{if }z>\delta\\
+	\beta(-c^Tx+d;\delta)&\text{if }z\leq\delta\\
+\end{cases}$$
+The simplest example of such a function $\beta$ is the quadratic $\beta(z;\delta)=\frac{1}{2}\left(\left(\frac{z-2\delta}{\delta}\right)^2-1\right)-\log(\delta)$\,.
+
+\vskip 1cm
+
+All in all we have the following new data :
+\begin{itemize}[label=\textbullet]
+	\item polytopic state, control and terminal constraints :
+	\begin{align*}
+		\cal{X}=\{x\in\R^n~|~C_xx\leq d_x\}&\text{ with }C_x\in\R^{q_x\times n_x},d_x\in\R^{q_x}\\
+		\cal{U}=\{u\in\R^m~|~C_ux\leq d_u\}&\text{ with }C_u\in\R^{q_u\times n_u},d_u\in\R^{q_u}\\
+		\cal{X}_f=\{x\in\R^n~|~C_fx\leq d_f\}&\text{ with }C_f\in\R^{q_f\times n_x},d_f\in\R^{q_f}\\
+	\end{align*}
+
+	\item relaxed and weight-recentered log-barrier functions
+	$\tilde{B}_x(x)=\sum_{i=1}^{q_x}\tilde{B}_{x,i}(x)$ with 
+	$$\tilde{B}_{x,i}(x)=\begin{cases}
+		(1+w_{x,i})\left(-\log(-\mathrm{row}_i(C_x)^Tx+d_{x,i})+\log(d_{x,i})\right)&\text{if }z>\delta\\
+		(1+w_{x,i})\left(\beta(-\mathrm{row}_i(C_x)^Tx+d_{x,i};\delta)+\log(d_{x,i})\right)&\text{if }z\leq\delta
+	\end{cases}$$
+	and similarly for $\tilde{B}_{u}$ and $\tilde{B}_f$\,.
+	The relaxation parameters is chosen so that 
+	$$0<\delta\leq\min\left\{d_{x,1},\dots,d_{x,n},d_{u,1},\dots,d_{u,m}\right\}$$
+
+	\item a barrier parameter $\epsilon>0$ and new stage and terminal costs 
+	$$\tilde{l}(x,u)=l(x,u)+\epsilon\tilde{B}_x(x)+\epsilon\tilde{B}_u(u),\quad\tilde{F}(x)=F(x)+\epsilon\tilde{B}_f(x),\quad \tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=1}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$$
+\end{itemize}
+
+The new MPC formulation then reads :
+\begin{align*}
+	\tilde{V}(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \tilde{J}_N(\mathbf{x},\mathbf{u})\\
+	\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1
+\end{align*}
+
+
+\section{Our contribution : Stability results for relaxed log-barrier function based NMPC}
+Now we consider a nonlinear dynamicaly system $x^+=f(x,u)$, with the state and control constraits 
+\begin{align*}
+	x\in\cal{X}=\{x\in\R^n~|~C_xx\leq d_x\}&\text{ with }C_x\in\R^{q_x\times n_x},d_x\in\R^{q_x}\\
+	u\in\cal{U}=\{u\in\R^m~|~C_ux\leq d_u\}&\text{ with }C_u\in\R^{q_u\times n_u},d_u\in\R^{q_u}
+\end{align*}
+
+We want to stabilize the system at $x^*$ which we can consider without loss of generality to be 0.
+Otherwise we can just define a new state variable $\tilde{x}=x-x^*$ and transform the dynamics by translation: $\tilde{x}^+=\tilde{f}(\tilde{x},u):=f(x-x^*,u)$\,.
+The new state constraints and costs can be defined similarly.
+
+\begin{theorem}
+	Consider the nonlinear dynamical system $x^+=f(x,u)$ and we make the following definitions and assumptions : 
+	\begin{itemize}[label=\textbullet]
+		\item we let $A=\partial_xf(0,0)$ and $B=\partial_uf(0,0)$
+		\item the state and control constraints are given by the sets $\cal{X}=\{x\in\R^n~|~C_xx\leq d_x\}\text{ with }C_x\in\R^{q_x\times n_x},d_x\in\R^{q_x}$ 
+		and $\cal{U}=\{u\in\R^m~|~C_ux\leq d_u\}\text{ with }C_u\in\R^{q_u\times n_u},d_u\in\R^{q_u}$\,.
+		We assume that the target state $x^*=0$ is contained in the interior of $\cal{X}$.
+		\item we define the relaxed and weight-recentered log-barrier functions $B_x$ and $B_u$ associated to these domains with a relaxation parameter $\delta\in(0,\min\left\{d_{x,1},\dots,d_{x,n},d_{u,1},\dots,d_{u,m}\right\}]$ and we define the matrices 
+		$M_x=\frac{1}{2\delta^2}C_x^\top\diag(1+w_x)C_x$ and $M_u=\frac{1}{2\delta^2}C_u^\top\diag(1+w_u)C_u$.
+
+		\item the stage costs are defined as $l(x,u)=x^\top Qx+uR^\top u+\epsilon B_x(x)+\epsilon B_u(u)$ where 
+		
+		\item $P$
+	\end{itemize}
+	
+	$x\in\cal{X}=\{x\in\R^n~|~C_xx\leq d_x\}\text{ with }C_x\in\R^{q_x\times n_x},d_x\in\R^{q_x}$ 
+	and $u\in\cal{U}=\{u\in\R^m~|~C_ux\leq d_u\}\text{ with }C_u\in\R^{q_u\times n_u},d_u\in\R^{q_u}$\,.\newline
+	Now consider the relaxed and weight-recentered log-barrier functions $\tilde{B}_x(x)$ and $\tilde{B}_u(u)$ associated to theses constraints.
+	We also define the stage cost as $l(x,u)=x^\top Qx+u^\top Ru+\epsilon B_x(x)+\epsilon B_u(u)$ and the terminal cost as $F(x)=x^\top Px$ where $P$ verifies the following Riccati equation :
+	$$P=A^\top PA+Q-A^\top PB(R+B^\top PB+\epsilon M_u)^{-1}B^\top PA+\epsilon M_x$$
+
+
+
+\end{theorem}
+\begin{itemize}[label=\textbullet]
+	\item linearize the dynamics around 0 : we let $A=\partial_xf(0,0)$ and $B=\partial_uf(0,0)$ so that $f(x,u)=\underbrace{f(0,0)}_{=0}=Ax+Bu+O(\|x\|^2+\|u\|^2)$\,.
+	We assume that the pair $(A,B)$ is stabilizable so that we can use the linear case
+	
+
+	\item relaxed and weight-recentered log-barrier functions
+	$\tilde{B}_x(x)=\sum_{i=1}^{q_x}\tilde{B}_{x,i}(x)$ with 
+	$$\tilde{B}_{x,i}(x)=\begin{cases}
+		(1+w_{x,i})\left(-\log(-\mathrm{row}_i(C_x)^Tx+d_{x,i})+\log(d_{x,i})\right)&\text{if }z>\delta\\
+		(1+w_{x,i})\left(\beta(-\mathrm{row}_i(C_x)^Tx+d_{x,i};\delta)+\log(d_{x,i})\right)&\text{if }z\leq\delta
+	\end{cases}$$
+	and similarly for $\tilde{B}_{u}$ and $\tilde{B}_f$\,.
+	The relaxation parameters is chosen so that 
+	$$0<\delta\leq\min\left\{d_{x,1},\dots,d_{x,n},d_{u,1},\dots,d_{u,m}\right\}$$
+
+	\item a barrier parameter $\epsilon>0$ and new stage and terminal costs 
+	$$\tilde{l}(x,u)=l(x,u)+\epsilon\tilde{B}_x(x)+\epsilon\tilde{B}_u(u),\quad\tilde{F}(x)=F(x)+\epsilon\tilde{B}_f(x),\quad \tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=1}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$$
+\end{itemize}
+
+The new MPC formulation then reads :
+\begin{align*}
+	\tilde{V}(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \tilde{J}_N(\mathbf{x},\mathbf{u})\\
+	\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1
+\end{align*}
+
+\end{document}
