@@ -335,7 +335,7 @@ for i in range(simulation_length):
     x_2_pred = sol[1::3]
     u_pred = sol[2::3]
     controls[i] = u_pred[0]
-    states[:, i + 1] = [x_1_pred[0], x_2_pred[0]]
+    states[:, i + 1] = [x_1_pred[1], x_2_pred[1]]
     updatePlots(states, controls, casadi.horzcat(x_1_pred, x_2_pred).T, u_pred, i)
 
     plt.draw()
