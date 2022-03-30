@@ -6,8 +6,8 @@ from math import inf
 T = 12.0  # Time horizon
 N = 40  # number of control intervals
 M = 4  # RK4 integrations steps
-delta = 0.3  # relaxation parameter
-epsilon = 0.1  # barrier parameter
+delta = 0.33  # relaxation parameter
+epsilon = 0.05  # barrier parameter
 
 # %% Declare model
 x = casadi.SX.sym("x", 2)
@@ -87,10 +87,15 @@ M_tilde_x = hess_B_x(casadi.DM([1.0, 1.0]))
 
 
 B_u_1 = casadi.if_else(1 - u > delta, -casadi.log(1 - u), beta(1 - u))
+# B_u_2 = casadi.if_else(
+#     1.0e-6 + u > delta,
+#     casadi.log(casadi.DM(1.0e-6)) - casadi.log(1.0e-6 + u),
+#     casadi.log(casadi.DM(1.0e-6)) - beta(1.0e-6 + u),
+# )
 B_u_2 = casadi.if_else(
-    1.0e-6 + u > delta,
-    casadi.log(casadi.DM(1.0e-6)) - casadi.log(1.0e-6 + u),
-    casadi.log(casadi.DM(1.0e-6)) - beta(1.0e-6 + u),
+    u > delta,
+    -casadi.log(u),
+    -beta(u),
 )
 grad_B_u_1 = casadi.Function("grad_B_u_1", [u], [casadi.jacobian(B_u_1, u)])
 grad_B_u_2 = casadi.Function("grad_B_u_2", [u], [casadi.jacobian(B_u_2, u)])
@@ -111,8 +116,8 @@ l = casadi.Function(
     "l",
     [x, u],
     [
-        (x[0] - 1) ** 2
-        + (x[1] - 1) ** 2
+        (x[0] - 1.0) ** 2
+        + (x[1] - 1.0) ** 2
         + 1.0e-4 * u**2
         + epsilon * B_x(x)
         + epsilon * B_u(u)
@@ -144,29 +149,20 @@ for i in range(1000):
     P = new_P
 print("P = ", P)
 
-F = casadi.Function("F", [x], [casadi.bilin(P, x, x)])
+F = casadi.Function(
+    "F", [x], [casadi.bilin(P, (x - casadi.DM.ones(2)), (x - casadi.DM.ones(2)))]
+)
+K = -casadi.inv(R + epsilon * M_tilde_u + B.T @ P @ B) @ B.T @ P @ A
 
 # %% Create compute_control function
 
 
-def solve_mpc(x_init: np.ndarray) -> casadi.DM:
+def solve_mpc(
+    x_init: np.ndarray, x_start: list[casadi.DM], u_start: list[casadi.DM]
+) -> casadi.DM:
     """
     returns the optimal solution with all the variables from all the stages
     """
-
-    # assert len(x_init) == 2, "x_init must be a list of length 2"
-    # initial guesses
-    # =====================================================
-    u_start = [casadi.DM(0.0)] * N
-    # Get a feasible trajectory as an initial guess
-    x_k = casadi.DM(x_init)
-    x_start = [x_k]
-    for k in range(N):
-        x_k = f_discrete(x_k, u_start[k])
-        x_start += [x_k]
-
-    # Formulate the NLP
-    # ======================================================
     x_0 = casadi.MX.sym("x_0", 2)
     x_k = x_0
 
@@ -217,7 +213,7 @@ def solve_mpc(x_init: np.ndarray) -> casadi.DM:
         nlp_prob,
         {
             "ipopt": {
-                "max_iter": 2,
+                "max_iter": 1,
                 "max_cpu_time": 10.0,
             },
         },
@@ -227,7 +223,7 @@ def solve_mpc(x_init: np.ndarray) -> casadi.DM:
 
 
 # %% solve the problem in a closed loop fashion
-simulation_length = 100
+simulation_length = 25
 x_init = [1.2, 0.7]
 
 
@@ -246,6 +242,7 @@ def createPlot(
 
     # Plot trajectory
     ax_state = fig.add_subplot(gs[0, 0])
+    ax_state.grid("both")
     ax_state.set_title("evolution of populations")
     ax_state.set_xlabel("time")
     ax_state.set_ylabel("population")
@@ -258,6 +255,7 @@ def createPlot(
 
     # Plot control
     ax_control = fig.add_subplot(gs[1, 0])
+    ax_control.grid("both")
     ax_control.set_title("evolution of controls")
     ax_control.set_xlabel("time")
     ax_control.set_ylabel("control")
@@ -298,8 +296,8 @@ def updatePlots(
         range(iteration, iteration + 1 + N), state_predictions[1, :].T, "m--"
     )
 
-    ax_control.plot(range(0, iteration + 1), controls[: iteration + 1], "g-")
-    ax_control.plot(range(iteration, iteration + N), control_predictions, "g--")
+    ax_control.step(range(0, iteration + 1), controls[: iteration + 1], "g-")
+    ax_control.step(range(iteration, iteration + N), control_predictions, "g--")
 
     plt.pause(pause_duration)
 
@@ -308,13 +306,11 @@ def updatePlots(
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-plt.figure(1)
-plt.clf()
 states = np.zeros((2, simulation_length + 1))
 controls = np.zeros(simulation_length)
 states[:, 0] = x_init
 
-# Get a feasible trajectory as an initial guess
+# Get a feasible trajectory as an initial guess (for the plot creation)
 u_start = casadi.DM.zeros(N)
 x_start = casadi.DM.zeros(2, N + 1)
 x_start[:, 0] = x_init
@@ -329,15 +325,40 @@ createPlot(
     u_start,
 )
 
+# transform the initial guess into a list of DMs for the solver
+u_start = [casadi.DM(0.0)] * N
+x_start_k = casadi.DM(x_init)
+x_start = [x_start_k]
+for k in range(N):
+    x_start_k = f_discrete(x_start_k, u_start[k])
+    x_start += [x_start_k]
+
 for i in range(simulation_length):
-    sol = solve_mpc(states[:, i])
+    # retrieve solution data
+    sol = solve_mpc(states[:, i], x_start=x_start, u_start=u_start)
     x_1_pred = sol[0::3]
     x_2_pred = sol[1::3]
     u_pred = sol[2::3]
+
+    # update the states and controls
+    # u_pred = np.clip(u_pred, 0.0, 1.0)
     controls[i] = u_pred[0]
     states[:, i + 1] = [x_1_pred[1], x_2_pred[1]]
     updatePlots(states, controls, casadi.horzcat(x_1_pred, x_2_pred).T, u_pred, i)
+    if i == simulation_length - 1:
+        print("Final state: ", states[:, i + 1])
+        print("Final control: ", controls[i])
+        print("all controls: ", controls)
+        plt.show()
+    else:
+        plt.draw()
 
-    plt.draw()
+    # update the initial guess
+    for k in range(N - 2):
+        u_start[k] = u_pred[k + 1]
+        x_start[k] = casadi.DM([x_1_pred[k + 1], x_2_pred[k + 1]])
+    u_start[N - 1] = -K @ (x_start[N - 1] - casadi.DM.ones(2))
+    x_start[N] = f_discrete(x_start[N - 1], u_start[N - 1])
+
 
 # %%
