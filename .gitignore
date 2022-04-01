@@ -1,3 +1,4 @@
-math-project-intro.*
-!math-project-intro.tex
-math-project-intro/__latexindent_temp.tex
+math-project-report/**
+!math-project-report/math-project-report.tex
+!math-project-report/math-project-report.pdf
+!math-project-report/refs.bib

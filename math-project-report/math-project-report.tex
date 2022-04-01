@@ -12,10 +12,11 @@
 \usepackage{tikz-cd} % for diagrams with arrows
 \usepackage{graphicx} % to manage images
 \usepackage{titlesec}
-\usepackage{biblatex} % for bibliography
 \usepackage{hyperref} % for hyperlinks to refs or bibliography
 \usepackage{indentfirst} % for indenting the first line of a paragraph
 \usepackage{optidef}
+\usepackage{biblatex} % for bibliography
+\addbibresource{refs.bib}
 
 % Margins, font size =====================================================================================================================
 %\oddsidemargin = 0.5cm \evensidemargin = 0.5cm \textwidth = 6.3in
@@ -141,14 +142,14 @@
 }
 
 
-\title{Intro to project}
+\title{Stability properties of Relaxed Recentered log-barrier function based Nonlinear MPC}
 \author{Tudor Oancea}
-\date{}
+\date{March 2022}
 
 \begin{document}
 \maketitle
 
-\section{Intro}
+\section{Introduction}
 Given a controlled nonlinear dynamical system of the form $x^+=f(x,u)$ with state and control constraints $x\in\cal{X}\subseteq\R^{n_x},~u\in\cal{U}\subseteq\R^{n_u}$ and a fixed point $x^*$ for these dynamics, i.e. a point such that $f(x^*,0)=x^*$, the problem of \textit{stabilization} is to find a a feedback control law $\mu:\cal{X}\to\cal{U}$ such that $x^*$ is asymptoticall stable for the dynamical system $x^+=f(x,\mu(x))$.
 Such a problem is usually tackled using \textit{optimal control}, and precisely \textit{model predictive control} (MPC), an algorithm that defines this feedback control as the solution to an optimization problem of the following form :
 \begin{align}
@@ -167,9 +168,9 @@ In our work the follwoing assumptions will be made :
 \begin{assumption}~
 	\begin{itemize}[label=\textbullet]
 		\item The function $f$ describing the dynamics is a general $C^2$ function, not necessarily linear.
-		\item Without loss of generality, $x^*=0$. We can always come back to this case by defining new translated states $\tilde{x}:=x-x^*$, new dynamics $\tilde{f}(\tilde{x},u):=f(x-x^*,u)$, new state constraints and so on.
+		\item Without loss of generality, $x^*=0$. We can always come back to this case by defining new translated states $\tilde{x}:=x-x^*$ and new dynamics and new constraints accordingly by translation.
 		\item $x^*=0\in\mathrm{int}\,\cal{X}$ and $0\in\mathrm{int}\,\cal{U}$
-		\item The stage costs and the final costs are quadratic : $l(x,u)=x^TQx+u^TQu,~F(x)=x^TPx$.
+		\item The stage costs and the final costs are quadratic : $l(x,u)=x^TQx+u^TQu,~F(x)=x^TPx$ with $Q,R$ and $P$ positive definite matrices.
 		This is very usual in MPC.
 		\item The state and constraints sets are polytopic :
 		\begin{align*}
@@ -199,7 +200,7 @@ To properly introduce this new formulation let's introduce the central notion of
 	where the weights $w_{x,i}$ are defined as chosen such that $B_x(0)=0$ and $\nabla B_x(0)=0$.
 \end{definition}
 \begin{definition}
-	A \textit{relaxed recentered log-barrier function} is defined by :
+	A \textit{relaxed recentered log-barrier function} (RRLB function) is defined by :
 	\begin{align*}
 		B_x(x)&=\sum_{i=1}^{q_x}(1+w_{x,i})B_{x,i}(x)\\
 		\text{ with }B_{x,i}(x)&=\begin{cases}
@@ -211,10 +212,14 @@ To properly introduce this new formulation let's introduce the central notion of
 	The simplest example of such a function is 
 	$$\beta(z;\delta)=\frac{1}{2}\left[ \left( \frac{z-2\delta}{\delta} \right)^2-1 \right]-\log(\delta)$$
 \end{definition}
+
 \begin{lemma}
 	\label{RRLB-quadratic-bound}
-	hey
+	The RRLB functions are upper bounded by quadratic functions.
 \end{lemma}
+\begin{proof}
+	The proof is similar to the one of the Lemma 3 of \cite{RRLB-linear-MPC}.
+\end{proof}
 
 \newpage
 Now we can finally define our new MPC formulation as follows :
@@ -286,9 +291,13 @@ We are going to show the following stability result :
 		$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,\mu(\tilde{x}_N)))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,\mu(\tilde{x}_N)) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ locally}}\checkmark$$
 		
 		\item{\underline{Step 3 : show the quadratic lower and upper bounds of $\tilde{V}_N$}}\newline
-		We can use \ref{RRLB-quadratic-bound} to upper-bound.
-
+		
+		The upper bound comes from the fact that the costs $l$ and $F$ are quadratic and that the RRLB functions can also be quadraticallt upper bounded as shown in \ref{RRLB-quadratic-bound}.
+		Since these functions are also positive, we can lower bound $\tilde{J}_N$ by $J_N$ and the quadratic lower bound is easy to find given that $Q,R$ and $P$ are positive definite matrices.
 	\end{itemize}
 \end{proof}
+
+\section*{Appendix}
+\printbibliography
 
 \end{document}
