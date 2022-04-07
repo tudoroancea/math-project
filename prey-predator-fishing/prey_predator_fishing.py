@@ -87,11 +87,6 @@ M_tilde_x = hess_B_x(casadi.DM([1.0, 1.0]))
 
 
 B_u_1 = casadi.if_else(1 - u > delta, -casadi.log(1 - u), beta(1 - u))
-# B_u_2 = casadi.if_else(
-#     1.0e-6 + u > delta,
-#     casadi.log(casadi.DM(1.0e-6)) - casadi.log(1.0e-6 + u),
-#     casadi.log(casadi.DM(1.0e-6)) - beta(1.0e-6 + u),
-# )
 B_u_2 = casadi.if_else(
     u > delta,
     -casadi.log(u),
@@ -131,12 +126,10 @@ riccati = casadi.Function(
     "riccati",
     [P],
     [
-        # casadi.densify(
         A.T * P * A
-        - A.T @ P @ B @ casadi.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
+        - A.T @ P @ B @ casadi.inv(R + epsilon * M_tilde_u + B.T @ P @ B) @ B.T @ P @ A
         + casadi.DM([[0.1, 0.0], [0.0, 0.1]])
-        + epsilon * M_x
-        # )
+        + epsilon * M_tilde_x
     ],
 )
 
