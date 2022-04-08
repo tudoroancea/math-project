@@ -2,3 +2,6 @@ math-project-report/**
 !math-project-report/math-project-report.tex
 !math-project-report/math-project-report.pdf
 !math-project-report/refs.bib
+cstr/CSTR_setting.m
+.gitignore
+cstr/ODE_CSTR.m

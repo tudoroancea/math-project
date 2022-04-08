@@ -2,14 +2,23 @@
 import casadi
 import numpy as np
 from math import inf
+import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 
 T = 2000.0  # Time horizon
 N = 100  # number of control intervals
-M = 4  # RK4 integrations steps
+M = 1  # RK4 integrations steps
 delta = 10.0  # relaxation parameter
 epsilon = 0.05  # barrier parameter
-x_S = casadi.DM([2.1402, 1.0903, 114.19, 112.91])
-u_S = casadi.DM([14.19, -1113.5])
+x_S = casadi.DM(
+    [
+        2.1402105301746182e00,
+        1.0903043613077321e00,
+        1.1419108442079495e02,
+        1.1290659291045561e02,
+    ]
+)
+u_S = casadi.DM([14.19, -1113.50])
 
 
 # %% Declare model
@@ -34,28 +43,23 @@ C_PK = 2.0  # [kJ/(kg.K)]
 c_A0 = 5.1  # [mol/l]
 theta_0 = 104.9  # [°C]
 
-theta = casadi.SX.sym("theta")
-k_1 = casadi.Function("k_1", [theta], [k_10 * casadi.exp(E_1 / (theta + 273.15))])
-k_2 = casadi.Function("k_2", [theta], [k_20 * casadi.exp(E_2 / (theta + 273.15))])
-k_3 = casadi.Function("k_3", [theta], [k_30 * casadi.exp(E_3 / (theta + 273.15))])
+k_1 = k_10 * casadi.exp(E_1 / (x[2] + 273.15))
+k_2 = k_20 * casadi.exp(E_2 / (x[2] + 273.15))
+k_3 = k_30 * casadi.exp(E_3 / (x[2] + 273.15))
 
 f_cont = casadi.Function(
     "f_cont",
     [x, u],
     [
         casadi.vertcat(
-            u[0] * (c_A0 - x[0]) - k_1(x[2]) * x[0] - k_3(x[2]) * x[0] ** 2,
-            -u[0] * x[1] + k_1(x[2]) * x[0] - k_2(x[2]) * x[1],
+            u[0] * (c_A0 - x[0]) - k_1 * x[0] - k_3 * x[0] * x[0],
+            -u[0] * x[1] + k_1 * x[0] - k_2 * x[1],
             u[0] * (theta_0 - x[2])
             + (x[3] - x[2]) * k_w * A_R / (rho * C_p * V_R)
-            - (
-                k_1(x[2]) * x[0] * H_1
-                + k_2(x[2]) * x[1] * H_2
-                + k_3(x[2]) * x[0] ** 2 * H_3
-            )
+            - (k_1 * x[0] * H_1 + k_2 * x[1] * H_2 + k_3 * x[0] * x[0] * H_3)
             / (rho * C_p),
             (u[1] + k_w * A_R * (x[2] - x[3])) / (m_K * C_PK),
-        )
+        )/3600.0
     ],
 )
 
@@ -85,15 +89,19 @@ beta = casadi.Function(
     "beta", [z], [0.5 * (((z - 2 * delta) / delta) ** 2 - 1) - casadi.log(delta)]
 )
 B_x_1 = casadi.if_else(
-    x[2] - 98.0 > delta, casadi.log(16.19) - casadi.log(x[2] - 98.0), beta(x[2] - 98.0)
+    x[2] - 98.0 > delta,
+    casadi.log(x_S[2] - 98.0) - casadi.log(x[2] - 98.0),
+    beta(x[2] - 98.0),
 )
 B_x_2 = casadi.if_else(
-    x[3] - 92.0 > delta, casadi.log(20.91) - casadi.log(x[3] - 92.0), beta(x[3] - 92.0)
+    x[3] - 92.0 > delta,
+    casadi.log(x_S[3] - 92.0) - casadi.log(x[3] - 92.0),
+    beta(x[3] - 92.0),
 )
 grad_B_x_1 = casadi.Function("grad_B_x_1", [x], [casadi.jacobian(B_x_1, x)])
 grad_B_x_2 = casadi.Function("grad_B_x_2", [x], [casadi.jacobian(B_x_2, x)])
-w_x_1 = 0.0
-w_x_2 = 0.0
+w_x_1 = -1.0
+w_x_2 = -1.0
 B_x = casadi.Function(
     "B_x",
     [x],
@@ -101,8 +109,8 @@ B_x = casadi.Function(
 )
 grad_B_x = casadi.Function("grad_B_x", [x], [casadi.jacobian(B_x(x), x)])
 hess_B_x = casadi.Function("hess_B_x", [x], [casadi.hessian(B_x(x), x)[0]])
-print("grad_B_x = ", grad_B_x(x_S))
-assert casadi.norm_inf(grad_B_x(x_S)) < 1.0e-10, "grad_B_x(x) != 0"
+print("grad_B_x = {}, norm = {}".format(grad_B_x(x_S), casadi.norm_2(grad_B_x(x_S))))
+# assert casadi.norm_inf(grad_B_x(x_S)) < 1.0e-10, "grad_B_x(x) != 0"
 
 M_x = hess_B_x(x_S)
 
@@ -142,8 +150,8 @@ B_u = casadi.Function(
 )
 grad_B_u = casadi.Function("grad_B_u", [u], [casadi.jacobian(B_u(u), u)])
 hess_B_u = casadi.Function("hess_B_u", [u], [casadi.hessian(B_u(u), u)[0]])
-print("grad_B_u = ", grad_B_u(0.0))
-assert casadi.norm_inf(grad_B_u(0.0)) < 1.0e-10, "grad_B_u(u) != 0"
+print("grad_B_u = {}, norm = {}".format(grad_B_u(u_S), casadi.norm_2(grad_B_u(u_S))))
+# assert casadi.norm_inf(grad_B_u(0.0)) < 1.0e-10, "grad_B_u(u) != 0"
 
 M_u = hess_B_u(u_S)
 
@@ -163,11 +171,11 @@ l = casadi.Function(
         + epsilon * B_u(u)
     ],
 )
-
-# %% terminal cost (determine P)
-P = casadi.SX.sym("P", 4, 4)
 Q = casadi.diag(casadi.DM([0.2, 1.0, 0.5, 0.2]))
 R = casadi.diag(casadi.DM([0.5, 5.0e-7]))
+
+# %% terminal cost (determine P)
+P = casadi.MX.sym("P", 4, 4)
 riccati = casadi.Function(
     "riccati",
     [P],
@@ -179,15 +187,48 @@ riccati = casadi.Function(
     ],
 )
 
-P = casadi.DM.eye(2)
-for i in range(1000):
-    assert i < 999, "P not converged"
+P = casadi.DM.eye(4)
+for i in range(10000):
+    assert i < 9999, "P not converged : {}".format(casadi.norm_fro(new_P - P))
     new_P = riccati(P)
     if casadi.norm_fro(new_P - P) < 1.0e-6:
         print("done")
         break
     P = new_P
+    if not P.is_regular():
+        print("P not regular at iteration {} :".format(i))
+        break
+
+P = casadi.DM(
+    [
+        [
+            1.4646778374584373,
+            0.6676889516721198,
+            0.35446715117028615,
+            0.10324422005086348,
+        ],
+        [
+            0.6676889516721198,
+            1.407812935783267,
+            0.17788030743777067,
+            0.050059833257226405,
+        ],
+        [
+            0.35446715117028615,
+            0.1778803074377706,
+            0.6336052592712396,
+            0.01110329497282364,
+        ],
+        [
+            0.10324422005086348,
+            0.05005983325722643,
+            0.011103294972823655,
+            0.229412393739723,
+        ],
+    ]
+)
 print("P = ", P)
+
 
 F = casadi.Function("F", [x], [casadi.bilin(P, (x - x_S), (x - x_S))])
 K = -casadi.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
@@ -250,7 +291,9 @@ def solve_mpc(
         "ipopt",
         nlp_prob,
         {
+            "print_time": 0,
             "ipopt": {
+                "print_level": 0,
                 "max_iter": 1,
                 "max_cpu_time": 10.0,
             },
@@ -282,8 +325,11 @@ def createPlot(
     ax_concentration = fig.add_subplot(gs[0, 0])
     ax_concentration.grid("both")
     ax_concentration.set_title("evolution of concentrations over time")
+    plt.ylim([0.0, 4.0])
     ax_concentration.set_xlabel("time [h]")
     ax_concentration.set_ylabel("concentration [mol/L]")
+    ax_concentration.plot([0, simulation_length - 1], [x_S[0], x_S[0]], "b-.")
+    ax_concentration.plot([0, simulation_length - 1], [x_S[1], x_S[1]], "m-.")
     (c_A,) = ax_concentration.plot(initial_states[0, 0], "b-")
     (c_B,) = ax_concentration.plot(initial_states[1, 0], "m-")
     ax_concentration.plot(initial_state_prediction[0, :], "b--")
@@ -300,6 +346,9 @@ def createPlot(
     ax_temperatures.set_title("evolution of temperatures over time")
     ax_temperatures.set_xlabel("time [h]")
     ax_temperatures.set_ylabel("temperature [°C]")
+    plt.ylim([95.0, 120.0])
+    ax_temperatures.plot([0, simulation_length - 1], [x_S[2], x_S[2]], "b-.")
+    ax_temperatures.plot([0, simulation_length - 1], [x_S[3], x_S[3]], "m-.")
     (theta,) = ax_temperatures.plot(initial_states[2, 0], "b-")
     (theta_K,) = ax_temperatures.plot(initial_states[3, 0], "m-")
     ax_temperatures.plot(initial_state_prediction[2, :], "b--")
@@ -311,22 +360,24 @@ def createPlot(
     )
 
     # Plot feed inflow
-    ax_feed_inflow = fig.add_subplot(gs[1, 0])
+    ax_feed_inflow = fig.add_subplot(gs[2, 0])
     ax_feed_inflow.grid("both")
     ax_feed_inflow.set_title("evolution of feed inflow rate")
     ax_feed_inflow.set_xlabel("time [h]")
     ax_feed_inflow.set_ylabel("feed inflow rate [h^-1]")
+    ax_feed_inflow.plot([0, simulation_length - 1], [u_S[0], u_S[0]], "g-.")
     ax_feed_inflow.plot([0, simulation_length - 1], [3.0, 3.0], "r:")
     ax_feed_inflow.plot([0, simulation_length - 1], [35.0, 35.0], "r:")
     ax_feed_inflow.plot(initial_controls[0, 0], "g-")
     ax_feed_inflow.plot(initial_control_prediction[0, :], "g--")
 
     # Plot heat removal
-    ax_heat_removal = fig.add_subplot(gs[1, 0])
+    ax_heat_removal = fig.add_subplot(gs[3, 0])
     ax_heat_removal.grid("both")
     ax_heat_removal.set_title("evolution of heat removal rate")
     ax_heat_removal.set_xlabel("time [h]")
     ax_heat_removal.set_ylabel("heat removal rate [kJ/h]")
+    ax_heat_removal.plot([0, simulation_length - 1], [u_S[1], u_S[1]], "g-.")
     ax_heat_removal.plot([0, simulation_length - 1], [-9000.0, -9000.0], "r:")
     ax_heat_removal.plot([0, simulation_length - 1], [0.0, 0.0], "r:")
     ax_heat_removal.plot(initial_controls[1, 0], "g-")
@@ -341,7 +392,7 @@ def updatePlots(
     state_predictions,
     control_predictions,
     iteration,
-    pause_duration=T / N,
+    pause_duration=0.05,
 ):
     fig = plt.gcf()
     [ax_concentration, ax_temperature, ax_feed_inflow, ax_heat_removal] = fig.axes
@@ -381,21 +432,18 @@ def updatePlots(
 
     ax_feed_inflow.step(range(0, iteration + 1), controls[0, : iteration + 1], "g-")
     ax_feed_inflow.step(
-        range(iteration, iteration + N), control_predictions[0, :], "g--"
+        range(iteration, iteration + N), control_predictions[0, :].T, "g--"
     )
 
     ax_heat_removal.step(range(0, iteration + 1), controls[1, : iteration + 1], "g-")
     ax_heat_removal.step(
-        range(iteration, iteration + N), control_predictions[1, :], "g--"
+        range(iteration, iteration + N), control_predictions[1, :].T, "g--"
     )
 
     plt.pause(pause_duration)
 
 
 # Plot the solution
-import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-
 states = np.zeros((4, simulation_length + 1))
 controls = np.zeros((2, simulation_length))
 states[:, 0] = x_init
