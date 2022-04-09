@@ -1,4 +1,7 @@
 # %% imports and global parameters
+import os
+import sys
+from time import time
 import casadi
 import numpy as np
 from math import inf
@@ -19,6 +22,8 @@ x_S = casadi.DM(
     ]
 )
 u_S = casadi.DM([14.19, -1113.50])
+simulation_length = 150  # iterations
+x_init = [1.0, 0.5, 100.0, 100.0]
 
 
 # %% Declare model
@@ -59,7 +64,8 @@ f_cont = casadi.Function(
             - (k_1 * x[0] * H_1 + k_2 * x[1] * H_2 + k_3 * x[0] * x[0] * H_3)
             / (rho * C_p),
             (u[1] + k_w * A_R * (x[2] - x[3])) / (m_K * C_PK),
-        )/3600.0
+        )
+        / 3600.0
     ],
 )
 
@@ -110,8 +116,6 @@ B_x = casadi.Function(
 grad_B_x = casadi.Function("grad_B_x", [x], [casadi.jacobian(B_x(x), x)])
 hess_B_x = casadi.Function("hess_B_x", [x], [casadi.hessian(B_x(x), x)[0]])
 print("grad_B_x = {}, norm = {}".format(grad_B_x(x_S), casadi.norm_2(grad_B_x(x_S))))
-# assert casadi.norm_inf(grad_B_x(x_S)) < 1.0e-10, "grad_B_x(x) != 0"
-
 M_x = hess_B_x(x_S)
 
 
@@ -151,8 +155,6 @@ B_u = casadi.Function(
 grad_B_u = casadi.Function("grad_B_u", [u], [casadi.jacobian(B_u(u), u)])
 hess_B_u = casadi.Function("hess_B_u", [u], [casadi.hessian(B_u(u), u)[0]])
 print("grad_B_u = {}, norm = {}".format(grad_B_u(u_S), casadi.norm_2(grad_B_u(u_S))))
-# assert casadi.norm_inf(grad_B_u(0.0)) < 1.0e-10, "grad_B_u(u) != 0"
-
 M_u = hess_B_u(u_S)
 
 
@@ -167,9 +169,12 @@ l = casadi.Function(
         + 0.2 * (x[3] - x_S[3]) ** 2
         + 0.5 * (u[0] - u_S[0]) ** 2
         + 5.0e-7 * (u[1] - u_S[1]) ** 2
-        + epsilon * B_x(x)
-        + epsilon * B_u(u)
     ],
+)
+l_tilde = casadi.Function(
+    "l_tilde",
+    [x, u],
+    [l(x, u) + epsilon * B_x(x) + epsilon * B_u(u)],
 )
 Q = casadi.diag(casadi.DM([0.2, 1.0, 0.5, 0.2]))
 R = casadi.diag(casadi.DM([0.5, 5.0e-7]))
@@ -192,41 +197,41 @@ for i in range(10000):
     assert i < 9999, "P not converged : {}".format(casadi.norm_fro(new_P - P))
     new_P = riccati(P)
     if casadi.norm_fro(new_P - P) < 1.0e-6:
-        print("done")
+        print("P converged at iteration : ", i)
         break
     P = new_P
     if not P.is_regular():
-        print("P not regular at iteration {} :".format(i))
+        print("P contains Inf or NaN at iteration {} :".format(i))
         break
 
-P = casadi.DM(
-    [
-        [
-            1.4646778374584373,
-            0.6676889516721198,
-            0.35446715117028615,
-            0.10324422005086348,
-        ],
-        [
-            0.6676889516721198,
-            1.407812935783267,
-            0.17788030743777067,
-            0.050059833257226405,
-        ],
-        [
-            0.35446715117028615,
-            0.1778803074377706,
-            0.6336052592712396,
-            0.01110329497282364,
-        ],
-        [
-            0.10324422005086348,
-            0.05005983325722643,
-            0.011103294972823655,
-            0.229412393739723,
-        ],
-    ]
-)
+# P = casadi.DM(
+#     [
+#         [
+#             1.4646778374584373,
+#             0.6676889516721198,
+#             0.35446715117028615,
+#             0.10324422005086348,
+#         ],
+#         [
+#             0.6676889516721198,
+#             1.407812935783267,
+#             0.17788030743777067,
+#             0.050059833257226405,
+#         ],
+#         [
+#             0.35446715117028615,
+#             0.1778803074377706,
+#             0.6336052592712396,
+#             0.01110329497282364,
+#         ],
+#         [
+#             0.10324422005086348,
+#             0.05005983325722643,
+#             0.011103294972823655,
+#             0.229412393739723,
+#         ],
+#     ]
+# )
 print("P = ", P)
 
 
@@ -234,9 +239,7 @@ F = casadi.Function("F", [x], [casadi.bilin(P, (x - x_S), (x - x_S))])
 K = -casadi.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
 
 # %% Create compute_control function
-
-
-def solve_mpc(
+def solve_rrlb_mpc(
     x_init: np.ndarray, x_start: list[casadi.DM], u_start: list[casadi.DM]
 ) -> casadi.DM:
     """
@@ -264,7 +267,7 @@ def solve_mpc(
         w_start += [u_start[k]]
 
         x_k_end = f_discrete(x_k, u_k)
-        J = J + l(x_k, u_k)
+        J = J + l_tilde(x_k, u_k)
 
         x_k = casadi.MX.sym(
             "x_" + str(k + 1), 4
@@ -303,16 +306,80 @@ def solve_mpc(
     return sol["x"]
 
 
+def solve_mpc(
+    x_init: np.ndarray, x_start: list[casadi.DM], u_start: list[casadi.DM]
+) -> casadi.DM:
+    """
+    returns the optimal solution with all the variables from all the stages
+    """
+    x_0 = casadi.MX.sym("x_0", 4)
+    x_k = x_0
+
+    J = 0  # objective function
+    w = [x_0]  # list of all the variables x and u concatenated
+    w_start = [x_start[0]]  # initial guess
+    lbw = []
+    lbw += x_init.tolist()  # lower bound for all the variables
+    ubw = []
+    ubw += x_init.tolist()  # upper bound for all the variables
+    g = []  # equality constraints
+    lbg = []  # lower bound for the equality constraints
+    ubg = []  # upper bound for the equality constraints
+
+    # Formulate the NLP
+    for k in range(N):
+        # New NLP variable for the control
+        u_k = casadi.MX.sym("u_" + str(k), 2)
+        w += [u_k]
+        w_start += [u_start[k]]
+
+        x_k_end = f_discrete(x_k, u_k)
+        J = J + l(x_k, u_k)
+
+        x_k = casadi.MX.sym(
+            "x_" + str(k + 1), 4
+        )  # WARNING : from here x_k represents x_{k+1}
+        w += [x_k]
+        w_start += [x_start[k + 1]]
+        lbw += [3.0, -9000.0, -inf, -inf, 98.0, 92.0]
+        ubw += [35.0, 0.0, inf, inf, inf, inf]
+
+        # Add equality constraint
+        g += [x_k_end - x_k]
+        lbg += [0.0, 0.0, 0.0, 0.0]
+        ubg += [0.0, 0.0, 0.0, 0.0]
+    # J += F(x_k)  # here x_k represents x_N
+
+    # Concatenate decision variables and constraint terms
+    w = casadi.vertcat(*w)
+    g = casadi.vertcat(*g)
+
+    # Create an NLP solver
+    nlp_prob = {"f": J, "x": w, "g": g}
+    nlp_solver = casadi.nlpsol(
+        "nlp_solver",
+        "ipopt",
+        nlp_prob,
+        {
+            "print_time": 0,
+            "ipopt": {
+                "print_level": 0,
+                "max_iter": 1,
+                "max_cpu_time": 10.0,
+            },
+        },
+    )
+    sol = nlp_solver(x0=casadi.vertcat(*w_start), lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+    return sol["x"]
+
+
 # %% solve the problem in a closed loop fashion
-simulation_length = 150
-x_init = [1.0, 0.5, 100.0, 100.0]
-
-
 def createPlot(
-    initial_states,
-    initial_controls,
-    initial_state_prediction,
-    initial_control_prediction,
+    states,
+    controls,
+    state_prediction,
+    control_prediction,
+    final=False,
 ):
     """Creates a plot and adds the initial data provided by the arguments"""
 
@@ -330,10 +397,14 @@ def createPlot(
     ax_concentration.set_ylabel("concentration [mol/L]")
     ax_concentration.plot([0, simulation_length - 1], [x_S[0], x_S[0]], "b-.")
     ax_concentration.plot([0, simulation_length - 1], [x_S[1], x_S[1]], "m-.")
-    (c_A,) = ax_concentration.plot(initial_states[0, 0], "b-")
-    (c_B,) = ax_concentration.plot(initial_states[1, 0], "m-")
-    ax_concentration.plot(initial_state_prediction[0, :], "b--")
-    ax_concentration.plot(initial_state_prediction[1, :], "m--")
+    if not final:
+        (c_A,) = ax_concentration.plot(states[0, 0], "b-")
+        (c_B,) = ax_concentration.plot(states[1, 0], "m-")
+    else:
+        (c_A,) = ax_concentration.plot(states[0, :], "b-")
+        (c_B,) = ax_concentration.plot(states[1, :], "m-")
+    ax_concentration.plot(state_prediction[0, :], "b--")
+    ax_concentration.plot(state_prediction[1, :], "m--")
     ax_concentration.legend(
         [c_A, c_B],
         ["c_A", "c_B"],
@@ -349,10 +420,14 @@ def createPlot(
     plt.ylim([95.0, 120.0])
     ax_temperatures.plot([0, simulation_length - 1], [x_S[2], x_S[2]], "b-.")
     ax_temperatures.plot([0, simulation_length - 1], [x_S[3], x_S[3]], "m-.")
-    (theta,) = ax_temperatures.plot(initial_states[2, 0], "b-")
-    (theta_K,) = ax_temperatures.plot(initial_states[3, 0], "m-")
-    ax_temperatures.plot(initial_state_prediction[2, :], "b--")
-    ax_temperatures.plot(initial_state_prediction[3, :], "m--")
+    if not final:
+        (theta,) = ax_temperatures.plot(states[2, 0], "b-")
+        (theta_K,) = ax_temperatures.plot(states[3, 0], "m-")
+    else:
+        (theta,) = ax_temperatures.plot(states[2, :], "b-")
+        (theta_K,) = ax_temperatures.plot(states[3, :], "m-")
+    ax_temperatures.plot(state_prediction[2, :], "b--")
+    ax_temperatures.plot(state_prediction[3, :], "m--")
     ax_temperatures.legend(
         [theta, theta_K],
         ["theta", "theta_K"],
@@ -368,8 +443,11 @@ def createPlot(
     ax_feed_inflow.plot([0, simulation_length - 1], [u_S[0], u_S[0]], "g-.")
     ax_feed_inflow.plot([0, simulation_length - 1], [3.0, 3.0], "r:")
     ax_feed_inflow.plot([0, simulation_length - 1], [35.0, 35.0], "r:")
-    ax_feed_inflow.plot(initial_controls[0, 0], "g-")
-    ax_feed_inflow.plot(initial_control_prediction[0, :], "g--")
+    if not final:
+        ax_feed_inflow.plot(controls[0, 0], "g-")
+    else:
+        ax_feed_inflow.plot(controls[0, :], "g-")
+    ax_feed_inflow.plot(control_prediction[0, :], "g--")
 
     # Plot heat removal
     ax_heat_removal = fig.add_subplot(gs[3, 0])
@@ -380,8 +458,11 @@ def createPlot(
     ax_heat_removal.plot([0, simulation_length - 1], [u_S[1], u_S[1]], "g-.")
     ax_heat_removal.plot([0, simulation_length - 1], [-9000.0, -9000.0], "r:")
     ax_heat_removal.plot([0, simulation_length - 1], [0.0, 0.0], "r:")
-    ax_heat_removal.plot(initial_controls[1, 0], "g-")
-    ax_heat_removal.plot(initial_control_prediction[1, :], "g--")
+    if not final:
+        ax_heat_removal.plot(controls[1, 0], "g-")
+    else:
+        ax_heat_removal.plot(controls[1, :], "g-")
+    ax_heat_removal.plot(control_prediction[1, :], "g--")
 
     plt.tight_layout()
 
@@ -443,70 +524,112 @@ def updatePlots(
     plt.pause(pause_duration)
 
 
-# Plot the solution
-states = np.zeros((4, simulation_length + 1))
-controls = np.zeros((2, simulation_length))
-states[:, 0] = x_init
+def run_closed_loop_simulation(
+    simulation_length: int, method, step_by_step: bool, name: str = "rrlb_mpc"
+):
+    states = np.zeros((4, simulation_length + 1))
+    controls = np.zeros((2, simulation_length))
+    states[:, 0] = x_init
 
-# Get a feasible trajectory as an initial guess (for the plot creation)
-u_start = casadi.horzcat(*([u_S] * N))
-x_start = casadi.DM.zeros(4, N + 1)
-x_start[:, 0] = x_init
-for k in range(N):
-    x_start[:, k + 1] = f_discrete(x_start[:, k], u_start[k])
+    # Get a feasible trajectory as an initial guess (for the plot creation)
+    u_start = casadi.horzcat(*([u_S] * N))
+    x_start = casadi.DM.zeros(4, N + 1)
+    x_start[:, 0] = x_init
+    for k in range(N):
+        x_start[:, k + 1] = f_discrete(x_start[:, k], u_start[k])
 
-
-createPlot(
-    states,
-    controls,
-    x_start,
-    u_start,
-)
-
-# transform the initial guess into a list of DMs for the solver
-u_start = [u_S] * N
-x_start_k = casadi.DM(x_init)
-x_start = [x_start_k]
-for k in range(N):
-    x_start_k = f_discrete(x_start_k, u_start[k])
-    x_start += [x_start_k]
-
-for i in range(simulation_length):
-    # retrieve solution data
-    sol = solve_mpc(states[:, i], x_start=x_start, u_start=u_start)
-    c_A_pred = sol[0::6]
-    c_B_pred = sol[1::6]
-    theta_pred = sol[2::6]
-    theta_K_pred = sol[3::6]
-    u_1_pred = sol[4::6]
-    u_2_pred = sol[5::6]
-
-    # update the states and controls
-    controls[:, i] = [u_1_pred[0], u_2_pred[0]]
-    states[:, i + 1] = [c_A_pred[1], c_B_pred[1], theta_pred[1], theta_K_pred[1]]
-    updatePlots(
-        states,
-        controls,
-        casadi.horzcat(c_A_pred, c_B_pred, theta_pred, theta_K_pred).T,
-        casadi.horzcat(u_1_pred, u_2_pred).T,
-        i,
-    )
-    if i == simulation_length - 1:
-        print("Final state: ", states[:, i + 1])
-        print("Final control: ", controls[:, i])
-        # print("all controls: ", controls)
-        plt.show()
-    else:
-        plt.draw()
-
-    # update the initial guess
-    for k in range(N - 2):
-        u_start[k] = casadi.DM([u_1_pred[k + 1], u_2_pred[k + 1]])
-        x_start[k] = casadi.DM(
-            [c_A_pred[k + 1], c_B_pred[k + 1], theta_pred[k + 1], theta_K_pred[k + 1]]
+    if step_by_step:
+        createPlot(
+            states,
+            controls,
+            x_start,
+            u_start,
         )
-    u_start[N - 1] = -K @ (x_start[N - 1] - x_S)
-    x_start[N] = f_discrete(x_start[N - 1], u_start[N - 1])
 
+    # transform the initial guess into a list of DMs for the solver
+    u_start = [u_S] * N
+    x_start_k = casadi.DM(x_init)
+    x_start = [x_start_k]
+    for k in range(N):
+        x_start_k = f_discrete(x_start_k, u_start[k])
+        x_start += [x_start_k]
+
+    for i in range(simulation_length):
+        # retrieve solution data
+        start = time()
+        sol = method(states[:, i], x_start=x_start, u_start=u_start)
+        stop = time()
+        print("time for iteration {} : {}".format(i, 1000*(stop - start)))
+        c_A_pred = sol[0::6]
+        c_B_pred = sol[1::6]
+        theta_pred = sol[2::6]
+        theta_K_pred = sol[3::6]
+        u_1_pred = sol[4::6]
+        u_2_pred = sol[5::6]
+
+        # update the states and controls
+        controls[:, i] = [u_1_pred[0], u_2_pred[0]]
+        states[:, i + 1] = [c_A_pred[1], c_B_pred[1], theta_pred[1], theta_K_pred[1]]
+        states_pred = casadi.horzcat(c_A_pred, c_B_pred, theta_pred, theta_K_pred).T
+        controls_pred = casadi.horzcat(u_1_pred, u_2_pred).T
+
+        # update the initial guess for next solve
+        for k in range(N - 2):
+            u_start[k] = casadi.DM([u_1_pred[k + 1], u_2_pred[k + 1]])
+            x_start[k] = casadi.DM(
+                [
+                    c_A_pred[k + 1],
+                    c_B_pred[k + 1],
+                    theta_pred[k + 1],
+                    theta_K_pred[k + 1],
+                ]
+            )
+        u_start[N - 1] = -K @ (x_start[N - 1] - x_S)
+        x_start[N] = f_discrete(x_start[N - 1], u_start[N - 1])
+
+        # plot the simulation data if need be
+        if step_by_step:
+            updatePlots(
+                states,
+                controls,
+                states_pred,
+                controls_pred,
+                i,
+            )
+            if i == simulation_length - 1:
+                print("Final state: ", states[:, i + 1])
+                print("Final control: ", controls[:, i])
+                # print("all controls: ", controls)
+                plt.show()
+            else:
+                plt.draw()
+        else:
+            if i == simulation_length - 1:
+                print("Final state: ", states[:, i + 1])
+                print("Final control: ", controls[:, i])
+                createPlot(states, controls, states_pred, controls_pred, final=True)
+                plt.savefig(os.path.join(os.path.dirname(__file__), name + ".png"), dpi=300, format="png")
+
+
+if __name__ == "__main__":
+    # run_closed_loop_simulation(
+    #     simulation_length=simulation_length,
+    #     method=solve_rrlb_mpc,
+    #     step_by_step=True,
+    # )
+    sys.stderr.write("RRLB MPC : \n==========================")
+    run_closed_loop_simulation(
+        simulation_length=simulation_length,
+        method=solve_rrlb_mpc,
+        step_by_step=False,
+        name="rrlb_mpc",
+    )
+    sys.stderr.write("MPC : \n==========================")
+    run_closed_loop_simulation(
+        simulation_length=simulation_length,
+        method=solve_mpc,
+        step_by_step=False,
+        name="mpc",
+    )
 
 # %%
