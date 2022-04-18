@@ -147,9 +147,24 @@ F = casadi.Function(
 )
 K = -casadi.inv(R + epsilon * M_tilde_u + B.T @ P @ B) @ B.T @ P @ A
 
+# %% Check that the hessian of the objective function at 0 is positive definite
+x_0 = casadi.MX.sym("x_0", 2)
+x_k = x_0
+u = []
+
+objective = 0
+for k in range(N):
+    u_k = casadi.MX.sym("u_" + str(k))
+    u.append(u_k)
+    x_k = f_discrete(x_k, u_k)
+    objective += l(x_k, u_k)
+
+objective += F(x_k)
+u = casadi.vertcat(*u)
+hess_at = casadi.Function("hess_at", [x_0, u], [casadi.hessian(objective, u)[0]])
+print(np.any(np.linalg.eig(np.array(hess_at(casadi.DM.zeros(2), casadi.DM.zeros(N))))[0]<=0))
+
 # %% Create compute_control function
-
-
 def solve_mpc(
     x_init: np.ndarray, x_start: list[casadi.DM], u_start: list[casadi.DM]
 ) -> casadi.DM:

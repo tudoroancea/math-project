@@ -238,6 +238,23 @@ print("P = ", P)
 F = casadi.Function("F", [x], [casadi.bilin(P, (x - x_S), (x - x_S))])
 K = -casadi.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
 
+# %% Verify that the hessian of the objective function at 0 is positive definite
+x_0 = casadi.MX.sym("x_0", 4)
+x_k = x_0
+u = []
+
+objective = 0
+for k in range(N):
+    u_k = casadi.MX.sym("u_" + str(k), 2)
+    u.append(u_k)
+    x_k = f_discrete(x_k, u_k)
+    objective += l_tilde(x_k, u_k)
+
+objective += F(x_k)
+u = casadi.vertcat(*u)
+hess_at = casadi.Function("hess_at", [x_0, u], [casadi.hessian(objective, u)[0]])
+print(np.any(np.linalg.eig(np.array(hess_at(casadi.DM.zeros(4), casadi.DM.zeros(2*N))))[0]<=0))
+
 # %% Create compute_control function
 def solve_rrlb_mpc(
     x_init: np.ndarray, x_start: list[casadi.DM], u_start: list[casadi.DM]
@@ -559,7 +576,7 @@ def run_closed_loop_simulation(
         start = time()
         sol = method(states[:, i], x_start=x_start, u_start=u_start)
         stop = time()
-        print("time for iteration {} : {}".format(i, 1000*(stop - start)))
+        print("time for iteration {} : {} ms".format(i, 1000*(stop - start)))
         c_A_pred = sol[0::6]
         c_B_pred = sol[1::6]
         theta_pred = sol[2::6]
