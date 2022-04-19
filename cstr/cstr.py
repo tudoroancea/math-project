@@ -8,6 +8,9 @@ from math import inf
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
+
+states_dim = 4
+control_dim = 2
 T = 2000.0  # Time horizon
 N = 100  # number of control intervals
 M = 1  # RK4 integrations steps
@@ -27,8 +30,8 @@ x_init = [1.0, 0.5, 100.0, 100.0]
 
 
 # %% Declare model
-x = casadi.SX.sym("x", 4)
-u = casadi.SX.sym("u", 2)
+x = casadi.SX.sym("x", states_dim)
+u = casadi.SX.sym("u", control_dim)
 k_10 = 1.287e12  # [h^-1]
 k_20 = 1.287e12  # [h^-1]
 k_30 = 9.043e9  # [h^-1]
@@ -90,7 +93,7 @@ print("B = ", B)
 
 
 # %% barrier functions for state and control constraints
-z = casadi.SX.sym("z", 1)
+z = casadi.SX.sym("z")
 beta = casadi.Function(
     "beta", [z], [0.5 * (((z - 2 * delta) / delta) ** 2 - 1) - casadi.log(delta)]
 )
@@ -253,7 +256,12 @@ for k in range(N):
 objective += F(x_k)
 u = casadi.vertcat(*u)
 hess_at = casadi.Function("hess_at", [x_0, u], [casadi.hessian(objective, u)[0]])
-print(np.any(np.linalg.eig(np.array(hess_at(casadi.DM.zeros(4), casadi.DM.zeros(2*N))))[0]<=0))
+print(
+    np.any(
+        np.linalg.eig(np.array(hess_at(casadi.DM.zeros(4), casadi.DM.zeros(2 * N))))[0]
+        <= 0
+    )
+)
 
 # %% Create compute_control function
 def solve_rrlb_mpc(
@@ -262,7 +270,7 @@ def solve_rrlb_mpc(
     """
     returns the optimal solution with all the variables from all the stages
     """
-    x_0 = casadi.MX.sym("x_0", 4)
+    x_0 = casadi.MX.sym("x_0", states_dim)
     x_k = x_0
 
     J = 0  # objective function
@@ -279,7 +287,7 @@ def solve_rrlb_mpc(
     # Formulate the NLP
     for k in range(N):
         # New NLP variable for the control
-        u_k = casadi.MX.sym("u_" + str(k), 2)
+        u_k = casadi.MX.sym("u_" + str(k), control_dim)
         w += [u_k]
         w_start += [u_start[k]]
 
@@ -287,17 +295,17 @@ def solve_rrlb_mpc(
         J = J + l_tilde(x_k, u_k)
 
         x_k = casadi.MX.sym(
-            "x_" + str(k + 1), 4
+            "x_" + str(k + 1), states_dim
         )  # WARNING : from here x_k represents x_{k+1}
         w += [x_k]
         w_start += [x_start[k + 1]]
-        lbw += [-inf, -inf, -inf, -inf, -inf, -inf]
-        ubw += [inf, inf, inf, inf, inf, inf]
+        lbw += [-inf] * (states_dim + control_dim)
+        ubw += [inf] * (states_dim + control_dim)
 
         # Add equality constraint
         g += [x_k_end - x_k]
-        lbg += [0.0, 0.0, 0.0, 0.0]
-        ubg += [0.0, 0.0, 0.0, 0.0]
+        lbg += [0.0] * states_dim
+        ubg += [0.0] * states_dim
     J += F(x_k)  # here x_k represents x_N
 
     # Concatenate decision variables and constraint terms
@@ -329,7 +337,7 @@ def solve_mpc(
     """
     returns the optimal solution with all the variables from all the stages
     """
-    x_0 = casadi.MX.sym("x_0", 4)
+    x_0 = casadi.MX.sym("x_0", states_dim)
     x_k = x_0
 
     J = 0  # objective function
@@ -346,7 +354,7 @@ def solve_mpc(
     # Formulate the NLP
     for k in range(N):
         # New NLP variable for the control
-        u_k = casadi.MX.sym("u_" + str(k), 2)
+        u_k = casadi.MX.sym("u_" + str(k), control_dim)
         w += [u_k]
         w_start += [u_start[k]]
 
@@ -354,7 +362,7 @@ def solve_mpc(
         J = J + l(x_k, u_k)
 
         x_k = casadi.MX.sym(
-            "x_" + str(k + 1), 4
+            "x_" + str(k + 1), states_dim
         )  # WARNING : from here x_k represents x_{k+1}
         w += [x_k]
         w_start += [x_start[k + 1]]
@@ -363,8 +371,8 @@ def solve_mpc(
 
         # Add equality constraint
         g += [x_k_end - x_k]
-        lbg += [0.0, 0.0, 0.0, 0.0]
-        ubg += [0.0, 0.0, 0.0, 0.0]
+        lbg += [0.0] * states_dim
+        ubg += [0.0] * states_dim
     # J += F(x_k)  # here x_k represents x_N
 
     # Concatenate decision variables and constraint terms
@@ -544,13 +552,13 @@ def updatePlots(
 def run_closed_loop_simulation(
     simulation_length: int, method, step_by_step: bool, name: str = "rrlb_mpc"
 ):
-    states = np.zeros((4, simulation_length + 1))
-    controls = np.zeros((2, simulation_length))
+    states = np.zeros((states_dim, simulation_length + 1))
+    controls = np.zeros((control_dim, simulation_length))
     states[:, 0] = x_init
 
     # Get a feasible trajectory as an initial guess (for the plot creation)
     u_start = casadi.horzcat(*([u_S] * N))
-    x_start = casadi.DM.zeros(4, N + 1)
+    x_start = casadi.DM.zeros(states_dim, N + 1)
     x_start[:, 0] = x_init
     for k in range(N):
         x_start[:, k + 1] = f_discrete(x_start[:, k], u_start[k])
@@ -576,7 +584,7 @@ def run_closed_loop_simulation(
         start = time()
         sol = method(states[:, i], x_start=x_start, u_start=u_start)
         stop = time()
-        print("time for iteration {} : {} ms".format(i, 1000*(stop - start)))
+        print("time for iteration {} : {} ms".format(i, 1000 * (stop - start)))
         c_A_pred = sol[0::6]
         c_B_pred = sol[1::6]
         theta_pred = sol[2::6]
@@ -592,15 +600,8 @@ def run_closed_loop_simulation(
 
         # update the initial guess for next solve
         for k in range(N - 2):
-            u_start[k] = casadi.DM([u_1_pred[k + 1], u_2_pred[k + 1]])
-            x_start[k] = casadi.DM(
-                [
-                    c_A_pred[k + 1],
-                    c_B_pred[k + 1],
-                    theta_pred[k + 1],
-                    theta_K_pred[k + 1],
-                ]
-            )
+            u_start[k] = controls_pred[:, k + 1]
+            x_start[k] = states_pred[:, k + 1]
         u_start[N - 1] = -K @ (x_start[N - 1] - x_S)
         x_start[N] = f_discrete(x_start[N - 1], u_start[N - 1])
 
@@ -625,7 +626,11 @@ def run_closed_loop_simulation(
                 print("Final state: ", states[:, i + 1])
                 print("Final control: ", controls[:, i])
                 createPlot(states, controls, states_pred, controls_pred, final=True)
-                plt.savefig(os.path.join(os.path.dirname(__file__), name + ".png"), dpi=300, format="png")
+                plt.savefig(
+                    os.path.join(os.path.dirname(__file__), name + ".png"),
+                    dpi=300,
+                    format="png",
+                )
 
 
 if __name__ == "__main__":
