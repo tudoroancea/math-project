@@ -2,6 +2,7 @@
 import os
 import sys
 from time import time
+from typing import Tuple
 
 import casadi
 import matplotlib.pyplot as plt
@@ -310,7 +311,7 @@ def createPlot(
     controls,
     state_prediction,
     control_prediction,
-    final = False,
+    final=False,
 ):
     """Creates a plot and adds the initial data provided by the arguments"""
 
@@ -341,12 +342,12 @@ def createPlot(
     ax_control.grid("both")
     ax_control.set_title("evolution of controls")
     ax_control.set_xlabel("time")
-    ax_control.set_ylabel("control")    
+    ax_control.set_ylabel("control")
     ax_control.plot([0, simulation_length - 1], [0.0, 0.0], "r:")
     ax_control.plot([0, simulation_length - 1], [1.0, 1.0], "r:")
     if not final:
         ax_control.plot(controls[0], "g-")
-    else: 
+    else:
         ax_control.plot(controls, "g-")
 
     ax_control.plot(control_prediction, "g--")
@@ -390,16 +391,26 @@ def updatePlots(
 
 
 def run_closed_loop_simulation(
-    simulation_length: int, method, step_by_step: bool, name: str = "rrlb_mpc"
-):
-    states = np.zeros((state_dim, simulation_length + 1))
-    controls = np.zeros(simulation_length)
-    states[:, 0] = x_init
+    custom_x_init=x_init,
+    stop_tol=1.0e-3,
+    max_simulation_length: int = 100,
+    method=solve_rrlb_mpc,
+    name: str = None,
+    step_by_step: bool = True,
+) -> Tuple[float, int, bool]:
+    """
+    Returns the total cost of the run until convergence, the number of iterations taken to reach
+    convergence, and if there was any constraint violation
+    """
+    constraints_violated = False
+    states = np.zeros((state_dim, max_simulation_length + 1))
+    controls = np.zeros(max_simulation_length)
+    states[:, 0] = custom_x_init
 
     # Get a feasible trajectory as an initial guess (for the plot creation)
     u_start = casadi.horzcat(*([u_S] * N))
     x_start = casadi.DM.zeros(state_dim, N + 1)
-    x_start[:, 0] = x_init
+    x_start[:, 0] = custom_x_init
     for k in range(N):
         x_start[:, k + 1] = f_discrete(x_start[:, k], u_start[k])
 
@@ -413,18 +424,23 @@ def run_closed_loop_simulation(
 
     # transform the initial guess into a list of DMs for the solver
     u_start = [u_S] * N
-    x_start_k = casadi.DM(x_init)
+    x_start_k = casadi.DM(custom_x_init)
     x_start = [x_start_k]
     for k in range(N):
         x_start_k = f_discrete(x_start_k, u_start[k])
         x_start += [x_start_k]
 
-    for i in range(simulation_length):
+    i = 0
+
+    while (
+        np.sqrt(np.sum(np.square(states[:, i] - np.array(x_S).ravel()))) >= stop_tol
+        and i < max_simulation_length
+    ):
         # retrieve solution data
         start = time()
         sol = method(states[:, i], x_start=x_start, u_start=u_start)
         stop = time()
-        print("time for iteration {} : {} ms".format(i, 1000 * (stop - start)))
+        # print("time for iteration {} : {} ms".format(i, 1000 * (stop - start)))
         x_1_pred = sol[0::3]
         x_2_pred = sol[1::3]
         u_pred = sol[2::3]
@@ -433,6 +449,10 @@ def run_closed_loop_simulation(
         controls[i] = u_pred[0]
         states[:, i + 1] = [x_1_pred[1], x_2_pred[1]]
         states_pred = casadi.horzcat(x_1_pred, x_2_pred).T
+
+        # check if there was any constraint violation
+        if controls[i] < 0.0 or controls[i] > 1.0:
+            constraints_violated = True
 
         # update the initial guess for next solve
         for k in range(N - 2):
@@ -450,7 +470,7 @@ def run_closed_loop_simulation(
                 u_pred,
                 i,
             )
-            if i == simulation_length - 1:
+            if i == max_simulation_length - 1:
                 print("Final state: ", states[:, i + 1])
                 print("Final control: ", controls[i])
                 # print("all controls: ", controls)
@@ -458,15 +478,36 @@ def run_closed_loop_simulation(
             else:
                 plt.draw()
         else:
-            if i == simulation_length - 1:
+            if i == max_simulation_length - 1:
                 print("Final state: ", states[:, i + 1])
                 print("Final control: ", controls[i])
-                createPlot(states, controls, states_pred, u_pred, final=True)
-                plt.savefig(
-                    os.path.join(os.path.dirname(__file__), name + ".png"),
-                    dpi=300,
-                    format="png",
-                )
+                if name != None:
+                    createPlot(states, controls, states_pred, u_pred, final=True)
+                    plt.savefig(
+                        os.path.join(os.path.dirname(__file__), name + ".png"),
+                        dpi=300,
+                        format="png",
+                    )
+
+        i += 1
+
+    if (
+        i == max_simulation_length
+        and np.sqrt(np.sum(np.square(states[:, i] - np.array(x_S).ravel()))) >= stop_tol
+    ):
+        sys.stderr.write("\tnot converged in {max_simulation_length} iterations for : ")
+
+    states = np.delete(states, list(range(i + 1, 101)), axis=1)
+    controls = np.delete(controls, list(range(i, 100)), axis=0)
+
+    # compute total sum of controls
+    total_cost = 0.0
+    np.sum(np.sqrt(np.sum((np.square(states - np.array(x_S))), axis=0)))
+    for k in range(i):
+        total_cost += l(states[:, k], controls[k])
+    total_cost += F(states[:, i])
+
+    return float(total_cost), i, constraints_violated
 
 
 if __name__ == "__main__":
@@ -475,19 +516,49 @@ if __name__ == "__main__":
     #     method=solve_mpc,
     #     step_by_step=True,
     # )
-    print("RRLB MPC : \n==========================")
-    run_closed_loop_simulation(
-        simulation_length=simulation_length,
-        method=solve_rrlb_mpc,
-        step_by_step=False,
-        name="rrlb_mpc",
-    )
-    print("MPC : \n==========================")
-    run_closed_loop_simulation(
-        simulation_length=simulation_length,
-        method=solve_mpc,
-        step_by_step=False,
-        name="mpc",
+    # print("RRLB MPC : \n==========================")
+    # run_closed_loop_simulation(
+    #     simulation_length=simulation_length,
+    #     method=solve_rrlb_mpc,
+    #     step_by_step=False,
+    #     name="rrlb_mpc",
+    # )
+    # print("MPC : \n==========================")
+    # run_closed_loop_simulation(
+    #     simulation_length=simulation_length,
+    #     method=solve_mpc,
+    #     step_by_step=False,
+    #     name="mpc",
+    # )
+
+    # Find region without constraint violation ========================================================
+    x_sample = np.linspace(0.0, 2.0, 100)
+    y_sample = np.linspace(0.0, 2.0, 100)
+    constraints_violated_table = np.zeros((100, 100), dtype=bool)
+
+    for i in range(100):
+        for j in range(100):
+            start = time()
+            (
+                total_cost,
+                iterations,
+                constraints_violated_table[i, j],
+            ) = run_closed_loop_simulation(
+                custom_x_init=np.array([x_sample[i], y_sample[i]]),
+                stop_tol=1.0e-3,
+                max_simulation_length=1000,
+                method=solve_rrlb_mpc,
+                step_by_step=False,
+            )
+            stop = time()
+            print(
+                "for i={},j={} : total_cost = {}, iterations = {}, time = {} s".format(
+                    i, j, total_cost, iterations, stop - start
+                )
+            )
+
+    np.savetxt(
+        "constraints_violated_ppf.csv", constraints_violated_table, delimiter=","
     )
 
 # %%
