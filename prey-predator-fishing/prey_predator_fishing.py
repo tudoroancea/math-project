@@ -146,7 +146,7 @@ F = casadi.Function("F", [x], [casadi.bilin(P, (x - x_S), (x - x_S))])
 K = -casadi.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
 
 # %% Check that the hessian of the objective function at 0 is positive definite
-x_0 = casadi.MX.sym("x_0", 2)
+x_0 = casadi.MX.sym("x_0", state_dim)
 x_k = x_0
 u = []
 
@@ -161,11 +161,23 @@ objective += F(x_k)
 u = casadi.vertcat(*u)
 hess_at = casadi.Function("hess_at", [x_0, u], [casadi.hessian(objective, u)[0]])
 print(
-    np.any(
-        np.linalg.eig(np.array(hess_at(casadi.DM.zeros(2), casadi.DM.zeros(N))))[0] <= 0
+    "hessian of the objective wrt controls at the origin is positive definite : ",
+    not np.any(
+        np.linalg.eig(np.array(hess_at(casadi.DM.zeros(state_dim), casadi.DM.zeros(N*control_dim))))[0] <= 0
     )
 )
+stab_eig_values = np.linalg.eig(A+B@K)
+for val in stab_eig_values:
+    if (np.linalg.norm(val) >= 1.0):
+        print("A+BK is not stable : ", np.linalg.norm(val))
+        # break
 
+print(
+    "hessian of B_u wrt controls at the origin is positive definite : ",
+    not np.any(
+        np.linalg.eig(np.array(hess_B_u(casadi.DM.zeros(control_dim))))[0] <= 0
+    )
+)
 # %% Create compute_control function
 def solve_rrlb_mpc(
     x_init: np.ndarray, x_start: list[casadi.DM], u_start: list[casadi.DM]
@@ -497,8 +509,8 @@ def run_closed_loop_simulation(
     ):
         sys.stderr.write("\tnot converged in {max_simulation_length} iterations for : ")
 
-    states = np.delete(states, list(range(i + 1, 101)), axis=1)
-    controls = np.delete(controls, list(range(i, 100)), axis=0)
+    states = np.delete(states, list(range(i + 1, max_simulation_length+1)), axis=1)
+    controls = np.delete(controls, list(range(i, max_simulation_length)), axis=0)
 
     # compute total sum of controls
     total_cost = 0.0
@@ -511,33 +523,38 @@ def run_closed_loop_simulation(
 
 
 if __name__ == "__main__":
+    # pass
+
+    # Run closed loop simulation of RRLB with live plot ==============================================
     # run_closed_loop_simulation(
-    #     simulation_length=simulation_length,
+    #     max_simulation_length=simulation_length,
     #     method=solve_mpc,
     #     step_by_step=True,
     # )
+
+    # run closed loop simulation of RRLB and regular NMPC to compare behaviors =======================
     # print("RRLB MPC : \n==========================")
     # run_closed_loop_simulation(
-    #     simulation_length=simulation_length,
+    #     max_simulation_length=simulation_length,
     #     method=solve_rrlb_mpc,
     #     step_by_step=False,
     #     name="rrlb_mpc",
     # )
     # print("MPC : \n==========================")
     # run_closed_loop_simulation(
-    #     simulation_length=simulation_length,
+    #     max_simulation_length=simulation_length,
     #     method=solve_mpc,
     #     step_by_step=False,
     #     name="mpc",
     # )
 
     # Find region without constraint violation ========================================================
-    x_sample = np.linspace(0.0, 2.0, 100)
-    y_sample = np.linspace(0.0, 2.0, 100)
-    constraints_violated_table = np.zeros((100, 100), dtype=bool)
+    x_sample = np.linspace(0.7, 1.3, 10)
+    y_sample = np.linspace(0.7, 1.3, 10)
+    constraints_violated_table = np.zeros((10, 10), dtype=bool)
 
-    for i in range(100):
-        for j in range(100):
+    for i in range(10):
+        for j in range(10):
             start = time()
             (
                 total_cost,
