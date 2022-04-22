@@ -16,7 +16,8 @@
 \usepackage{indentfirst} % for indenting the first line of a paragraph
 \usepackage{optidef}
 \usepackage{biblatex} % for bibliography
-\addbibresource{refs.bib}
+\usepackage{bookmark}
+% \addbibresource{refs.bib}
 
 % Margins, font size =====================================================================================================================
 %\oddsidemargin = 0.5cm \evensidemargin = 0.5cm \textwidth = 6.3in
@@ -218,7 +219,7 @@ To properly introduce this new formulation let's introduce the central notion of
 	The RRLB functions are upper bounded by quadratic functions.
 \end{lemma}
 \begin{proof}
-	The proof is similar to the one of the Lemma 3 of \cite{RRLB-linear-MPC}.
+	The proof is similar to the one of the Lemma 3 of %\cite{RRLB-linear-MPC}.
 \end{proof}
 
 \newpage
@@ -229,75 +230,111 @@ Now we can finally define our new MPC formulation as follows :
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 	\end{split}
 \end{align}
-where the new objective function $\tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$.
+where the new objective function $\tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$ for a certain matrix $P$ that will be determined later.
 The barrier parameter $\epsilon$ has in theory the following interpretation : when it goes to zero, the solution of problem \ref{RRLB-NMPC} converges to the one of \ref{NMPC}.
-The matrix $P$ is chosen as the unique solution to the modified Riccati equation 
-\begin{equation}
-	\label{Riccati}
-	P=A^TPA-A^TPB\inv{(R+\epsilon M_u+B^TPB)}B^TPA+Q+\epsilon M_x
-\end{equation}
 
-\section{Stability property of RRLB Nonlinear MPC}
-We are going to show the following stability result :
-\begin{theorem}
-	Let's denote by $\tilde{\mathbf{u}}(x)=(\tilde{u}_0(x),\dots,\tilde{u}_{N-1}(x))$ and $\tilde{\mathbf{x}}(x)=(\tilde{x}_0(x)=x,\tilde{x}_1(x),\dots,\tilde{x}_N(x))$ the sequences of optimal controls and states given by \ref{RRLB-NMPC}.
-	Then the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$ for all initial state in a neighborhood of the origin.
-\end{theorem}
 
-\begin{proof}~
+\section{Theoretical properties of RRLB Nonlinear MPC}
+
+\subsection{Nominal asymptotic stability}
+
+\begin{lemma}
+	\label{Lipchitzianity}
+	Consider the problem \ref{RRLB-NMPC} and re-write it in a simpler way as 
+	\begin{align*}
+		\tilde{V}_N(x)=\underset{\mathbf{u}}{\min} &\quad J(x,\mathbf{u})\\
+		\text{s.t.}&
+	\end{align*}
+	where $J(x,\mathbf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
+	If for a certain value for the initial state $x$ we denote by $\tilde{\mathbf{u}}(x)=(\tilde{u}_0(x),\dots,\tilde{u}_{N-1}(x))$ the optimal sequence of controls and we suppose that $D_\mathbf{u}J(x,\tilde{\mathbf{u}})=0$ and $\nabla_{\mathbf{u}\mathbf{u}}^2J(x, \tilde{\mathbf{u}})\succ 0$ (the matrix is positive definite) then :
 	\begin{itemize}[label=\textbullet]
-		\item \underline{Step 1 : show that $\tilde{V}_\infty(x)=F(x)+O(\|x\|^3)$} \newline 
-		where $\tilde{V}_\infty$ is the infinite horizon version of \ref{RRLB-NMPC} defined by :
-		\begin{align*}
-			\tilde{V}_\infty(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad\sum_{k=0}^\infty\tilde{l}(x_k,u_k)\\
-			\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k\geq 0\\
-		\end{align*}
-		By \textbf{???} we know that $\tilde{V}_\infty\in\ctwo$ and we can write its Taylor expansion :
-		$$\tilde{V}_\infty(x)=\tilde{V}_\infty(0)+\nabla\tilde{V}_\infty(0)^Tx+x^T\left( \underbrace{\frac{1}{2}\nabla^2\tilde{V}_\infty(0)}_{=:\tilde{P}}\right)x+O(\|x\|^3)$$
-		It is easy to see that $\tilde{V}_\infty(0)=0$ and $\nabla\tilde{V}_\infty(0)$, so if show that $\tilde{P}=P$ then we will have shown that $\tilde{V}_\infty(x)=F(x)+O(\|x\|^3)$\,.
-
-		By the dynamic programming principle we have:
-		\begin{equation}\label{RRLB-NMPC-inf-DP}
-			\tilde{V}_\infty(x)=\underset{u_0}{\mathrm{\min}}\quad\tilde{l}(x,u_0)+\tilde{V}_\infty(f(x,u_0))
-		\end{equation}
-		Let $u_0^*(x)$ be the minimizer of \ref{RRLB-NMPC-inf-DP}, which we are going to denote as $u^*$ for simplicity.
-		By \textbf{???} we know that $u^*=O(\|x\|)$.
-		In our case we can show exactly that the minimizer is a stationnary point so :
-		\begin{align*}
-			0&=\nabla_u\tilde{l}(x;u^*)+\nabla_u f(x,u^*)\nabla\tilde{V}_\infty(f(x,u^*))\\
-			&=R^*+\epsilon\nabla B_u(u^*)+\nabla_u f(x,u^*)\nabla\tilde{V}_\infty(f(x,u^*))\\
-			&=Ru^*+\epsilon\left(\underbrace{\nabla B_u(0)}_{=0}+\nabla^2B_u(0)u^*+O(\|u^*\|^2)\right)\\
-			&+(B^T+O(\|u^*\|^2))\left(\tilde{P}(Ax+Bu^*+O(\|x\|^2+\|u^*\|^2))+O\left(\left\|Ax+Bu^*+O(\|x\|^2+\|u^*\|^2)\right\|^2\right)\right)\\
-			&=R^*+\epsilon M_uu^*+B^T\tilde{P}(Ax+Bu^*)+O(\|x\|^2)
-		\end{align*}
-		where we use that
-		\begin{align*}
-			&f(x,u)+Ax+Bu+O(\|x\|^2+\|u\|^2)\Longrightarrow\nabla_u f(x,u)=B^T+O(\|u\|)\\
-			&\tilde{V}_\infty(x)=x^T\tilde{P}x+O(\|x\|^3)\Longrightarrow\nabla\tilde{V}_\infty(x)=\tilde{P}x+O(\|x\|^2)
-		\end{align*}
-		This implies that $u^*=\underbrace{-\inv{(R+\epsilon M_u+B^T\tilde{P}B)}}_{=:\tilde{K}}B^T\tilde{P}Ax+O(\|x\|^2)$\,.
-		By plugging this expression back in the definition of $\tilde{V}_\infty$ given by \ref{RRLB-NMPC-inf-DP} :
-		$$\tilde{V}_\infty(x)=x^T(Q+\epsilon M_x+\tilde{K}^T(R+\epsilon M_u)\tilde{K}+A_{\tilde{K}}^T\tilde{P}A_{\tilde{K}})x+O(\|x\|^3)$$
-		and by unicity of the Taylor expansion we conclude that $\tilde{P}$ verifies the equation \ref{Riccati}.
-		Since $P$ was the unique solution to this equation, we conclude that $P=\tilde{P}$ as wanted.\quad\checkmark
-
-		\item \underline{Step 2 : show the descent property for $\tilde{J}_N$} \newline
-		Using the dynamic programming principle for $\tilde{V}_\infty$, we know there exists a feedback control $\mu:\R^{n_x}\to\R^{n_u}$ (given by the solution to \ref{RRLB-NMPC-inf-DP}) such that :
-		$$\tilde{V}_\infty(f(x,\mu(x)))-\tilde{V}_\infty(x)+\tilde{l}(x,\mu(x))=0$$
-		hence by the approximation shown at last step :
-		$$\tilde{F}(f(x,\mu(x)))-\tilde{F}(x)+\tilde{l}(x,\mu(x))=O(\|x\|^3)$$
-		Now given $\tilde{\mathbf{x}}(x)$ and $\tilde{\mathbf{u}}(x)$ we can construct some feasible sequences $\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,\mu(\tilde{x}_N)))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},\mu(\tilde{x}_N))$ for the problem \ref{RRLB-NMPC} with initial condition $\tilde{x}_1$\,.
-		Then we have :
-		$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,\mu(\tilde{x}_N)))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,\mu(\tilde{x}_N)) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ locally}}\checkmark$$
-		
-		\item{\underline{Step 3 : show the quadratic lower and upper bounds of $\tilde{V}_N$}}\newline
-		
-		The upper bound comes from the fact that the costs $l$ and $F$ are quadratic and that the RRLB functions can also be quadraticallt upper bounded as shown in \ref{RRLB-quadratic-bound}.
-		Since these functions are also positive, we can lower bound $\tilde{J}_N$ by $J_N$ and the quadratic lower bound is easy to find given that $Q,R$ and $P$ are positive definite matrices.
+		\item $\forall k=0,\dots,N-1,\quad \|\tilde{u}_k(x)\|=O(\|x\|)$
+		\item $\forall k=1,\dots,N,\quad \|\tilde{x}_k(x)\|=f(f(\dots,u_{k-2}),u_{k-1})=O(\|x\|)$
 	\end{itemize}
+\end{lemma}
+\begin{proof}
+	See appendix
 \end{proof}
 
-\section*{Appendix}
-\printbibliography
+Now the main piece :
+
+\begin{theorem}
+	Let's consider the problem \ref{RRLB-NMPC} and assume the following :
+	\begin{enumerate}
+		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
+		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
+		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following Lyapunov equation :
+		\begin{equation}
+			P=A_K^TPA_K+\mu Q_K
+		\end{equation}
+		where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
+		% \item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following modified Discrete Alegbraic Riccati Equation (DARE) :
+		% \begin{equation}
+		% 	\label{DARE}
+		% 	P=A^TPA-A^TPB\inv{(\underbrace{R+\epsilon M_u}_{=:\tilde{R}}+B^TPB)}B^TPA+\underbrace{Q+\epsilon M_x}_{=:\tilde{Q}}
+		% \end{equation}
+		% where $M_x:=\nabla_{xx}^2B_x(0),M_u:=\nabla_{uu}^2B_u(0)$.
+		% This equation can be re-written as :
+		% \begin{equation}
+		% 	\label{full-DARE}
+		% 	\begin{cases}
+		% 		P=(\underbrace{A+BK}_{=:A_K})^TP(\underbrace{A+BK}_{=:A_K})+\underbrace{\tilde{Q}+K^T\tilde{R}K}_{=:\tilde{Q}_K}&\\
+		% 		K=-\inv{(\tilde{R}+B^TPB)}B^TPA&
+		% 	\end{cases}
+		% \end{equation}
+	\end{enumerate}	
+	then if we use the same notations for the optimal controls and states as in the previous lemma, the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$ for all initial state in a certain neighborhood of the origin.
+\end{theorem}
+
+\begin{remark}
+	The proof of the existence and unicity of such a matrix $P$ is based on results on the Continuous Algebraic Riccati equation and the proof can be found in the appendix.
+\end{remark}
+
+\begin{proof}~
+	Let's define the matrices $\hat{Q}=\nabla_{xx}^2\tilde{l}(0,0)=Q+\epsilon M_x,\hat{R}=\nabla_{uu}^2\tilde{l}(0,0)=R+\epsilon M_u$ and $\hat{l}(x,u)=x^T\hat{Q}x+u^T+\hat{R}u=\tilde{l}(x,u)+O(\|x\|^3+\|u\|^3)$\,.
+	By the second assumption, we have 
+	$$\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0,~\forall x\in\R^{n_x}$$
+	We can use the same reasoning as in the book to show that $\tilde{F}$ is a local Lyapunov funnction, i.e. there exists a neighborhood $V$ of the origin such that :
+	$$\tilde{F}(f(x,Kx))+\mu x^T Q_K x-\tilde{F}(x)=0,~\forall x\in V$$
+
+	Then if the initial state in problem \ref{RRLB-NMPC} is in $V$ \textbf{(and this set is forward invariant)}, every state $\tilde{x}_k(x)$ will be in $V$ too.
+	
+	Now using the optimal sequence of states and controls of the problem \ref{RRLB-NMPC} starting at $x$, we can construct a new feasible sequence for the problem starting at $\tilde{x}_1(x)$ as 
+	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,\mu(\tilde{x}_N)))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},\mu(\tilde{x}_N))$ \,.
+	Then we have :
+	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,\mu(\tilde{x}_N)))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,\mu(\tilde{x}_N)) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a nbh }W\subseteq V}\checkmark$$
+	
+	It is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is a Lyapunov function in $W$\,.~\checkmark
+
+\end{proof}
+
+\subsection{Constraints violation guarantees}
+
+\section{Numerical extensions}
+
+\subsection{Real Time Iteration methods}
+\subsubsection{Asymptotic stability of RTI scheme}
+\subsubsection{Numerical experiments}
+
+\subsection{Parallelization}
+\subsubsection{Numerical experiments}
+
+\section{Appendix}
+% \printbibliography
+\begin{proof}[Proof of lemma \ref{Lipchitzianity}]
+
+\end{proof}
+
+\begin{lemma}[Existence an Unicity of solution to the Lyapunov equation]
+	
+\end{lemma}
+
+\begin{proof}
+	
+\end{proof}
+
+\begin{lemma}[Coercive quadratic lower and upper bounds for objective value function]
+
+\end{lemma}
 
 \end{document}
