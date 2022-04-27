@@ -18,7 +18,7 @@ delta = 0.33  # relaxation parameter
 epsilon = 0.05  # barrier parameter
 x_S = casadi.DM([1.0, 1.0])
 u_S = casadi.DM(0.0)
-simulation_length = 25
+simulation_length = 30
 x_init = [1.2, 0.7]
 
 # %% Declare model
@@ -163,20 +163,23 @@ hess_at = casadi.Function("hess_at", [x_0, u], [casadi.hessian(objective, u)[0]]
 print(
     "hessian of the objective wrt controls at the origin is positive definite : ",
     not np.any(
-        np.linalg.eig(np.array(hess_at(casadi.DM.zeros(state_dim), casadi.DM.zeros(N*control_dim))))[0] <= 0
-    )
+        np.linalg.eig(
+            np.array(
+                hess_at(casadi.DM.zeros(state_dim), casadi.DM.zeros(N * control_dim))
+            )
+        )[0]
+        <= 0
+    ),
 )
-stab_eig_values = np.linalg.eig(A+B@K)
+stab_eig_values = np.linalg.eig(A + B @ K)
 for val in stab_eig_values:
-    if (np.linalg.norm(val) >= 1.0):
+    if np.linalg.norm(val) >= 1.0:
         print("A+BK is not stable : ", np.linalg.norm(val))
         # break
 
 print(
     "hessian of B_u wrt controls at the origin is positive definite : ",
-    not np.any(
-        np.linalg.eig(np.array(hess_B_u(casadi.DM.zeros(control_dim))))[0] <= 0
-    )
+    not np.any(np.linalg.eig(np.array(hess_B_u(casadi.DM.zeros(control_dim))))[0] <= 0),
 )
 # %% Create compute_control function
 def solve_rrlb_mpc(
@@ -323,6 +326,7 @@ def createPlot(
     controls,
     state_prediction,
     control_prediction,
+    simulation_length,
     final=False,
 ):
     """Creates a plot and adds the initial data provided by the arguments"""
@@ -414,6 +418,10 @@ def run_closed_loop_simulation(
     Returns the total cost of the run until convergence, the number of iterations taken to reach
     convergence, and if there was any constraint violation
     """
+    assert (
+        step_by_step and name == None
+    ) or (not step_by_step and name != None), "Name must be provided if and only if step_by_step is False (you want to save the final plot without printing them)"
+
     constraints_violated = False
     states = np.zeros((state_dim, max_simulation_length + 1))
     controls = np.zeros(max_simulation_length)
@@ -432,6 +440,7 @@ def run_closed_loop_simulation(
             controls,
             x_start,
             u_start,
+            simulation_length=max_simulation_length,
         )
 
     # transform the initial guess into a list of DMs for the solver
@@ -444,10 +453,13 @@ def run_closed_loop_simulation(
 
     i = 0
 
-    while (
-        np.sqrt(np.sum(np.square(states[:, i] - np.array(x_S).ravel()))) >= stop_tol
-        and i < max_simulation_length
-    ):
+    def converged(i: int) -> bool:
+        return (
+            np.sqrt(np.sum(np.square(states[:, i] - np.array(x_S).ravel())))
+            < stop_tol
+        )
+
+    while not converged(i) and i < max_simulation_length:
         # retrieve solution data
         start = time()
         sol = method(states[:, i], x_start=x_start, u_start=u_start)
@@ -459,7 +471,7 @@ def run_closed_loop_simulation(
 
         # update the states and controls
         controls[i] = u_pred[0]
-        states[:, i + 1] = [x_1_pred[1], x_2_pred[1]]
+        states[:, i + 1] = np.array([float(x_1_pred[1]), float(x_2_pred[1])])
         states_pred = casadi.horzcat(x_1_pred, x_2_pred).T
 
         # check if there was any constraint violation
@@ -473,6 +485,13 @@ def run_closed_loop_simulation(
         u_start[N - 1] = -K @ (x_start[N - 1] - x_S)
         x_start[N] = f_discrete(x_start[N - 1], u_start[N - 1])
 
+        # if the simulation will stop at next iteration (either because it has converged or because we
+        #  have reached the maximum number of iterations), we say what happened
+        if converged(i+1):
+            print("Converged at iteration {}".format(i))
+        elif i == max_simulation_length - 1:
+            sys.stderr.write("Not converged in {max_simulation_length} iterations")
+        
         # plot the simulation data if need be
         if step_by_step:
             updatePlots(
@@ -482,34 +501,26 @@ def run_closed_loop_simulation(
                 u_pred,
                 i,
             )
-            if i == max_simulation_length - 1:
-                print("Final state: ", states[:, i + 1])
-                print("Final control: ", controls[i])
-                # print("all controls: ", controls)
-                plt.show()
-            else:
-                plt.draw()
-        else:
-            if i == max_simulation_length - 1:
-                print("Final state: ", states[:, i + 1])
-                print("Final control: ", controls[i])
-                if name != None:
-                    createPlot(states, controls, states_pred, u_pred, final=True)
-                    plt.savefig(
-                        os.path.join(os.path.dirname(__file__), name + ".png"),
-                        dpi=300,
-                        format="png",
-                    )
-
+            plt.draw()
+                
         i += 1
 
-    if (
-        i == max_simulation_length
-        and np.sqrt(np.sum(np.square(states[:, i] - np.array(x_S).ravel()))) >= stop_tol
-    ):
-        sys.stderr.write("\tnot converged in {max_simulation_length} iterations for : ")
+    if step_by_step:
+        plt.show()
+    else:
+        createPlot(states, controls, states_pred, u_pred, simulation_length=i, final=True)
+        if not converged(i):
+            plt.title('NOT CONVERGED')
 
-    states = np.delete(states, list(range(i + 1, max_simulation_length+1)), axis=1)
+        plt.savefig(
+            os.path.join(os.path.dirname(__file__), name + ".png"),
+            dpi=300,
+            format="png",
+        )
+
+    print("Final state: ", states[:, i + 1])
+    print("Final control: ", controls[i])
+    states = np.delete(states, list(range(i + 1, max_simulation_length + 1)), axis=1)
     controls = np.delete(controls, list(range(i, max_simulation_length)), axis=0)
 
     # compute total sum of controls
@@ -526,11 +537,12 @@ if __name__ == "__main__":
     # pass
 
     # Run closed loop simulation of RRLB with live plot ==============================================
-    # run_closed_loop_simulation(
-    #     max_simulation_length=simulation_length,
-    #     method=solve_mpc,
-    #     step_by_step=True,
-    # )
+    total_cost, iterations, constraints_violated = run_closed_loop_simulation(
+        max_simulation_length=simulation_length,
+        method=solve_mpc,
+        step_by_step=True,
+    )
+    print(total_cost, iterations, constraints_violated)
 
     # run closed loop simulation of RRLB and regular NMPC to compare behaviors =======================
     # print("RRLB MPC : \n==========================")
@@ -549,33 +561,33 @@ if __name__ == "__main__":
     # )
 
     # Find region without constraint violation ========================================================
-    x_sample = np.linspace(0.7, 1.3, 10)
-    y_sample = np.linspace(0.7, 1.3, 10)
-    constraints_violated_table = np.zeros((10, 10), dtype=bool)
+    # x_sample = np.linspace(0.7, 1.3, 10)
+    # y_sample = np.linspace(0.7, 1.3, 10)
+    # constraints_violated_table = np.zeros((10, 10), dtype=bool)
 
-    for i in range(10):
-        for j in range(10):
-            start = time()
-            (
-                total_cost,
-                iterations,
-                constraints_violated_table[i, j],
-            ) = run_closed_loop_simulation(
-                custom_x_init=np.array([x_sample[i], y_sample[i]]),
-                stop_tol=1.0e-3,
-                max_simulation_length=1000,
-                method=solve_rrlb_mpc,
-                step_by_step=False,
-            )
-            stop = time()
-            print(
-                "for i={},j={} : total_cost = {}, iterations = {}, time = {} s".format(
-                    i, j, total_cost, iterations, stop - start
-                )
-            )
+    # for i in range(10):
+    #     for j in range(10):
+    #         start = time()
+    #         (
+    #             total_cost,
+    #             iterations,
+    #             constraints_violated_table[i, j],
+    #         ) = run_closed_loop_simulation(
+    #             custom_x_init=np.array([x_sample[i], y_sample[i]]),
+    #             stop_tol=1.0e-3,
+    #             max_simulation_length=1000,
+    #             method=solve_rrlb_mpc,
+    #             step_by_step=False,
+    #         )
+    #         stop = time()
+    #         print(
+    #             "for i={},j={} : total_cost = {}, iterations = {}, time = {} s".format(
+    #                 i, j, total_cost, iterations, stop - start
+    #             )
+    #         )
 
-    np.savetxt(
-        "constraints_violated_ppf.csv", constraints_violated_table, delimiter=","
-    )
+    # np.savetxt(
+    #     "constraints_violated_ppf.csv", constraints_violated_table, delimiter=","
+    # )
 
 # %%

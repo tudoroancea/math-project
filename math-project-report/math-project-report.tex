@@ -291,18 +291,24 @@ Now the main piece :
 \end{remark}
 
 \begin{proof}~
-	Let's define the matrices $\hat{Q}=\nabla_{xx}^2\tilde{l}(0,0)=Q+\epsilon M_x,\hat{R}=\nabla_{uu}^2\tilde{l}(0,0)=R+\epsilon M_u$ and $\hat{l}(x,u)=x^T\hat{Q}x+u^T+\hat{R}u=\tilde{l}(x,u)+O(\|x\|^3+\|u\|^3)$\,.
+	Let's define the matrices $\hat{Q}=\nabla_{xx}^2\tilde{l}(0,0)=Q+\epsilon M_x,\hat{R}=\nabla_{uu}^2\tilde{l}(0,0)=R+\epsilon M_u$ and $\hat{l}(x,u)=x^T\hat{Q}x+u^T\hat{R}u=\tilde{l}(x,u)+O(\|x\|^3+\|u\|^3)$\,.
+	With this definitions we have $\tilde{l}(x,Kx)=x^TQ_Kx+O(\|x\|^3)$\,.
+
 	By the second assumption, we have 
 	$$\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0,~\forall x\in\R^{n_x}$$
-	We can use the same reasoning as in the book to show that $\tilde{F}$ is a local Lyapunov funnction, i.e. there exists a neighborhood $V$ of the origin such that :
-	$$\tilde{F}(f(x,Kx))+\mu x^T Q_K x-\tilde{F}(x)=0,~\forall x\in V$$
+	We can use the same reasoning as in the book to show that $\tilde{F}$ is a local Lyapunov funnction, i.e. there exists a neighborhood $V$ of the origin such that $\forall x\in V$ :
+	\begin{align*}
+		\tilde{F}(f(x,Kx))+x^T Q_K x-\tilde{F}(x)&\leq 0\\
+		% \Longleftrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)&\leq O(\|x\|^3)&\\
+		\Longleftrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)&= O(\|x\|^3)
+	\end{align*}
 
 	Then if the initial state in problem \ref{RRLB-NMPC} is in $V$ \textbf{(and this set is forward invariant)}, every state $\tilde{x}_k(x)$ will be in $V$ too.
 	
 	Now using the optimal sequence of states and controls of the problem \ref{RRLB-NMPC} starting at $x$, we can construct a new feasible sequence for the problem starting at $\tilde{x}_1(x)$ as 
-	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,\mu(\tilde{x}_N)))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},\mu(\tilde{x}_N))$ \,.
+	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$ \,.
 	Then we have :
-	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,\mu(\tilde{x}_N)))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,\mu(\tilde{x}_N)) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a nbh }W\subseteq V}\checkmark$$
+	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a nbh }W\subseteq V}\checkmark$$
 	
 	It is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is a Lyapunov function in $W$\,.~\checkmark
 
