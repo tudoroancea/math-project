@@ -5,3 +5,5 @@ math-project-report/**
 cstr/CSTR_setting.m
 .gitignore
 cstr/ODE_CSTR.m
+
+*.pyc
