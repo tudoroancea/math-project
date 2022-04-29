@@ -7,6 +7,7 @@ from typing import Tuple
 import casadi
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.linalg as la
 from matplotlib.gridspec import GridSpec
 
 # general problem parameters
@@ -142,12 +143,20 @@ for i in range(1000):
         break
     P = new_P
 print("P = ", P)
+P = la.solve_discrete_are(A, B, Q+epsilon*M_x, R+epsilon*M_u)
+print("P = ", P)
 
 F = casadi.Function("F", [x], [casadi.bilin(P, (x - x_S), (x - x_S))])
-K = -casadi.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
+K = -la.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
 
 # %% Check the assumptions of the nominal stability theorem
 # stabilizability of (A,B)
+controllability_matrix = np.tile(B, (1, N))
+for i in range(1, N):
+    controllability_matrix[:, i * control_dim : (i + 1) * control_dim] = (
+        A @ controllability_matrix[:, (i - 1) * control_dim : i * control_dim]
+    )
+print("rank of controllability matrix = ", np.linalg.matrix_rank(controllability_matrix))
 
 # hessian of the objective is positive definite at the target (for Lipschitzianity)
 x_0 = casadi.MX.sym("x_0", state_dim)
@@ -435,7 +444,7 @@ def run_closed_loop_simulation(
     states[:, 0] = custom_x_init
 
     # Get a feasible trajectory as an initial guess (for the plot creation)
-    u_start = casadi.horzcat(*([u_S] * N))
+    u_start = casadi.vertcat(*([u_S] * N))
     x_start = casadi.DM.zeros(state_dim, N + 1)
     x_start[:, 0] = custom_x_init
     for k in range(N):
@@ -446,6 +455,7 @@ def run_closed_loop_simulation(
             states,
             controls,
             x_start,
+            # np.array(u_start).ravel(),
             u_start,
             simulation_length=max_simulation_length,
         )

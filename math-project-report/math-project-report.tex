@@ -268,20 +268,20 @@ Now the main piece :
 			P=A_K^TPA_K+\mu Q_K
 		\end{equation}
 		where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
-		% \item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following modified Discrete Alegbraic Riccati Equation (DARE) :
-		% \begin{equation}
-		% 	\label{DARE}
-		% 	P=A^TPA-A^TPB\inv{(\underbrace{R+\epsilon M_u}_{=:\tilde{R}}+B^TPB)}B^TPA+\underbrace{Q+\epsilon M_x}_{=:\tilde{Q}}
-		% \end{equation}
-		% where $M_x:=\nabla_{xx}^2B_x(0),M_u:=\nabla_{uu}^2B_u(0)$.
-		% This equation can be re-written as :
-		% \begin{equation}
-		% 	\label{full-DARE}
-		% 	\begin{cases}
-		% 		P=(\underbrace{A+BK}_{=:A_K})^TP(\underbrace{A+BK}_{=:A_K})+\underbrace{\tilde{Q}+K^T\tilde{R}K}_{=:\tilde{Q}_K}&\\
-		% 		K=-\inv{(\tilde{R}+B^TPB)}B^TPA&
-		% 	\end{cases}
-		% \end{equation}
+		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following modified Discrete Alegbraic Riccati Equation (DARE) :
+		\begin{equation}
+			\label{DARE}
+			P=A^TPA-A^TPB\inv{(\underbrace{R+\epsilon M_u}_{=:\tilde{R}}+B^TPB)}B^TPA+\underbrace{Q+\epsilon M_x}_{=:\tilde{Q}}
+		\end{equation}
+		where $M_x:=\nabla_{xx}^2B_x(0),M_u:=\nabla_{uu}^2B_u(0)$.
+		This equation can be re-written as :
+		\begin{equation}
+			\label{full-DARE}
+			\begin{cases}
+				P=(\underbrace{A+BK}_{=:A_K})^TP(\underbrace{A+BK}_{=:A_K})+\underbrace{\tilde{Q}+K^T\tilde{R}K}_{=:\tilde{Q}_K}&\\
+				K=-\inv{(\tilde{R}+B^TPB)}B^TPA&
+			\end{cases}
+		\end{equation}
 	\end{enumerate}	
 	then if we use the same notations for the optimal controls and states as in the previous lemma, the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$ for all initial state in a certain neighborhood of the origin.
 \end{theorem}

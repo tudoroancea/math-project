@@ -17,9 +17,10 @@ print(
         total_cost, iterations, constraints_violated
     )
 )
+
 # Run closed loop simulation of Regular MPC with live plot ==============================================
 # total_cost, iterations, constraints_violated = run_closed_loop_simulation(
-#     custom_x_init=[1.5, 0.7],
+#     # custom_x_init=[1.5, 0.7],
 #     max_simulation_length=100,
 #     method=solve_mpc,
 #     step_by_step=True,
