@@ -6,3 +6,6 @@ math-project-report/**
 CSTR_setting.m
 ODE_CSTR.m
 *.pyc
+
+.vscode
+.idea
