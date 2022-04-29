@@ -1,6 +1,7 @@
 from cstr import *
 
 # run closed loop simulation of RRLB and regular NMPC to compare behaviors =======================
+start = time()
 print("RRLB MPC : \n==========================")
 run_closed_loop_simulation(
     max_simulation_length=simulation_length,
@@ -25,3 +26,5 @@ run_closed_loop_simulation(
         "ipopt": {"sb": "yes", "print_level": 0, "max_cpu_time": 10.0},
     },
 )
+stop = time()
+print("\n\nTime taken: {} seconds".format(stop - start))
