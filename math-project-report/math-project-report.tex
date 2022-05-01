@@ -15,9 +15,9 @@
 \usepackage{hyperref} % for hyperlinks to refs or bibliography
 \usepackage{indentfirst} % for indenting the first line of a paragraph
 \usepackage{optidef}
-\usepackage{biblatex} % for bibliography
+\usepackage[backend=bibtex]{biblatex} % for bibliography
 \usepackage{bookmark}
-% \addbibresource{refs.bib}
+\addbibresource{refs.bib}
 
 % Margins, font size =====================================================================================================================
 %\oddsidemargin = 0.5cm \evensidemargin = 0.5cm \textwidth = 6.3in
@@ -241,10 +241,7 @@ The barrier parameter $\epsilon$ has in theory the following interpretation : wh
 \begin{lemma}
 	\label{Lipchitzianity}
 	Consider the problem \ref{RRLB-NMPC} and re-write it in a simpler way as 
-	\begin{align*}
-		\tilde{V}_N(x)=\underset{\mathbf{u}}{\min} &\quad J(x,\mathbf{u})\\
-		\text{s.t.}&
-	\end{align*}
+	$$\tilde{V}_N(x)=\underset{\mathbf{u}}{\min} \quad J(x,\mathbf{u})$$
 	where $J(x,\mathbf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
 	If for a certain value for the initial state $x$ we denote by $\tilde{\mathbf{u}}(x)=(\tilde{u}_0(x),\dots,\tilde{u}_{N-1}(x))$ the optimal sequence of controls and we suppose that $D_\mathbf{u}J(x,\tilde{\mathbf{u}})=0$ and $\nabla_{\mathbf{u}\mathbf{u}}^2J(x, \tilde{\mathbf{u}})\succ 0$ (the matrix is positive definite) then :
 	\begin{itemize}[label=\textbullet]
@@ -258,63 +255,81 @@ The barrier parameter $\epsilon$ has in theory the following interpretation : wh
 
 Now the main piece :
 
-\begin{theorem}
+\begin{theorem}\label{nominal-stability}
 	Let's consider the problem \ref{RRLB-NMPC} and assume the following :
 	\begin{enumerate}
+		\item the assumptions of previous lemma
 		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
 		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following Lyapunov equation :
-		\begin{equation}
+		\begin{equation*}
 			P=A_K^TPA_K+\mu Q_K
-		\end{equation}
+		\end{equation*}
 		where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
-		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following modified Discrete Alegbraic Riccati Equation (DARE) :
-		\begin{equation}
-			\label{DARE}
-			P=A^TPA-A^TPB\inv{(\underbrace{R+\epsilon M_u}_{=:\tilde{R}}+B^TPB)}B^TPA+\underbrace{Q+\epsilon M_x}_{=:\tilde{Q}}
-		\end{equation}
-		where $M_x:=\nabla_{xx}^2B_x(0),M_u:=\nabla_{uu}^2B_u(0)$.
-		This equation can be re-written as :
-		\begin{equation}
-			\label{full-DARE}
-			\begin{cases}
-				P=(\underbrace{A+BK}_{=:A_K})^TP(\underbrace{A+BK}_{=:A_K})+\underbrace{\tilde{Q}+K^T\tilde{R}K}_{=:\tilde{Q}_K}&\\
-				K=-\inv{(\tilde{R}+B^TPB)}B^TPA&
-			\end{cases}
-		\end{equation}
 	\end{enumerate}	
-	then if we use the same notations for the optimal controls and states as in the previous lemma, the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$ for all initial state in a certain neighborhood of the origin.
+	Then if we use the same notations for the optimal controls and states as in the previous lemma, the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$ for all initial state in a certain neighborhood of the origin.
 \end{theorem}
 
 \begin{remark}
-	The proof of the existence and unicity of such a matrix $P$ is based on results on the Continuous Algebraic Riccati equation and the proof can be found in the appendix.
+	\begin{enumerate}
+		\item The matrix $K$ can be constructed using the Discrete Algebraic Riccati Equation for the infinite horizon LQR problem :
+		\begin{align}
+			\begin{split}\label{inf-LQR}
+				\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^\infty x_k^T(Q+\epsilon M_x)x_k+u_k^T(R+\epsilon M_u)u_k\\
+				\text{s.t.} &\quad x_{k+1}=Ax_k+Bu_k,~k=0,\dots,N-1\\
+			\end{split}
+		\end{align}
+	\end{enumerate}
 \end{remark}
 
 \begin{proof}~
-	Let's define the matrices $\hat{Q}=\nabla_{xx}^2\tilde{l}(0,0)=Q+\epsilon M_x,\hat{R}=\nabla_{uu}^2\tilde{l}(0,0)=R+\epsilon M_u$ and $\hat{l}(x,u)=x^T\hat{Q}x+u^T\hat{R}u=\tilde{l}(x,u)+O(\|x\|^3+\|u\|^3)$\,.
-	With this definitions we have $\tilde{l}(x,Kx)=x^TQ_Kx+O(\|x\|^3)$\,.
-
-	By the second assumption, we have 
-	$$\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0,~\forall x\in\R^{n_x}$$
-	We can use the same reasoning as in the book to show that $\tilde{F}$ is a local Lyapunov funnction, i.e. there exists a neighborhood $V$ of the origin such that $\forall x\in V$ :
+	By writing the Taylor expansion of the stage costs $\tilde{l}$ we can see that
+	\begin{align*}
+		\tilde{l}(x,u)&=x^T[\nabla_{xx}^2\tilde{l}(0,0)] x+u^T[\nabla_{uu}^2\tilde{l}(0,0)]u+O(\|x\|^3+\|u\|^3)\\
+		&=x^T[Q+\epsilon M_x]x+u^T[R+\epsilon M_u]u+O(\|x\|^3+\|u\|^3)
+	\end{align*}
+	so $\tilde{l}(x,Kx)=x^TQ_Kx+O(\|x\|^3)$\,.
+	By the second assumption, we also have $\forall x\in\R^{n_x}$:
+	$$\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0$$
+	We can use the same reasoning as in the paragraph 2.5.5 of \cite[MPC Theory, Computation and Design]{MPC-book} to show that $\tilde{F}$ is a local Lyapunov funnction, i.e. there exists a neighborhood of the origin such that $\forall x$ in it :
 	\begin{align*}
 		\tilde{F}(f(x,Kx))+x^T Q_K x-\tilde{F}(x)&\leq 0\\
-		% \Longleftrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)&\leq O(\|x\|^3)&\\
 		\Longleftrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)&= O(\|x\|^3)
 	\end{align*}
 
-	Then if the initial state in problem \ref{RRLB-NMPC} is in $V$ \textbf{(and this set is forward invariant)}, every state $\tilde{x}_k(x)$ will be in $V$ too.
+	What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
 	
-	Now using the optimal sequence of states and controls of the problem \ref{RRLB-NMPC} starting at $x$, we can construct a new feasible sequence for the problem starting at $\tilde{x}_1(x)$ as 
+	Now using the optimal sequence of states and controls of the problem \ref{RRLB-NMPC} starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as 
 	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$ \,.
 	Then we have :
-	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a nbh }W\subseteq V}\checkmark$$
+	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}\checkmark$$
 	
-	It is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is a Lyapunov function in $W$\,.~\checkmark
-
+	It is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is a Lyapunov function in a small neighborhood around the origin.~\checkmark
 \end{proof}
 
 \subsection{Constraints violation guarantees}
+This section follows closely the section IV.D of \cite{RRLB-linear-MPC} but gives more loose results that cannot take us as far.
+In particular, will show that we can ensure the existence of a neighborhood around the origin such that if we start in it, the states and controls along the closed-loop simulation will never violate the constraints.
+However, this neighborhood cannot be easily computed because of the generality of the considered dynamics.
+
+% \begin{definition}
+% 	For our RRLB functions $B_x$ and $B_u$ we can define :
+% \end{definition}
+
+\begin{lemma}
+	Consider problem \ref{RRLB-NMPC} and an initial state $x$ in the neighborhood given by \ref{nominal-stability}.
+	Let's denote by $\left\{x(0)=x,x(1),\dots\right\}$ and $\left\{u(0), u(1),\dots\right\}$ the closed-loop state and control trajectories (given by $u(k)=\tilde{u}_0(x(k)),~x(k+1)=f(x(k),u(k))$).
+	Then $\forall k\geq 0$:
+	\begin{align*}
+		B_x(x(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x)-x^T\tilde{P}x-\sum_{k=0}^\infty\eta(x(k))\right)\\
+		B_u(u(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x)-x^T\tilde{P}x-\sum_{k=0}^\infty\eta(x(k))\right)
+	\end{align*}
+	where $\tilde{P}$ is the solution to the DARE associated \ref{inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
+\end{lemma}
+
+\begin{proof}
+	
+\end{proof}
 
 \section{Numerical extensions}
 
@@ -326,9 +341,9 @@ Now the main piece :
 \subsubsection{Numerical experiments}
 
 \section{Appendix}
-% \printbibliography
+\printbibliography
 \begin{proof}[Proof of lemma \ref{Lipchitzianity}]
-
+\cite{RRLB-linear-MPC}
 \end{proof}
 
 \begin{lemma}[Existence an Unicity of solution to the Lyapunov equation]
