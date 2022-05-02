@@ -24,11 +24,11 @@ else:
 # ====================================================================================================
 # Check controllability/stabilizability
 # ====================================================================================================
-def test_controllability(A_loc, B_loc):
-    controllability_matrix = np.tile(B_loc, (1, N))
+def test_controllability(my_A, my_B):
+    controllability_matrix = np.tile(my_B, (1, N))
     for i in range(1, N):
         controllability_matrix[:, i * control_dim : (i + 1) * control_dim] = (
-            A_loc @ controllability_matrix[:, (i - 1) * control_dim : i * control_dim]
+            my_A @ controllability_matrix[:, (i - 1) * control_dim : i * control_dim]
         )
     rank = np.linalg.matrix_rank(controllability_matrix)
     if rank == state_dim:
@@ -38,9 +38,8 @@ def test_controllability(A_loc, B_loc):
             "\tERROR : (A,B) is not controllable, rank = {}\n".format(rank)
         )
 
-
-def test_stabilizability(A_loc, B_loc, K_loc):
-    discrete_eig = np.linalg.eig(A_loc + B_loc @ K_loc)
+def test_stabilizability(my_A, my_B, my_K):
+    discrete_eig = np.linalg.eig(my_A + my_B @ my_K)[0]
     not_in_unit_disk = []
     for val in discrete_eig:
         if np.linalg.norm(val) >= 1.0:
@@ -92,9 +91,7 @@ for k in range(N):
 objective += F(x_k)
 u = ca.vertcat(*u)
 hess_at = ca.Function("hess_at", [x_0, u], [ca.hessian(objective, u)[0]])
-eigvalues = np.linalg.eig(
-    np.array(hess_at(ca.DM.zeros(state_dim), ca.DM.zeros(N * control_dim)))
-)[0]
+eigvalues = np.linalg.eig(np.array(hess_at(x_S, ca.vertcat(*([u_S] * N)))))[0]
 if np.any(eigvalues <= 0):
     sys.stderr.write(
         "ERROR : hessian of the objective wrt controls at the origin is not positive \

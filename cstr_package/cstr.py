@@ -180,12 +180,10 @@ l_tilde = ca.Function(
 Q = ca.diag(ca.DM([0.2, 1.0, 0.5, 0.2]))
 R = ca.diag(ca.DM([0.5, 5.0e-7]))
 
-# %% terminal cost (determine P)
-P = la.solve_discrete_are(A, B, Q + epsilon * M_x, R + epsilon * M_u)
-# print("P = ", P)
-
-F = ca.Function("F", [x], [ca.bilin(P, (x - x_S), (x - x_S))])
+# %% terminal cost
+P = np.array(la.solve_discrete_are(A, B, Q + epsilon * M_x, R + epsilon * M_u))
 K = -la.inv(R + epsilon * M_u + B.T @ P @ B) @ B.T @ P @ A
+F = ca.Function("F", [x], [ca.bilin(P, (x - x_S), (x - x_S))])
 
 
 # %% Create compute_control function
