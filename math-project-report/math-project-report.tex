@@ -317,18 +317,70 @@ However, this neighborhood cannot be easily computed because of the generality o
 % \end{definition}
 
 \begin{lemma}
-	Consider problem \ref{RRLB-NMPC} and an initial state $x$ in the neighborhood given by \ref{nominal-stability}.
-	Let's denote by $\left\{x(0)=x,x(1),\dots\right\}$ and $\left\{u(0), u(1),\dots\right\}$ the closed-loop state and control trajectories (given by $u(k)=\tilde{u}_0(x(k)),~x(k+1)=f(x(k),u(k))$).
+	\label{RRLB-bounds-guarantees}
+	Consider problem \ref{RRLB-NMPC} and an initial state $x(0)$ in the neighborhood given by \ref{nominal-stability}.
+	Let's denote by $\left\{x(0),x(1),\dots\right\}$ and $\left\{u(0), u(1),\dots\right\}$ the closed-loop state and control trajectories (given by $u(k)=\tilde{u}_0(x(k)),~x(k+1)=f(x(k),u(k))$).
 	Then $\forall k\geq 0$:
 	\begin{align*}
-		B_x(x(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x)-x^T\tilde{P}x-\sum_{k=0}^\infty\eta(x(k))\right)\\
-		B_u(u(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x)-x^T\tilde{P}x-\sum_{k=0}^\infty\eta(x(k))\right)
+		B_x(x(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\right)\\
+		B_u(u(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\right)
 	\end{align*}
-	where $\tilde{P}$ is the solution to the DARE associated \ref{inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
+	where $P_{LQR}$ is the solution to the DARE associated \ref{inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
 \end{lemma}
 
 \begin{proof}
-	
+	In the proof of theorem \ref{nominal-stability} we showed that $\forall k\geq 0$:
+	\begin{multline*}
+		\tilde{V}_N(x(k+1))-\tilde{V}_N(x(k))\leq-\tilde{l}(x(k),u(k))+\tilde{l}(\tilde{x}_N(x(k)), K\tilde{x}_N(x(k)))\\
+		-\tilde{F}(\tilde{x}_N(x(k)))+\tilde{F}(f(\tilde{x}_N(x(k)),\tilde{x}_N(x(k))))
+	\end{multline*}
+	so by summing everything we get a telescopic sum that we can compute using the fact that the system is asymptotically stable so $\lim_{k\to\infty}\tilde{V}_N(x(k))=0$, we get :
+	\begin{align*}
+		\tilde{V}_N(x(0))&\geq\sum_{k=0}^\infty\tilde{l}(x(k),u(k))-\underbrace{\tilde{l}(\tilde{x}_N(x(k)), K\tilde{x}_N(x(k)))+\tilde{F}(\tilde{x}_N(x(k)))-\tilde{F}(f(\tilde{x}_N(x(k)),\tilde{x}_N(x(k))))}_{\eta(x(k))=O(\|x(0)\|^3)}\\
+		&=\sum_{k=0}^\infty l(x(k), u(k))+\epsilon B_x(x(k))+\epsilon B_u(u(k))+\eta(x(k))\\
+		&\geq x(0)^TP_{LQR}x(0)+\sum_{k=0}^\infty\eta(x(k))+\epsilon\sum_{k=0}^\infty B_x(x(k))+\epsilon\sum_{k=0}^\infty B_u(u(k))\\
+	\end{align*}
+	Note that even if we don't know a closed form for $\eta(x(k))$, we know that $\sum_{k=0}^\infty\eta(x(k))$ must be finite because it is bounded by $\tilde{V}_N(x(0))$\,.
+	Now since the RRLB functions are all positive definite, we can easily conclude.
+\end{proof}
+
+We define for ease of notation the following quantities
+\begin{align}
+	\begin{split}\label{bruh}
+		\alpha(x(0))=\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))
+	\end{split}\\
+	\begin{split}\label{bruh2}
+		\beta_x=\underset{i,x}{\min}\{B_x(x)~|~\mathrm{row}_i(C_x)x=d_{x,i}\}
+	\end{split}\\
+	\begin{split}\label{bruh3}
+		\beta_u=\underset{i,u}{\min}\{B_u(u)~|~\mathrm{row}_i(C_u)u=d_{u,i}\}
+	\end{split}
+\end{align}
+
+Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delta$\,.
+
+\begin{lemma}
+	\label{constraint-set-def-with-RRLB}
+	For all relaxation parameter $\delta$:
+	\begin{align*}
+		\left\{x\in\R^{n_x}~|~B_x(x)\leq\beta_x\right\}\subseteq\cal{X}
+		\left\{u\in\R^{n_u}~|~B_u(u)\leq\beta_u\right\}\subseteq\cal{U}
+	\end{align*}
+\end{lemma}
+
+\begin{proof}
+	See Lemma 1 in \cite{RRLB-linear-MPC}.
+\end{proof}
+
+\begin{theorem}
+	In the same setting as lemma \ref{RRLB-bounds-guarantees}, for any initial state $x(0)$ in the set
+	$$\cal{X}_N(\delta):=\left\{x\in\R^{n_x}~|~\alpha(x(0))\leq\epsilon\min\left\{\beta_x,\beta_u\right\}\right\}$$
+	there is no state or control constraint violation along the closed loop trajectories.
+\end{theorem}
+
+\begin{proof}
+	For any $x(0)\in\cal{X}_N(\delta)$ it holds due to \ref{RRLB-bounds-guarantees} that for all $k\geq 0,~\epsilon B_x(x(k))\leq\alpha(x(0))\leq\epsilon\beta_x$ so $B_x(x(k))\leq \beta_x$ and $x(k)\in\cal{X}$.
+	The same reasoning applies on the controls.
 \end{proof}
 
 \section{Numerical extensions}
