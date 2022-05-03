@@ -346,8 +346,8 @@ def createPlot(
     plt.ylim([0.0, 4.0])
     ax_concentration.set_xlabel("time [h]")
     ax_concentration.set_ylabel("concentration [mol/L]")
-    ax_concentration.plot([0, simulation_length], [float(x_S[0]), float(x_S[0])], "b-.")
-    ax_concentration.plot([0, simulation_length], [float(x_S[1]), float(x_S[1])], "m-.")
+    ax_concentration.plot([0, simulation_length], [float(x_S[0]), float(x_S[0])], "r")
+    ax_concentration.plot([0, simulation_length], [float(x_S[1]), float(x_S[1])], "r")
     if not final:
         (c_A,) = ax_concentration.plot(states[0, 0], "b-")
         (c_B,) = ax_concentration.plot(states[1, 0], "m-")
@@ -380,10 +380,10 @@ def createPlot(
     ax_temperatures.set_ylabel("temperature [°C]")
     plt.ylim([95.0, 120.0])
     ax_temperatures.plot(
-        [0, simulation_length - 1], [float(x_S[2]), float(x_S[2])], "b-."
+        [0, simulation_length - 1], [float(x_S[2]), float(x_S[2])], "r"
     )
     ax_temperatures.plot(
-        [0, simulation_length - 1], [float(x_S[3]), float(x_S[3])], "m-."
+        [0, simulation_length - 1], [float(x_S[3]), float(x_S[3])], "r"
     )
     if not final:
         (theta,) = ax_temperatures.plot(states[2, 0], "b-")
@@ -411,38 +411,38 @@ def createPlot(
 
     # Plot feed inflow
     ax_feed_inflow = fig.add_subplot(gs[2, 0])
+    plt.ylim([0.0, 39.0])
     ax_feed_inflow.grid("both")
     ax_feed_inflow.set_title("evolution of feed inflow rate")
     ax_feed_inflow.set_xlabel("time [h]")
     ax_feed_inflow.set_ylabel("feed inflow rate [h^-1]")
-    ax_feed_inflow.plot(
-        [0, simulation_length - 1], [float(u_S[0]), float(u_S[0])], "g-."
-    )
+    ax_feed_inflow.plot([0, simulation_length - 1], [float(u_S[0]), float(u_S[0])], "r")
     ax_feed_inflow.plot([0, simulation_length - 1], [3.0, 3.0], "r:")
     ax_feed_inflow.plot([0, simulation_length - 1], [35.0, 35.0], "r:")
     if not final:
         ax_feed_inflow.step(controls[0, 0], "g-")
         ax_feed_inflow.step(
             range(controls.shape[1] - 1, controls.shape[1] - 1 + N),
-            control_prediction[0, :],
+            control_prediction[0, :].T,
             "g--",
         )
     else:
         ax_feed_inflow.step(controls[0, :], "g-")
         ax_feed_inflow.step(
             range(controls.shape[1] - 1, controls.shape[1] - 1 + N),
-            control_prediction[0, :],
+            control_prediction[0, :].T,
             "g--",
         )
 
     # Plot heat removal
     ax_heat_removal = fig.add_subplot(gs[3, 0])
     ax_heat_removal.grid("both")
+    plt.ylim([-9900.0, 900.0])
     ax_heat_removal.set_title("evolution of heat removal rate")
     ax_heat_removal.set_xlabel("time [h]")
     ax_heat_removal.set_ylabel("heat removal rate [kJ/h]")
     ax_heat_removal.plot(
-        [0, simulation_length - 1], [float(u_S[1]), float(u_S[1])], "g-."
+        [0, simulation_length - 1], [float(u_S[1]), float(u_S[1])], "r"
     )
     ax_heat_removal.plot([0, simulation_length - 1], [-9000.0, -9000.0], "r:")
     ax_heat_removal.plot([0, simulation_length - 1], [0.0, 0.0], "r:")
@@ -545,11 +545,13 @@ def run_closed_loop_simulation(
     states[:, 0] = custom_x_init
 
     # Get a feasible trajectory as an initial guess (for the plot creation)
-    u_start = ca.vertcat(*([u_S] * N))
+    u_start = ca.horzcat(*([u_S] * N))
     x_start = ca.DM.zeros(state_dim, N + 1)
     x_start[:, 0] = custom_x_init
     for k in range(N):
         x_start[:, k + 1] = f_discrete(x_start[:, k], u_start[k])
+    u_start = np.array(u_start)
+    x_start = np.array(x_start)
 
     if step_by_step:
         createPlot(
@@ -656,6 +658,17 @@ def run_closed_loop_simulation(
     np.sum(np.sqrt(np.sum((np.square(states - np.array(x_S))), axis=0)))
     for k in range(i):
         total_cost += l(states[:, k], controls[:, k])
+        if not constraints_violated:
+            for j in range(N):
+                if not (
+                    3.0 <= controls[0, k] <= 35.0
+                    and -9000.0 <= controls[1, k] <= 0.0
+                    and 98.0 <= states[2, k]
+                    and 92.0 <= states[3, k]
+                ):
+                    constraints_violated = True
     total_cost += F(states[:, i])
+    if not (98.0 <= states[2, i] and 92.0 <= states[3, i]):
+        constraints_violated = True
 
     return float(total_cost), i, constraints_violated
