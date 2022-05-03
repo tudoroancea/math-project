@@ -19,143 +19,69 @@
 \usepackage{bookmark}
 \addbibresource{refs.bib}
 
-% Margins, font size =====================================================================================================================
-%\oddsidemargin = 0.5cm \evensidemargin = 0.5cm \textwidth = 6.3in
-%\oddsidemargin = 1.2cm \evensidemargin = 1.2cm \textwidth = 6.3in
-%\textheight =8.6in
-\geometry{
-	a4paper,
-	total={170mm,257mm},
-	left=20mm,
-	top=20mm,
-}
+\include{predefs}
 
-% Sections (theorems, propositions, lemmas…) =====================================================================================================================
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem*{conjecture}{\bf Conjecture}
-\newtheorem{proposition}[theorem]{Proposition}
-% \numberwithin{theorem}{section} % To display the section number in the theorem
-
-\theoremstyle{definition}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{assumption}[theorem]{Assumption}
-\newtheorem{exercise}{Exercise}
-\newtheorem*{solution}{Solution}
-\newtheorem*{answer}{Answer}
-\newtheorem*{claim}{Claim}
-
-\theoremstyle{remark}
-\newtheorem*{theoremno}{{\bf Theorem}}
-\newtheorem*{remark}{Remark}
-\newtheorem*{example}{Example}
-\newtheorem*{hint}{Hint}
-
-
-
-% Commands =====================================================================================================================
-\def\bb#1{\mathbb{#1}}
-\def\cal#1{\mathcal{#1}}
-\def\frak#1{\mathfrak{#1}}
-\def\rm#1{\mathrm{#1}}
-\def\bf#1{\mathbf{#1}}
-\newcommand{\C}{\mathbb{C}}
-\newcommand{\R}{\mathbb{R}}
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\Z}{\mathbb{Z}}
-\newcommand{\Q}{\mathbb{Q}}
-\newcommand{\K}{\mathbb{K}}
-\newcommand{\bbP}{\mathbb{P}}
-\newcommand{\F}{\mathcal{F}}
-\newcommand{\calP}{\mathcal{P}}
-\newcommand{\G}{\mathcal{G}}
-\newcommand{\calL}{\mathcal{L}}
-\newcommand{\calC}{\mathcal{C}}
-\newcommand{\calN}{\mathcal{N}}
-\newcommand{\calF}{\mathcal{F}}
-\newcommand{\calE}{\mathcal{E}}
-\newcommand{\frakA}{\mathfrak{A}}
-\newcommand{\frakS}{\mathfrak{S}}
-\newcommand{\esp}{\mathbb{E}}
-% \P = caracs spéciaux,\S = paragraphe, \L = L barre
-
-% Existe déjà : ker, partie Im, Re, min, max, inf, sup, log, exp, sin, sinh, cos, cosh,, tan lim, liminf, limsup
-\DeclareMathOperator{\Id}{Id}
-\DeclareMathOperator{\Hom}{Hom}
-\DeclareMathOperator{\Ima}{Im}
-\DeclareMathOperator{\Homeo}{Homeo}
-\DeclareMathOperator{\Aut}{Aut}
-\DeclareMathOperator{\Bij}{Bij}
-\DeclareMathOperator{\Isom}{Isom}
-\DeclareMathOperator{\GL}{GL}
-\DeclareMathOperator{\End}{End}
-\DeclareMathOperator{\rang}{rang}
-\DeclareMathOperator{\rank}{rank}
-\DeclareMathOperator{\vol}{vol}
-\DeclareMathOperator{\sgn}{sgn}
-\DeclareMathOperator{\var}{Var}
-\DeclareMathOperator{\erf}{erf}
-\DeclareMathOperator{\spec}{spec}
-\DeclareMathOperator{\diag}{diag}
-\DeclareMathOperator{\pgcd}{pgcd}
-\DeclareMathOperator{\pgdc}{pgdc}
-
-% Lois de probabilités
-\DeclareMathOperator{\Geom}{Geom}
-\DeclareMathOperator{\Bin}{Bin}
-\DeclareMathOperator{\Exp}{Exp}
-\DeclareMathOperator{\Ber}{Ber}
-\DeclareMathOperator{\Student}{Student}
-\DeclareMathOperator{\Poi}{Poi}
-\newcommand{\czero}{\calC^0}
-\newcommand{\cone}{\calC^1}
-\newcommand{\ctwo}{\calC^2}
-\newcommand{\cinf}{\calC^{\infty}}
-\newcommand{\bigpeter}[1]{\Big\langle#1\Big\rangle}
-\newcommand{\peter}[1]{\langle#1\rangle}
-\newcommand{\transp}[1]{#1^t}
-\newcommand{\series}[2]{\sum_{#1}^{\infty}#2}
-\newcommand{\intt}[4]{\int_{#1}^{#2}#3\mathrm{d}#4}
-\newcommand{\ddt}[1]{\frac{\mathrm{d}#1}{\mathrm{dt}}}
-\newcommand{\deldt}[1]{\frac{\partial#1}{\partial\mathrm{t}}}
-\newcommand{\rmd}[1]{\mathrm{d}#1}
-\newcommand{\inv}[1]{#1^{-1}}
-\newcommand{\dx}{\rmd x}
-\newcommand{\dy}{\rmd y}
-\newcommand{\dz}{\rmd z}
-\newcommand{\dt}{\rmd t}
-\newcommand{\du}{\rmd u}
-\newcommand{\dv}{\rmd v}
-\newcommand{\ds}{\rmd s}
-\newcommand{\dxy}{\rmd xy}
-\newcommand{\dyz}{\rmd yz}
-\newcommand{\dyx}{\rmd yx}
-\newcommand{\dzy}{\rmd zy}
-\newcommand{\dzx}{\rmd zx}
-\newcommand{\dxz}{\rmd xz}
-\newcommand{\gtinf}[1]{\underset{#1\to\infty}{\longrightarrow}}
-\newcommand{\sm}[4]{\begin{psmallmatrix}#1&#2\\#3&#4\end{psmallmatrix}}
-\newcommand{\map}[4]{
-	\begin{matrix}
-		#1&\to&#2\\#3&\mapsto&#4
-	\end{matrix}
-}
-
-
-\title{Stability properties of Relaxed Recentered Log-Barrier function based Nonlinear MPC}
+\title{Study of Relaxed Recentered Log-Barrier function based Nonlinear Model Predictive Control}
 \author{Tudor Oancea}
 \date{March 2022}
 
 \begin{document}
 \maketitle
 
+\begin{abstract}
+	In this project, we investigate the use of relaxed logarithmic barrier functions in the context of nonlinear model predictive control.
+	We base our work on the one of C. Feller and C. Ebenbauer in \cite{RRLB-linear-MPC} and use one of their globally stabilizing schemes with terminal costs and without terminal sets.
+	We partially extend the results on the nominal asymptotic stability of the corresponding closed-loop system and the constraint satisfaction guarantees to the case of nonlinear dynamics and show that they are satisfied only in a neighborhood of the target state.
+	The theoretical results are complemented by numerical illustrations based on RTI and SQP algorithms.
+\end{abstract}
+
 \section{Introduction}
-Given a controlled nonlinear dynamical system of the form $x^+=f(x,u)$ with state and control constraints $x\in\cal{X}\subseteq\R^{n_x},~u\in\cal{U}\subseteq\R^{n_u}$ and a fixed point $x^*$ for these dynamics, i.e. a point such that $f(x^*,0)=x^*$, the problem of \textit{stabilization} is to find a a feedback control law $\mu:\cal{X}\to\cal{U}$ such that $x^*$ is asymptoticall stable for the dynamical system $x^+=f(x,\mu(x))$.
+\textit{Control theory} can simply be defined as the study of a generally dynamical system whose state evolution that we can influence by the means of external parameters called \textit{controls}, or \textit{inputs}.
+This theory is a very important one in numerous fields of engineering such as robotics, mechanical or chemical engineering where problems such as stabilizing a chemical reaction at a certain temperature or making an autonomous car follow the road are common.
+
+An important subfield of control theory is \textit{optimal control} (OC), which aims at finding a \textit{control law}, i.e. a way to control a system in order to attain a certain goal, by formulating and solving an optimization problem.
+For example, if one wants to stabilize the state around a certain target, or reference point that is constant in time, one will want to choose a control law that will minimize the distance between the future state (that depends on the current state and the chosen control) and the target state.
+This problem of \textit{stabilization} will be the one we will consider in this paper, but it is interesting to know there are other problems for which OC is applicable, such as path tracking or optimal trajectory generation. 
+
+One of the most important (family of) algorithm(s) of OC is \textit{Model Predictive Control}, or MPC. 
+This procedure uses the knowledge of the system \textit{dynamic model} (the equation governing its evolution) to compute an control law that also takes the future into account.
+More precisely, the control law is computed for a certain interval in time called the \textit{horizon}, and the cost along this whole horizon is minized.
+In some sense, the controller won't take decisions it will regret afterwards.
+MPC has many advantages over other classical control strategies, such as the ability to handle several control parameters and to take into consideration constraints on the states and the controls (by solving a \textit{constrained} optimization problem). These are very important in practice because any real-life system has physical limitations (e.g. the maximum speed of a car, the maximum torque of a motor, etc.).
+We will properly introduce the mathematical formulation of MPC and the theoretical tools used to study it in section \ref{sec:background-material}.
+
+In section \ref{sec:RRLB-MPC} we will introduce a different formulation in which (most of) the state and control constraints are replaced with a penalty added to the cost function.
+Such penalties are common in Interior Point methods and are usually log-barrier functions.
+These functions have several drawbacks, such as the fact that they are only defined in the interior of the feasible set.
+In this paper we will introduce a relaxed version of these functions called \textit{Relaxed Recentered Log-Barrier functions}, or \textit{RRLB functions}. 
+They extend regular log-barrier functions to the whole space and yield a convex optimization problem that is in general much easier to solve than the original one.
+More details on the upsides of RRLB functions can be found in the Introduction of \cite{RRLB-linear-MPC}.
+
+In the theoretical study of this new formulation that we will call \textit{RRLB MPC}, we will prove two major results : 
+\begin{enumerate}
+	\item When using the control law computed by the RRLB MPC, the corresponding closed-loop system asymptotically stabilizes at the target state. (see subsection \ref{sec:RRLB-nominal-stability})
+	\item In this formulation, the optimal solution of the optimization problem might yield states or controls that are not feasible in the original problem. However, if we start sufficiently close to the target state, this will never happen. (see subsection \ref{sec:constraints-satisfaction-guarantees})
+\end{enumerate}
+
+Finally, in section \ref{sec:numerical-extensions} we examine numercial aspects of the RRLB MPC.
+In practice, the optimization problem is not solved exactly, and we can't necessarily guarantee the satisfaction of the previous results in practice. 
+However, we will show that we can when using \textit{Real Time Iteration} methods (RTI, that correspond to using Sequential Quadratic Programming with only one iteration), which is quite common in practical implementations when the problem has to be solved online and with limited computation power.
+All our results will in the end be illustrated with a classical benchmark problem for MPC schemes : the Continuously Stirred Tank Reactor (CSTR) system.
+
+\section{Background material}\label{sec:background-material}
+
+\subsection{What is MPC ?}\label{sec:what-is-MPC}
+
+We are given a discrete-time controlled nonlinear dynamical system of the form $x(k+1)=f(x(k), u(k))$ (which we will usually denote $x^+=f(x,u)$) with state and control constraints $x(k)\in\cal{X}\subseteq\R^{n_x},~u(k)\in\cal{U}\subseteq\R^{n_u}$.
+Our goal is to stabilize the system around a target state $x^*$ and a target control $u^*$, which have to be a fixed point of the system : $x^*=f(x^*, u^*)$\,.
+To do that we will try to construct a \textit{state-feedback control law}, i.e. a function $\mu:\cal{X}\to\cal{U}$ such that $x^*$ is \textit{asymptotically stable} for the dynamical system $x^+=f(x,\mu(x))$ (which only depends on the state).
+The exact definition of asymptotica stability and how to prove it is discussed in subsection \ref{sec:Lyapunov-stability-theory}.
+
+
 Such a problem is usually tackled using \textit{optimal control}, and precisely \textit{model predictive control} (MPC), an algorithm that defines this feedback control as the solution to an optimization problem of the following form :
 \begin{align}
 	\begin{split}
-		\label{NMPC}
+		\label{eq:NMPC}
 		V_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad J_N(\mathbf{x},\mathbf{u})\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 		&\quad x_k\in\cal{X},~k=0,\dots,N\\
@@ -187,7 +113,9 @@ In some cases the authors also include \textit{terminal constraints} on the last
 Our work presents a new formulation that is based on this classical MPC framework and replaces the inequality constraints in the optimization problem (given by the state and control constraints) by some modified log-barrier functions added to the objective function.
 To properly introduce this new formulation let's introduce the central notion of \textit{relaxed recentered log-barrier function}.
 
-\section{Statement of the new formulation}
+\subsection{Lyapunov stability theory}\label{sec:Lyapunov-stability-theory}
+
+\section{The RRLB MPC}\label{sec:RRLB-MPC}
 \begin{definition}
 	Given a constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
 	Such a function is defined on the interior of feasible set of the constraint and becomes infinity near its boundary.
@@ -215,7 +143,7 @@ To properly introduce this new formulation let's introduce the central notion of
 \end{definition}
 
 \begin{lemma}
-	\label{RRLB-quadratic-bound}
+	\label{thm:RRLB-quadratic-bound}
 	The RRLB functions are upper bounded by quadratic functions.
 \end{lemma}
 \begin{proof}
@@ -225,22 +153,22 @@ To properly introduce this new formulation let's introduce the central notion of
 \newpage
 Now we can finally define our new MPC formulation as follows :
 \begin{align}
-	\begin{split}\label{RRLB-NMPC}
+	\begin{split}\label{eq:RRLB-NMPC}
 		\tilde{V}_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \tilde{J}_N(\mathbf{x},\mathbf{u})\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 	\end{split}
 \end{align}
 where the new objective function $\tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$ for a certain matrix $P$ that will be determined later.
-The barrier parameter $\epsilon$ has in theory the following interpretation : when it goes to zero, the solution of problem \ref{RRLB-NMPC} converges to the one of \ref{NMPC}.
+The barrier parameter $\epsilon$ has in theory the following interpretation : when it goes to zero, the solution of problem \ref{eq:RRLB-NMPC} converges to the one of \ref{eq:NMPC}.
 
 
-\section{Theoretical properties of RRLB Nonlinear MPC}
+\section{Theoretical properties of RRLB Nonlinear MPC}\label{sec:RRLB-theoretical-properties}
 
-\subsection{Nominal asymptotic stability}
+\subsection{Nominal asymptotic stability}\label{sec:RRLB-nominal-stability}
 
 \begin{lemma}
-	\label{Lipchitzianity}
-	Consider the problem \ref{RRLB-NMPC} and re-write it in a simpler way as 
+	\label{thm:Lipchitzianity}
+	Consider the problem \ref{eq:RRLB-NMPC} and re-write it in a simpler way as 
 	$$\tilde{V}_N(x)=\underset{\mathbf{u}}{\min} \quad J(x,\mathbf{u})$$
 	where $J(x,\mathbf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
 	If for a certain value for the initial state $x$ we denote by $\tilde{\mathbf{u}}(x)=(\tilde{u}_0(x),\dots,\tilde{u}_{N-1}(x))$ the optimal sequence of controls and we suppose that $D_\mathbf{u}J(x,\tilde{\mathbf{u}})=0$ and $\nabla_{\mathbf{u}\mathbf{u}}^2J(x, \tilde{\mathbf{u}})\succ 0$ (the matrix is positive definite) then :
@@ -255,8 +183,8 @@ The barrier parameter $\epsilon$ has in theory the following interpretation : wh
 
 Now the main piece :
 
-\begin{theorem}\label{nominal-stability}
-	Let's consider the problem \ref{RRLB-NMPC} and assume the following :
+\begin{theorem}\label{thm:nominal-stability}
+	Let's consider the problem \ref{eq:RRLB-NMPC} and assume the following :
 	\begin{enumerate}
 		\item the assumptions of previous lemma
 		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
@@ -274,7 +202,7 @@ Now the main piece :
 	\begin{enumerate}
 		\item The matrix $K$ can be constructed using the Discrete Algebraic Riccati Equation for the infinite horizon LQR problem :
 		\begin{align}
-			\begin{split}\label{inf-LQR}
+			\begin{split}\label{eq:inf-LQR}
 				\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^\infty x_k^T(Q+\epsilon M_x)x_k+u_k^T(R+\epsilon M_u)u_k\\
 				\text{s.t.} &\quad x_{k+1}=Ax_k+Bu_k,~k=0,\dots,N-1\\
 			\end{split}
@@ -299,7 +227,7 @@ Now the main piece :
 
 	What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
 	
-	Now using the optimal sequence of states and controls of the problem \ref{RRLB-NMPC} starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as 
+	Now using the optimal sequence of states and controls of the problem \ref{eq:RRLB-NMPC} starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as 
 	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$ \,.
 	Then we have :
 	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}\checkmark$$
@@ -307,7 +235,7 @@ Now the main piece :
 	It is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is a Lyapunov function in a small neighborhood around the origin.~\checkmark
 \end{proof}
 
-\subsection{Constraints violation guarantees}
+\subsection{Constraints satisfaction guarantees}\label{sec:constraints-satisfaction-guarantees}
 This section follows closely the section IV.D of \cite{RRLB-linear-MPC} but gives more loose results that cannot take us as far.
 In particular, will show that we can ensure the existence of a neighborhood around the origin such that if we start in it, the states and controls along the closed-loop simulation will never violate the constraints.
 However, this neighborhood cannot be easily computed because of the generality of the considered dynamics.
@@ -317,19 +245,19 @@ However, this neighborhood cannot be easily computed because of the generality o
 % \end{definition}
 
 \begin{lemma}
-	\label{RRLB-bounds-guarantees}
-	Consider problem \ref{RRLB-NMPC} and an initial state $x(0)$ in the neighborhood given by \ref{nominal-stability}.
+	\label{thm:RRLB-bounds-guarantees}
+	Consider problem \ref{eq:RRLB-NMPC} and an initial state $x(0)$ in the neighborhood given by \ref{thm:nominal-stability}.
 	Let's denote by $\left\{x(0),x(1),\dots\right\}$ and $\left\{u(0), u(1),\dots\right\}$ the closed-loop state and control trajectories (given by $u(k)=\tilde{u}_0(x(k)),~x(k+1)=f(x(k),u(k))$).
 	Then $\forall k\geq 0$:
 	\begin{align*}
 		B_x(x(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\right)\\
 		B_u(u(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\right)
 	\end{align*}
-	where $P_{LQR}$ is the solution to the DARE associated \ref{inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
+	where $P_{LQR}$ is the solution to the DARE associated \ref{eq:inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
 \end{lemma}
 
 \begin{proof}
-	In the proof of theorem \ref{nominal-stability} we showed that $\forall k\geq 0$:
+	In the proof of theorem \ref{thm:nominal-stability} we showed that $\forall k\geq 0$:
 	\begin{multline*}
 		\tilde{V}_N(x(k+1))-\tilde{V}_N(x(k))\leq-\tilde{l}(x(k),u(k))+\tilde{l}(\tilde{x}_N(x(k)), K\tilde{x}_N(x(k)))\\
 		-\tilde{F}(\tilde{x}_N(x(k)))+\tilde{F}(f(\tilde{x}_N(x(k)),\tilde{x}_N(x(k))))
@@ -346,13 +274,13 @@ However, this neighborhood cannot be easily computed because of the generality o
 
 We define for ease of notation the following quantities
 \begin{align}
-	\begin{split}\label{bruh}
+	\begin{split}
 		\alpha(x(0))=\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))
 	\end{split}\\
-	\begin{split}\label{bruh2}
+	\begin{split}
 		\beta_x=\underset{i,x}{\min}\{B_x(x)~|~\mathrm{row}_i(C_x)x=d_{x,i}\}
 	\end{split}\\
-	\begin{split}\label{bruh3}
+	\begin{split}
 		\beta_u=\underset{i,u}{\min}\{B_u(u)~|~\mathrm{row}_i(C_u)u=d_{u,i}\}
 	\end{split}
 \end{align}
@@ -360,7 +288,7 @@ We define for ease of notation the following quantities
 Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delta$\,.
 
 \begin{lemma}
-	\label{constraint-set-def-with-RRLB}
+	\label{thm:constraint-set-def-with-RRLB}
 	For all relaxation parameter $\delta$:
 	\begin{align*}
 		\left\{x\in\R^{n_x}~|~B_x(x)\leq\beta_x\right\}\subseteq\cal{X}
@@ -373,17 +301,17 @@ Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delt
 \end{proof}
 
 \begin{theorem}
-	In the same setting as lemma \ref{RRLB-bounds-guarantees}, for any initial state $x(0)$ in the set
+	In the same setting as lemma \ref{thm:RRLB-bounds-guarantees}, for any initial state $x(0)$ in the set
 	$$\cal{X}_N(\delta):=\left\{x\in\R^{n_x}~|~\alpha(x(0))\leq\epsilon\min\left\{\beta_x,\beta_u\right\}\right\}$$
 	there is no state or control constraint violation along the closed loop trajectories.
 \end{theorem}
 
 \begin{proof}
-	For any $x(0)\in\cal{X}_N(\delta)$ it holds due to \ref{RRLB-bounds-guarantees} that for all $k\geq 0,~\epsilon B_x(x(k))\leq\alpha(x(0))\leq\epsilon\beta_x$ so $B_x(x(k))\leq \beta_x$ and $x(k)\in\cal{X}$.
+	For any $x(0)\in\cal{X}_N(\delta)$ it holds due to \ref{thm:RRLB-bounds-guarantees} that for all $k\geq 0,~\epsilon B_x(x(k))\leq\alpha(x(0))\leq\epsilon\beta_x$ so $B_x(x(k))\leq \beta_x$ and $x(k)\in\cal{X}$.
 	The same reasoning applies on the controls.
 \end{proof}
 
-\section{Numerical extensions}
+\section{Numerical extensions}\label{sec:numerical-extensions}
 
 \subsection{Real Time Iteration methods}
 \subsubsection{Asymptotic stability of RTI scheme}
@@ -394,7 +322,7 @@ Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delt
 
 \section{Appendix}
 \printbibliography
-\begin{proof}[Proof of lemma \ref{Lipchitzianity}]
+\begin{proof}[Proof of lemma \ref{thm:Lipchitzianity}]
 \cite{RRLB-linear-MPC}
 \end{proof}
 

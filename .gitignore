@@ -1,7 +1,11 @@
-math-project-report/**
+math-project-report*
 !math-project-report/math-project-report.tex
 !math-project-report/math-project-report.pdf
 !math-project-report/refs.bib
+
+math-project-questions*
+!math-project-questions/math-project-questions.tex
+!math-project-questions/math-project-questions.pdf
 
 CSTR_setting.m
 ODE_CSTR.m
