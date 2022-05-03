@@ -125,7 +125,10 @@ Other variants of MPC are:
 	\item\underline{the \textit{(infinite-horizon) Linear Quadratic Regulator}, or \textit{LQR}}:\newline
 	it is basically an MPC with linear dynamics ($x^+=Ax+Bu$) and without state and control constraints.
 	These problems are the most basic one can find and are deeply linked to \textit{(Discrete) Algebraic Riccati Equations}, or \textit{DARE}:
-	$$P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA$$
+	\begin{equation}
+		\label{eq:DARE-LQR}
+		P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA
+	\end{equation}
 	The unique positive definite solution of this equation actually verifies $V_\infty(x)=x^TPx$ so it can be used to define the terminal costs of the finite horizon LQR problem.
 	This equation also provides the stabilizing state-feedback control law of the infinite horizon LQR : $\mu(x)=Kx$ where $K=-(R+B^TPB)^{-1}B^TPA$\,.
 	It is intersting to notice that in this case, the solution $P$ to the DARE also verifies the follwing equation called \textit{Lyapunov equation} :
@@ -164,51 +167,81 @@ In our case, the candidate function we are going to be interested in is the obje
 
 \section{The RRLB MPC}\label{sec:RRLB-MPC}
 
-\begin{definition}
-	Given a constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
-	Such a function is defined on the interior of feasible set of the constraint and becomes infinity near its boundary.
-	For a set of polytopic constraints similar to the ones describes above, we can define the log-barrier for the state constraints as the sum of the log-barriers for each constraint :
-	$$B_x(x)=\sum_{i=1}^{q_x}-\log(d_{x,i}-\mathrm{row}_i(C_x)x)$$
+In this section we will introduce the RRLB functions, formulate the RRLB MPC and recall the results proved in the linear case in \cite{RRLB-linear-MPC}.
+As mentioned in the last section, we will suppose that $x^*=0\in\cal{X}^\circ$ and $u^*=0\in\cal{U}^\circ$.
 
-\end{definition}
-\begin{definition}
-	A \textit{weight recentered log-barrier function} for a set of polytopic constraints similar to the ones described above is of the form :
-	$$B_x(x)=\sum_{i=1}^{q_x}(1+w_{x,i})\left[\log(d_{x,i})-\log(d_{x,i}-\mathrm{row}_i(C_x)x)\right]$$
-	where the weights $w_{x,i}$ are defined as chosen such that $B_x(0)=0$ and $\nabla B_x(0)=0$.
-\end{definition}
-\begin{definition}
-	A \textit{relaxed recentered log-barrier function} (RRLB function) is defined by :
-	\begin{align*}
+\vspace{12pt}
+
+First let's take a step back and recall what regular log-barrier functions are.
+We will first give the definitions only for the states $x$, since they only depend on the constraint set and not on the actual quantity represented.
+
+For a simple constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
+Such a function is defined on the interior of feasible set of the constraint and becomes infinity near its boundary.
+For a set of polytopic constraints, we can define the log-barrier as the sum of the log-barriers for each constraint :
+$$B_x(x)=\sum_{i=1}^{q_x}-\log(d_{x,i}-\mathrm{row}_i(C_x)x)$$
+where $q_x$ is the number of constraints, or equivalently the numbers of rows in $C_x$\,.
+
+A first interesting property we would like to add to our log-barrier function is the one of \textit{positive definiteness}, i.e. $B_x(x)>0,~\forall x\neq 0$ in a neighborhood of the origin.
+To this end we introduce the notion of \textit{weight recentered log-barrier function} as defined in \cite{RLB} :
+$$B_x(x)=\sum_{i=1}^{q_x}(1+w_{x,i})\left[\log(d_{x,i})-\log(d_{x,i}-\mathrm{row}_i(C_x)x)\right]$$
+where the weights $w_{x,i}$ are defined as chosen such that $B_x(0)=0$ and $\nabla B_x(0)=0$.
+It is shown in \cite{RLB} that such weights always exist and that this wight-recentered log-barrier function is also positive definite and upper-bounded by a quadratic.
+
+The second important property we have to add is the existence on the whole space.
+For a given \textit{relaxation parameter} $\delta>0$, we can define the \textit{relaxed recentered log-barrier function}, or \textit{RRLB} function as follows :
+\begin{align}
+	\begin{split}
+		\label{RRLB}
 		B_x(x)&=\sum_{i=1}^{q_x}(1+w_{x,i})B_{x,i}(x)\\
 		\text{ with }B_{x,i}(x)&=\begin{cases}
 			\log(d_{x,1})-\log(d_{x,1}-\mathrm{row}_i(C_x)x)&\text{if }d_{x,i}-\mathrm{row}_i(C_x)x>\delta\\
 			\beta(d_{x,1}-\mathrm{row}_i(C_x)x;\delta)&\text{ otherwise}
 		\end{cases}
-	\end{align*}
-	where $0<\delta$ is a relaxation parameter and $\beta$ is a function that twice continuously extends the log-barrier function on $(-\infty,\delta]$.
-	The simplest example of such a function is 
-	$$\beta(z;\delta)=\frac{1}{2}\left[ \left( \frac{z-2\delta}{\delta} \right)^2-1 \right]-\log(\delta)$$
-\end{definition}
+	\end{split}
+\end{align}
+where $\beta$ is a twice continuously function that extends the log-barrier to a twice continuously differentiable function on $\R$.
+The simplest example of such a function is 
+$$\beta(z;\delta)=\frac{1}{2}\left[ \left( \frac{z-2\delta}{\delta} \right)^2-1 \right]-\log(\delta)$$
+To ensure that this function still verifies $B_x(0)=0$ and $\nabla B_x(0)=0$, we need to choose $0<\delta\leq\min\left\{d_{x,1},\dots,d_{x,q_x},d_{u,1},\dots,d_{u,q_u}\right\}$\,, which is always possible if $0\in\cal{X}$ and $0\in\cal{U}$\,.
 
-\begin{lemma}
-	\label{thm:RRLB-quadratic-bound}
-	The RRLB functions are upper bounded by quadratic functions.
-\end{lemma}
-\begin{proof}
-	The proof is similar to the one of the Lemma 3 of %\cite{RRLB-linear-MPC}.
-\end{proof}
+\vspace{24pt}
 
-\newpage
-Now we can finally define our new MPC formulation as follows :
+With all these definitions we can finally define the \textit{RRLB MPC} :
 \begin{align}
 	\begin{split}\label{eq:RRLB-NMPC}
 		\tilde{V}_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \tilde{J}_N(\mathbf{x},\mathbf{u})\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 	\end{split}
 \end{align}
-where the new objective function $\tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$ for a certain matrix $P$ that will be determined later.
+where the new objective function $\tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$ for another matrix $P$ that will be determined in such a way that the control law given by the MPC yields an asymptotically stable system.
 The barrier parameter $\epsilon$ has in theory the following interpretation : when it goes to zero, the solution of problem \ref{eq:RRLB-NMPC} converges to the one of \ref{eq:NMPC}.
+However, we will here consider it as fixed for simplicity.
 
+\vspace{12pt}
+
+When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics $x^+=Ax+Bu$, we know the two following theorems.
+
+\begin{theorem}
+	\label{nominal-stability-linear-case}
+	Suppose that the pair $(A,B)$ is stabilizable and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE :
+	$$P=A^TPA-A^TPB(R+\epsilon M_u+B^TPB)^{-1}B^TPA+Q+\epsilon M_x$$
+	where $M_x=\nabla^2 B_x(0)$ and $M_u=\nabla^2 B_u(0)$\, are the hessian of the RRLB functions at the origin.
+
+	Then for any initial state $x(0)\in\R^{n_x}$, the control law given by the MPC yields an asymptotically stable system.
+	% TODO : add definition of stabilizable
+\end{theorem}
+
+\begin{theorem}
+	\label{constraint-satisfaction-guarantee-linear-case}
+	In the same conditions as previous theorem, there is a neighborhood $\cal{X}_N(\delta)$ of the origin such that for any initial state $x(0)\in\cal{X}_N(\delta)$, all the constraint will be satisfied along the closed-loop trajectories.
+	Furthermore, the set $\cal{X}_N(\delta)$ is given explicitly by :
+	$$\cal{X}_N(\delta)=\left\{x\in\cal{X}~|~\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)\leq\min\{\beta_x(\delta),\beta_u(\delta)\}\right\}$$
+	where $P_{LQR}$ is the solution to the classical DARE \ref{eq:DARE-LQR} and 
+	$$\beta_x(\delta)=\underset{i,x}{\min}\left\{ B_x(x)~|~\mathrm{row}_i(C_xx)=d_{x,i} \right\},\quad \beta_u(\delta)=\underset{i,u}{\min}\left\{ B_u(u)~|~\mathrm{row}_i(C_uu)=d_{u,i} \right\}$$
+\end{theorem}
+
+Additional results were proven in the linear case, such as the existence of a procedure to find $\delta$ such that the maximum constraint violation along the closed-loop trajectories is bounded by a pre-defined tolerance.
+In our nonlinear case however we will not be able to prove these more powerful results because of the lack of knowledge on the error terms that appear in the dynamics (see subsection \ref{sec:constraints-satisfaction-guarantees})
 
 \section{Theoretical properties of RRLB Nonlinear MPC}\label{sec:RRLB-theoretical-properties}
 
