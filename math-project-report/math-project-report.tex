@@ -77,45 +77,93 @@ Our goal is to stabilize the system around a target state $x^*$ and a target con
 To do that we will try to construct a \textit{state-feedback control law}, i.e. a function $\mu:\cal{X}\to\cal{U}$ such that $x^*$ is \textit{asymptotically stable} for the dynamical system $x^+=f(x,\mu(x))$ (which only depends on the state).
 The exact definition of asymptotica stability and how to prove it is discussed in subsection \ref{sec:Lyapunov-stability-theory}.
 
+An important simplification that is often made (and that we will use in this paper) is that we consider $x^*=0$ and $u^*=0$\,.
+It is easy to verify that when this is not the case, we can just define new translated states $\hat{x}=x-x^*$ and new control $\hat{u}=u-u^*$ and consequently new dynamics, new constraints, etc.
 
-Such a problem is usually tackled using \textit{optimal control}, and precisely \textit{model predictive control} (MPC), an algorithm that defines this feedback control as the solution to an optimization problem of the following form :
+To construct this control law $\mu$, we will solve the following opitmization problem :
 \begin{align}
 	\begin{split}
 		\label{eq:NMPC}
-		V_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad J_N(\mathbf{x},\mathbf{u})\\
+		V_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 		&\quad x_k\in\cal{X},~k=0,\dots,N\\
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
 	\end{split}
 \end{align}
-Here $N$ is called the horizon size, $J_N$ is the cost function that is usually described with \textit{stage costs} $l:\cal{X}\times\cal{U}\to\R$ and \textit{final cost} $F:\cal{X}\to\R$ by 
-$$J_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$$
-The system is then controlled by applying the first value of the optimal control sequence to the system.\newline
-In our work the follwoing assumptions will be made :
-\begin{assumption}~
-	\begin{itemize}[label=\textbullet]
-		\item The function $f$ describing the dynamics is a general $C^2$ function, not necessarily linear.
-		\item Without loss of generality, $x^*=0$. We can always come back to this case by defining new translated states $\tilde{x}:=x-x^*$ and new dynamics and new constraints accordingly by translation.
-		\item $x^*=0\in\mathrm{int}\,\cal{X}$ and $0\in\mathrm{int}\,\cal{U}$
-		\item The stage costs and the final costs are quadratic : $l(x,u)=x^TQx+u^TQu,~F(x)=x^TPx$ with $Q,R$ and $P$ positive definite matrices.
-		This is very usual in MPC.
-		\item The state and constraints sets are polytopic :
-		\begin{align*}
-			X=\left\{x\in\R^{n_x}~|~C_xx\leq d_x\text{ with }C_x\in\R^{q_x\times n_x}\text{ and }d_x\in\R^{q_x}\right\}\\
-			U=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\text{ with }C_u\in\R^{q_u\times n_u}\text{ and }d_u\in\R^{q_u}\right\}
-		\end{align*}
-		Up to defining additional states and/or controls and modifying the dynamics accordingly, this can always be achieved.
-	\end{itemize}
-\end{assumption}
-The goal is usually to define the terminal cost $F(x)$ in such a way that the optimal value function $V_N$ is a \textit{Lyapunov function}, which would prove that $x^*=0$ is asymptotically stable for the system controlled by the MPC.
-In some cases the authors also include \textit{terminal constraints} on the last state $x_N$ to ensure this stability, but here we are solely focusing on MPC with terminal costs and without terminal constraints.
-\newline
-Our work presents a new formulation that is based on this classical MPC framework and replaces the inequality constraints in the optimization problem (given by the state and control constraints) by some modified log-barrier functions added to the objective function.
-To properly introduce this new formulation let's introduce the central notion of \textit{relaxed recentered log-barrier function}.
+A bit of vocabulary : $N$ is called the \textit{horizon length}, the function $l$ is the \textit{stage cost}, the function $F$ is the \textit{terminal cost} (its role will become clearer in next section) and the function $J_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$ is called the \textit{cost function}.
+
+These costs have to be defined byt the user as a measure of the deviations from the target state and control (we recall they are 0).
+Their fine tuning is of capital importance for the feasibility, robustness and performance of the MPC scheme, and it is a whole area of interest of control theory (which is out of the scope of this paper).
+Then, during the experiment, we observe at a time $k$ the state $x(k)$.
+We solve the MPC \ref{eq:NMPC} and find the optimal sequences of states and controls $$\mathbf{x}^*(x(k))=\left\{ x_0^*(x(k))=x(k),\dots,x_N^*(x(k))\right\},\quad \mathbf{u}^*(x(k))=\left\{ u_0^*(x(k)),\dots,u_{N-1}^*(x(k))\right\}$$
+They represent the controls to apply at time $k,k+1,\dots,k+N-1$ and the states the system will be in after these controls are applied.
+In a sense, we 'over-solve' the problem since we are actually only interested in $u_0^*(x(k))$ that will define our control law : 
+$$\mu_{MPC}(x(k)):=u_0^*(x(k))$$
+Since at time $k+1$ the horizon will have shifted, we say we solve the control problem in a \textit{receeding horizon} fashion.
+
+\vspace{12pt}
+
+This general form of the MPC is the one we will use, but other variants exist in which different state constraint, called \textit{terminal constraints}, are enforces on $x_N$\,.
+We are also going to consider very specific form of costs and constraints : the costs will always be quadratic ($l(x,u)=x^TQx+u^TRu$ and $F(x)=x^TPx$ for some positive definite matrices $Q,R$ and $P$) and the (inequality) constraints will always be polytopic ($\cal{X}=\left\{x\in\R^{n_x}~|~C_xx\leq d_x\right\},~\cal{U}=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\right\}$ for matrices $C_x,C_u$ and vectors $d_x,d_u$ of appropriate dimension).
+These are very common in real-world applications.
+
+\vspace{12pt}
+
+Other variants of MPC are:
+\begin{itemize}[label=\textbullet]
+	\item \underline{the \textit{infinite horizon MPC}}: 
+	\begin{align*}
+		V_\infty(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^{\infty}l(x_k,u_k)\\
+		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
+		&\quad x_k\in\cal{X},~k=0,\dots,N\\
+		&\quad u_k\in\cal{U},~k=0,\dots,N-1
+	\end{align*}
+	In real life applications, we virtually consider that the duration of the experiment is infinite, so this variant may seem more natural.
+	However this opitmization problem is infinite-dimensional so not easily solvable in practice.
+	The terminal costs in regular MPC can actually be interpreted as a proxy for the part of the inifinite horizon that is not considered, and they are usually chosen this way.
+
+	\item\underline{the \textit{(infinite-horizon) Linear Quadratic Regulator}, or \textit{LQR}}:\newline
+	it is basically an MPC with linear dynamics ($x^+=Ax+Bu$) and without state and control constraints.
+	These problems are the most basic one can find and are deeply linked to \textit{(Discrete) Algebraic Riccati Equations}, or \textit{DARE}:
+	$$P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA$$
+	The unique positive definite solution of this equation actually verifies $V_\infty(x)=x^TPx$ so it can be used to define the terminal costs of the finite horizon LQR problem.
+	This equation also provides the stabilizing state-feedback control law of the infinite horizon LQR : $\mu(x)=Kx$ where $K=-(R+B^TPB)^{-1}B^TPA$\,.
+	It is intersting to notice that in this case, the solution $P$ to the DARE also verifies the follwing equation called \textit{Lyapunov equation} :
+	$$P=A_K^TPA_K+Q_K$$
+	where $A_K:=A+BK$ corresponds the evolution of the controlled system ($x^+=Ax+B\mu(x)=(A+BK)x$) and $Q_K:=Q+K^TRK$ corresponds to cost of a stage $(x,Kx)$ ($l(x,Kx)=x^TQ+(Kx)^TR(Kx)=x^TQ_Kx$).
+
+	More details on the properties of the DARE can be found in the appendix \ref{sec:DARE}.
+\end{itemize}
+
 
 \subsection{Lyapunov stability theory}\label{sec:Lyapunov-stability-theory}
+In this subsection we present the necessary background in dynamical systems theory and in particular give more precise definitions of the stability properties we want to prove.
+We will consider a general nonlinear dynamical system $x^+=g(x)$, whithout any control, since we remember that our goal is to construct the control as only depending on the state.
+
+A state $x^*$ is said to be :
+\begin{itemize}[label=\textbullet]
+	\item \textit{locally stable} if $\forall\epsilon>0,\exists \delta>0$ s.t. $\|x(0)-x^*\|\leq\delta\implies\|x(k)-x^*\|\leq\epsilon,~\forall k\geq 0$\,.
+	\item \textit{locally attractive} if $\|x(k)-x^*\|\underset{k\to\infty}{\longrightarrow}0$ for all $x(0)$ in a certain neighborhood of $x^*$\,.
+	\item \textit{globally attractive} if $\|x(k)-x^*\|\underset{k\to\infty}{\longrightarrow}0$ for all $x(0)$ in $\cal{X}$\,.
+	\item \textit{locally asymptotically stable}, or \textit{LAS}, if it is both locally stable and locally attractive.
+	\item \textit{globally asymptotically stable}, or \textit{GAS}, if it is both stable and globally attractive.
+\end{itemize}
+
+It can be showed that a state $x^*$ is GAS (or a LAS), if we can find a function $V:\cal{X}\to\R$ such that $\forall x\in\cal{X}$ (respectively in a neighborhood of $x^*$):
+\begin{align*}
+	V(x)&\leq c_1\|x-x^*\|^2\\
+	V(x)&\geq c_2\|x-x^*\|^2\\
+	V(g(x))&\leq V(x)-c_3\|x-x^*\|^2
+\end{align*}
+Such a function is called a \textit{Lyapunov function}, and the last equation is called the \textit{descent property}, which is usually the one that is the harder to prove for a given candidate function.
+
+\vspace{12pt}
+
+In our case, the candidate function we are going to be interested in is the objective value function $V_N$ defined in \ref{eq:NMPC}.
+
 
 \section{The RRLB MPC}\label{sec:RRLB-MPC}
+
 \begin{definition}
 	Given a constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
 	Such a function is defined on the interior of feasible set of the constraint and becomes infinity near its boundary.
@@ -322,6 +370,9 @@ Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delt
 
 \section{Appendix}
 \printbibliography
+
+\subsection*{More on the DARE}\label{sec:DARE}
+
 \begin{proof}[Proof of lemma \ref{thm:Lipchitzianity}]
 \cite{RRLB-linear-MPC}
 \end{proof}
