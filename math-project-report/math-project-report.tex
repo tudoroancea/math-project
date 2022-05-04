@@ -59,7 +59,7 @@ More details on the upsides of RRLB functions can be found in the Introduction o
 
 In the theoretical study of this new formulation that we will call \textit{RRLB MPC}, we will prove two major results : 
 \begin{enumerate}
-	\item When using the control law computed by the RRLB MPC, the corresponding closed-loop system asymptotically stabilizes at the target state. (see subsection \ref{sec:RRLB-nominal-stability})
+	\item When using the control law computed by the RRLB MPC, the corresponding closed-loop system asymptotically stabilizes at the target state. (see subsection \ref{sec:RRLB-nominal-stability}) This property will be called \textit{nominal stabilty}, to be differentiated of \textit{real-time stability} (see subsection \ref{sec:RRLB-real-time-stability}).
 	\item In this formulation, the optimal solution of the optimization problem might yield states or controls that are not feasible in the original problem. However, if we start sufficiently close to the target state, this will never happen. (see subsection \ref{sec:constraints-satisfaction-guarantees})
 \end{enumerate}
 
@@ -223,7 +223,8 @@ When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics 
 
 \begin{theorem}
 	\label{nominal-stability-linear-case}
-	Suppose that the pair $(A,B)$ is stabilizable and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE :
+	Suppose that the pair $(A,B)$ is stabilizable\footnote{We did not discuss the notion of controllability and stabilizability in \ref{sec:what-is-MPC} because they do not play a direct role in our proofs. They are however very important in standard control theory and they are needed in the proofs of existence of DAREs. More on them in the appendix \ref{sec:controllability-stabilizability}}
+	and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE :
 	$$P=A^TPA-A^TPB(R+\epsilon M_u+B^TPB)^{-1}B^TPA+Q+\epsilon M_x$$
 	where $M_x=\nabla^2 B_x(0)$ and $M_u=\nabla^2 B_u(0)$\, are the hessian of the RRLB functions at the origin.
 
@@ -245,14 +246,19 @@ In our nonlinear case however we will not be able to prove these more powerful r
 
 \section{Theoretical properties of RRLB Nonlinear MPC}\label{sec:RRLB-theoretical-properties}
 
+In this section, we consider the RRLB MPC \ref{eq:RRLB-NMPC} with nonlinear dynamics and show that the results of the previous section hold locally, in a certain neighborhood of the origin.
+
+From this point on, for an initial state $x\in\R^{n_x}$ we will denote by \newline
+$\tilde{\mathbf{x}}(x)=\left\{ \tilde{x}_0(x)=x,\tilde{x}_1(x),\dots,\tilde{x}_N(x) \right\}$ and $\tilde{\mathbf{u}}(x)=\left\{ \tilde{u}_0(x),\tilde{u}_1(x),\dots,\tilde{u}_{N-1}(x) \right\}$ the optimal sequences of states and controls found by the RRLB MPC.
+
 \subsection{Nominal asymptotic stability}\label{sec:RRLB-nominal-stability}
 
 \begin{lemma}
 	\label{thm:Lipchitzianity}
-	Consider the problem \ref{eq:RRLB-NMPC} and re-write it in a simpler way as 
+	Consider the RRLB MPC \ref{eq:RRLB-NMPC} and re-write it in a simpler way as 
 	$$\tilde{V}_N(x)=\underset{\mathbf{u}}{\min} \quad J(x,\mathbf{u})$$
 	where $J(x,\mathbf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
-	If for a certain value for the initial state $x$ we denote by $\tilde{\mathbf{u}}(x)=(\tilde{u}_0(x),\dots,\tilde{u}_{N-1}(x))$ the optimal sequence of controls and we suppose that $D_\mathbf{u}J(x,\tilde{\mathbf{u}})=0$ and $\nabla_{\mathbf{u}\mathbf{u}}^2J(x, \tilde{\mathbf{u}})\succ 0$ (the matrix is positive definite) then :
+	If we suppose that $D_\mathbf{u}J(x,\tilde{\mathbf{u}})=0$ and $\nabla_{\mathbf{u}\mathbf{u}}^2J(x, \tilde{\mathbf{u}})\succ 0$ (the matrix is positive definite) then :
 	\begin{itemize}[label=\textbullet]
 		\item $\forall k=0,\dots,N-1,\quad \|\tilde{u}_k(x)\|=O(\|x\|)$
 		\item $\forall k=1,\dots,N,\quad \|\tilde{x}_k(x)\|=f(f(\dots,u_{k-2}),u_{k-1})=O(\|x\|)$
@@ -262,37 +268,51 @@ In our nonlinear case however we will not be able to prove these more powerful r
 	See appendix
 \end{proof}
 
-Now the main piece :
+Now our main result :
 
 \begin{theorem}\label{thm:nominal-stability}
 	Let's consider the problem \ref{eq:RRLB-NMPC} and assume the following :
 	\begin{enumerate}
-		\item the assumptions of previous lemma
+		\item the assumptions of lemma \ref{thm:Lipchitzianity}
+
 		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
+		
 		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following Lyapunov equation :
 		\begin{equation*}
 			P=A_K^TPA_K+\mu Q_K
 		\end{equation*}
 		where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
 	\end{enumerate}	
-	Then if we use the same notations for the optimal controls and states as in the previous lemma, the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$ for all initial state in a certain neighborhood of the origin.
+	Then for all initial state in a certain neighborhood of the origin, the control law given by the RRLB MPC yields an asymptotically stable system, i.e. the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$\,.
 \end{theorem}
 
-\begin{remark}
-	\begin{enumerate}
-		\item The matrix $K$ can be constructed using the Discrete Algebraic Riccati Equation for the infinite horizon LQR problem :
-		\begin{align}
-			\begin{split}\label{eq:inf-LQR}
-				\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^\infty x_k^T(Q+\epsilon M_x)x_k+u_k^T(R+\epsilon M_u)u_k\\
-				\text{s.t.} &\quad x_{k+1}=Ax_k+Bu_k,~k=0,\dots,N-1\\
-			\end{split}
-		\end{align}
-	\end{enumerate}
+\begin{remark}~
+	The matrix $K$ can be constructed using the DARE for the following modified infinite horizon LQR problem :
+	\begin{align}
+		\begin{split}\label{eq:inf-LQR}
+			\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^\infty x_k^T(Q+\epsilon M_x)x_k+u_k^T(R+\epsilon M_u)u_k\\
+			\text{s.t.} &\quad x_{k+1}=Ax_k+Bu_k,~k=0,\dots,N-1\\
+		\end{split}
+	\end{align}
+	where $M_x=\nabla^2B_x(0)$ and $M_u=\nabla^2B_u(0)$, i.e.
+	$$\begin{cases}
+		K=-(R+B^T\Pi B)^{-1}B^T\Pi A&\\
+		\Pi=A_K^T\Pi A_K+Q_K
+	\end{cases}$$
+	The only difference between this last equation and the Lyapunov equation in the statement of the theorem is the $\mu$ term.
+	In theory it is very important, but in practice, we can actually take it very close to 1 and find $P$ and $K$ by solving 
+	$$\begin{cases}
+		K=-(R+B^TP B)^{-1}B^TP A&\\
+		P=A_K^TP A_K+Q_K
+	\end{cases}$$
+	More on that in \ref{sec:RRLB-numerical-experiments}.
 \end{remark}
 
 \begin{proof}~
-	By writing the Taylor expansion of the stage costs $\tilde{l}$ we can see that
+	To prove the result we will show that $\tilde{V}_N$ is a Lyapunov function in a certain neighborhood of the origin.
+
+	First, by writing the Taylor expansion of the stage costs $\tilde{l}$ we can see that
 	\begin{align*}
 		\tilde{l}(x,u)&=x^T[\nabla_{xx}^2\tilde{l}(0,0)] x+u^T[\nabla_{uu}^2\tilde{l}(0,0)]u+O(\|x\|^3+\|u\|^3)\\
 		&=x^T[Q+\epsilon M_x]x+u^T[R+\epsilon M_u]u+O(\|x\|^3+\|u\|^3)
@@ -308,12 +328,13 @@ Now the main piece :
 
 	What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
 	
-	Now using the optimal sequence of states and controls of the problem \ref{eq:RRLB-NMPC} starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as 
-	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$ \,.
+	Now using the optimal sequence of states and controls of the RRLB MPC starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as \newline
+	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$\,.
 	Then we have :
 	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}\checkmark$$
-	
-	It is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is a Lyapunov function in a small neighborhood around the origin.~\checkmark
+	We have therefore shown the descent property of our candidate Lyapunov function $\tilde{V}_N$\,.
+
+	Finally, it is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is indeed a Lyapunov function in a small neighborhood around the origin.
 \end{proof}
 
 \subsection{Constraints satisfaction guarantees}\label{sec:constraints-satisfaction-guarantees}
@@ -394,21 +415,18 @@ Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delt
 
 \section{Numerical extensions}\label{sec:numerical-extensions}
 
-\subsection{Real Time Iteration methods}
-\subsubsection{Asymptotic stability of RTI scheme}
-\subsubsection{Numerical experiments}
+\subsection{Asymptotic stability of RTI scheme}\label{sec:RRLB-real-time-stability}
+\subsection{Numerical experiments}\label{sec:RRLB-numerical-experiments}
+\subsection{Influence of the number of SQP iterations}\label{sec:RRLB-SQP-iterations}
 
-\subsection{Parallelization}
-\subsubsection{Numerical experiments}
+\newpage
 
 \section{Appendix}
 \printbibliography
 
-\subsection*{More on the DARE}\label{sec:DARE}
+\subsection*{Controllable vs. Stabilizable}\label{sec:controllability-stabilizability}
 
-\begin{proof}[Proof of lemma \ref{thm:Lipchitzianity}]
-\cite{RRLB-linear-MPC}
-\end{proof}
+\subsection*{More on the DARE}\label{sec:DARE}
 
 \begin{lemma}[Existence an Unicity of solution to the Lyapunov equation]
 	
@@ -418,8 +436,10 @@ Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delt
 	
 \end{proof}
 
-\begin{lemma}[Coercive quadratic lower and upper bounds for objective value function]
+\subsection*{Misc}
 
-\end{lemma}
+\begin{proof}[Proof of lemma \ref{thm:Lipchitzianity}]
+
+\end{proof}
 
 \end{document}
