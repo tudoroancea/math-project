@@ -13,11 +13,11 @@ from matplotlib.gridspec import GridSpec
 # general problem parameters
 state_dim = 4
 control_dim = 2
-T = 2000.0  # Time horizon
-N = 100  # number of control intervals
-M = 6  # RK4 integrations steps
-delta = 10.0  # relaxation parameter
-epsilon = 0.05  # barrier parameter
+T: float = 2000.0  # Time horizon
+N: int = 100  # number of control intervals
+M: int = 6  # RK4 integrations steps
+delta: float = 10.0  # relaxation parameter
+epsilon: float = 0.05  # barrier parameter
 x_S = ca.DM(
     [
         2.1402105301746182e00,
@@ -196,7 +196,7 @@ def solve_rrlb_mpc(
         "print_time": 0,
         "ipopt": {"sb": "yes", "print_level": 0, "max_iter": 1, "max_cpu_time": 10.0},
     },
-) -> ca.DM:
+):
     """
     returns the optimal solution with all the variables from all the stages
     """
@@ -206,13 +206,7 @@ def solve_rrlb_mpc(
     J = 0  # objective function
     w = [x_0]  # list of all the variables x and u concatenated
     w_start = [x_start[0]]  # initial guess
-    lbw = []
-    lbw += x_init.tolist()  # lower bound for all the variables
-    ubw = []
-    ubw += x_init.tolist()  # upper bound for all the variables
     g = []  # equality constraints
-    lbg = []  # lower bound for the equality constraints
-    ubg = []  # upper bound for the equality constraints
 
     # Formulate the NLP
     for k in range(N):
@@ -229,18 +223,23 @@ def solve_rrlb_mpc(
         )  # WARNING : from here x_k represents x_{k+1}
         w += [x_k]
         w_start += [x_start[k + 1]]
-        lbw += [-np.inf] * (state_dim + control_dim)
-        ubw += [np.inf] * (state_dim + control_dim)
 
         # Add equality constraint
         g += [x_k_end - x_k]
-        lbg += [0.0] * state_dim
-        ubg += [0.0] * state_dim
     J += F(x_k)  # here x_k represents x_N
 
     # Concatenate decision variables and constraint terms
     w = ca.vertcat(*w)
     g = ca.vertcat(*g)
+
+    lbw = (
+        x_init.tolist() + [-np.inf] * (state_dim + control_dim) * N
+    )  # lower bound for all the variables
+    ubw = (
+        x_init.tolist() + [np.inf] * (state_dim + control_dim) * N
+    )  # upper bound for all the variables
+    lbg = [0.0] * state_dim * N  # lower bound for the equality constraints
+    ubg = [0.0] * state_dim * N  # upper bound for the equality constraints
 
     # Create an NLP solver
     nlp_prob = {"f": J, "x": w, "g": g}
@@ -252,6 +251,33 @@ def solve_rrlb_mpc(
     )
     sol = nlp_solver(x0=ca.vertcat(*w_start), lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
     return sol["x"]
+
+    # tentative with map ======================================================
+
+    # X = ca.MX.sym("X", state_dim, N + 1)
+    # U = ca.MX.sym("U", control_dim, N)
+    
+    # f_discrete_map = f_discrete.map(N, "unroll")
+    # G = ca.vec(f_discrete_map(X[:, :N], U) - X[:, 1:])
+    # UBG = ca.DM.zeros(N * state_dim)
+    # LBG = ca.DM.zeros(N * state_dim)
+
+    # l_map = l.map(N, "unroll")
+    # J = ca.sum2(l_map(X[:, :N], U)) + F(X[:, N])
+    # W = ca.vertcat(ca.vec(X), ca.vec(U))
+    # LBW = x_init.tolist() + [-np.inf] * (state_dim + control_dim) * N
+    # UBW = x_init.tolist() + [np.inf] * (state_dim + control_dim) * N
+    # nlp_solver = ca.nlpsol(
+    #     "nlp_solver",
+    #     solver,
+    #     {"f": J, "x": W, "g": G},
+    #     opts,
+    # )
+    # sol = nlp_solver(x0=W, lbx=LBW, ubx=UBW, lbg=LBG, ubg=UBG)
+    # X_pred = ca.reshape(sol["x"][:state_dim * (N + 1)], (state_dim, N + 1))
+    # U_pred = ca.reshape(sol["x"][state_dim * (N + 1):], (control_dim, N))
+
+    # return X_pred.to_DM(), U_pred.to_DM()
 
 
 def solve_mpc(
@@ -586,7 +612,7 @@ def run_closed_loop_simulation(
             opts=opts,
         )
         stop = time()
-        # print("time for iteration {} : {} ms".format(i, 1000 * (stop - start)))
+        print("time for iteration {} : {} ms".format(i, 1000 * (stop - start)))
         c_A_pred = sol[0::6]
         c_B_pred = sol[1::6]
         theta_pred = sol[2::6]
