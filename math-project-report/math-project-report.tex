@@ -44,7 +44,7 @@ For example, if one wants to stabilize the state around a certain target, or ref
 This problem of \textit{stabilization} will be the one we will consider in this paper, but it is interesting to know there are other problems for which OC is applicable, such as path tracking or optimal trajectory generation. 
 
 One of the most important (family of) algorithm(s) of OC is \textit{Model Predictive Control}, or MPC. 
-This procedure uses the knowledge of the system \textit{dynamic model} (the equation governing its evolution) to compute an control law that also takes the future into account.
+This procedure uses the knowledge of the system \textit{dynamic model} (the equation governing its evolution) to compute a control law that also takes the future into account.
 More precisely, the control law is computed for a certain interval in time called the \textit{horizon}, and the cost along this whole horizon is minized.
 In some sense, the controller won't take decisions it will regret afterwards.
 MPC has many advantages over other classical control strategies, such as the ability to handle several control parameters and to take into consideration constraints on the states and the controls (by solving a \textit{constrained} optimization problem). These are very important in practice because any real-life system has physical limitations (e.g. the maximum speed of a car, the maximum torque of a motor, etc.).
