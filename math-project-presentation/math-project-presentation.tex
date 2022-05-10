@@ -128,25 +128,11 @@
         \item NLP solved with IPOPT through CasADi
         \item Horizon size 100
         \item max 1 iteration for RRLB MPC (equivalent to RTI) and 10 for regular MPC
+        \item \checkmark all the assumptions of the nominal stability theorem are satisfied
     \end{itemize}
 
     \textbf{\textit{Results}}:
-    Both converged after 74 time steps with similar total costs along the closed-loop trajectory.
-    % RRLB MPC : 
-    % ==========================
-    % Converged at iteration 74
-    % Final state:  [  2.14008167   1.09043004 114.19183962 112.90690575]
-    % Final control:  [   14.19009197 -1114.01512478]
-    % total_cost = 1424.3123462215194, iterations = 75, constraints_violated = True
-
-    % MPC : 
-    % ==========================
-    % Converged at iteration 73
-    % Final state:  [  2.14007811   1.09043741 114.19184186 112.90689261]
-    % Final control:  [   14.19009186 -1114.02693947]
-    % total_cost = 1412.6535688220122, iterations = 74, constraints_violated = False
-    
-    
+    Both converged after 74 time steps with similar total costs along the closed-loop trajectory.    
     % Comparison : 
     % ==========================
     % solve times RRLB MPC :
@@ -174,6 +160,38 @@
         \includegraphics[width=1.0\textwidth]{../cstr_package/mpc.png}
         \caption*{Closed-loop trajectories of MPC}
     \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Numerical experiments - CSTR}    
+    % solve times RRLB MPC :
+    % mean=25.537693822706068
+    % std=2.862889028359942
+    % solve times regular MPC :
+    % mean=170.89609197668128
+    % std=25.23435179106265
+    Here are the solve times in ms :\newline
+    \begin{minipage}{0.55\textwidth}
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=7cm]{../cstr_package/solve_times.png}
+            \caption*{Solve times for both schemes}
+        \end{figure}
+    \end{minipage}
+    \begin{minipage}{0.40\textwidth}
+        \begin{table}[H]
+            \centering
+            \begin{tabular}{|c|c|c|}
+                \hline
+                & mean & stdev\\
+                \hline
+                RRLB MPC & 25.538 & 2.863 \\
+                \hline
+                MPC & 170.896 & 25.234 \\
+                \hline
+              \end{tabular}
+        \end{table}
+    \end{minipage}
 \end{frame}
 
 \end{document}
