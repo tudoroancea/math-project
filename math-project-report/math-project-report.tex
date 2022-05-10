@@ -84,18 +84,18 @@ To construct this control law $\mu$, we will solve the following opitmization pr
 \begin{align}
 	\begin{split}
 		\label{eq:NMPC}
-		V_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)\\
+		V_N(x)=\underset{\bf{x},\bf{u}}{\min} &\quad \sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 		&\quad x_k\in\cal{X},~k=0,\dots,N\\
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
 	\end{split}
 \end{align}
-A bit of vocabulary : $N$ is called the \textit{horizon length}, the function $l$ is the \textit{stage cost}, the function $F$ is the \textit{terminal cost} (its role will become clearer in next section) and the function $J_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$ is called the \textit{cost function}.
+A bit of vocabulary : $N$ is called the \textit{horizon length}, the function $l$ is the \textit{stage cost}, the function $F$ is the \textit{terminal cost} (its role will become clearer in next section) and the function $J_N(\bf{x},\bf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$ is called the \textit{cost function}.
 
 These costs have to be defined byt the user as a measure of the deviations from the target state and control (we recall they are 0).
 Their fine tuning is of capital importance for the feasibility, robustness and performance of the MPC scheme, and it is a whole area of interest of control theory (which is out of the scope of this paper).
 Then, during the experiment, we observe at a time $k$ the state $x(k)$.
-We solve the MPC \ref{eq:NMPC} and find the optimal sequences of states and controls $$\mathbf{x}^*(x(k))=\left\{ x_0^*(x(k))=x(k),\dots,x_N^*(x(k))\right\},\quad \mathbf{u}^*(x(k))=\left\{ u_0^*(x(k)),\dots,u_{N-1}^*(x(k))\right\}$$
+We solve the MPC \ref{eq:NMPC} and find the optimal sequences of states and controls $$\bf{x}^*(x(k))=\left\{ x_0^*(x(k))=x(k),\dots,x_N^*(x(k))\right\},\quad \bf{u}^*(x(k))=\left\{ u_0^*(x(k)),\dots,u_{N-1}^*(x(k))\right\}$$
 They represent the controls to apply at time $k,k+1,\dots,k+N-1$ and the states the system will be in after these controls are applied.
 In a sense, we 'over-solve' the problem since we are actually only interested in $u_0^*(x(k))$ that will define our control law : 
 $$\mu_{MPC}(x(k)):=u_0^*(x(k))$$
@@ -113,7 +113,7 @@ Other variants of MPC are:
 \begin{itemize}[label=\textbullet]
 	\item \underline{the \textit{infinite horizon MPC}}: 
 	\begin{align*}
-		V_\infty(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^{\infty}l(x_k,u_k)\\
+		V_\infty(x)=\underset{\bf{x},\bf{u}}{\min} &\quad \sum_{k=0}^{\infty}l(x_k,u_k)\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 		&\quad x_k\in\cal{X},~k=0,\dots,N\\
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
@@ -178,12 +178,12 @@ We will first give the definitions only for the states $x$, since they only depe
 For a simple constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
 Such a function is defined on the interior of feasible set of the constraint and becomes infinity near its boundary.
 For a set of polytopic constraints, we can define the log-barrier as the sum of the log-barriers for each constraint :
-$$B_x(x)=\sum_{i=1}^{q_x}-\log(d_{x,i}-\mathrm{row}_i(C_x)x)$$
+$$B_x(x)=\sum_{i=1}^{q_x}-\log(d_{x,i}-\rm{row}_i(C_x)x)$$
 where $q_x$ is the number of constraints, or equivalently the numbers of rows in $C_x$\,.
 
 A first interesting property we would like to add to our log-barrier function is the one of \textit{positive definiteness}, i.e. $B_x(x)>0,~\forall x\neq 0$ in a neighborhood of the origin.
 To this end we introduce the notion of \textit{weight recentered log-barrier function} as defined in \cite{RLB} :
-$$B_x(x)=\sum_{i=1}^{q_x}(1+w_{x,i})\left[\log(d_{x,i})-\log(d_{x,i}-\mathrm{row}_i(C_x)x)\right]$$
+$$B_x(x)=\sum_{i=1}^{q_x}(1+w_{x,i})\left[\log(d_{x,i})-\log(d_{x,i}-\rm{row}_i(C_x)x)\right]$$
 where the weights $w_{x,i}$ are defined as chosen such that $B_x(0)=0$ and $\nabla B_x(0)=0$.
 It is shown in \cite{RLB} that such weights always exist and that this wight-recentered log-barrier function is also positive definite and upper-bounded by a quadratic.
 
@@ -194,8 +194,8 @@ For a given \textit{relaxation parameter} $\delta>0$, we can define the \textit{
 		\label{RRLB}
 		B_x(x)&=\sum_{i=1}^{q_x}(1+w_{x,i})B_{x,i}(x)\\
 		\text{ with }B_{x,i}(x)&=\begin{cases}
-			\log(d_{x,1})-\log(d_{x,1}-\mathrm{row}_i(C_x)x)&\text{if }d_{x,i}-\mathrm{row}_i(C_x)x>\delta\\
-			\beta(d_{x,1}-\mathrm{row}_i(C_x)x;\delta)&\text{ otherwise}
+			\log(d_{x,i})-\log(d_{x,i}-\rm{row}_i(C_x)x)&\text{if }d_{x,i}-\rm{row}_i(C_x)x>\delta\\
+			\beta(d_{x,i}-\rm{row}_i(C_x)x;\delta)&\text{ otherwise}
 		\end{cases}
 	\end{split}
 \end{align}
@@ -209,11 +209,11 @@ To ensure that this function still verifies $B_x(0)=0$ and $\nabla B_x(0)=0$, we
 With all these definitions we can finally define the \textit{RRLB MPC} :
 \begin{align}
 	\begin{split}\label{eq:RRLB-NMPC}
-		\tilde{V}_N(x)=\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \tilde{J}_N(\mathbf{x},\mathbf{u})\\
+		\tilde{V}_N(x)=\underset{\bf{x},\bf{u}}{\min} &\quad \tilde{J}_N(\bf{x},\bf{u})\\
 		\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 	\end{split}
 \end{align}
-where the new objective function $\tilde{J}_N(\mathbf{x},\mathbf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$ for another matrix $P$ that will be determined in such a way that the control law given by the MPC yields an asymptotically stable system.
+where the new objective function $\tilde{J}_N(\bf{x},\bf{u})=\sum_{k=0}^{N-1}\tilde{l}(x_k,u_k)~+~\tilde{F}(x_N)$ is defined using the new stage costs $\tilde{l}(x,u)=l(x,u)+\epsilon B_x(x)+\epsilon B_u(u)$ and the new terminal cost $\tilde{F}(x)=x^TPx$ for another matrix $P$ that will be determined in such a way that the control law given by the MPC yields an asymptotically stable system.
 The barrier parameter $\epsilon$ has in theory the following interpretation : when it goes to zero, the solution of problem \ref{eq:RRLB-NMPC} converges to the one of \ref{eq:NMPC}.
 However, we will here consider it as fixed for simplicity.
 
@@ -238,7 +238,7 @@ When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics 
 	Furthermore, the set $\cal{X}_N(\delta)$ is given explicitly by :
 	$$\cal{X}_N(\delta)=\left\{x\in\cal{X}~|~\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)\leq\min\{\beta_x(\delta),\beta_u(\delta)\}\right\}$$
 	where $P_{LQR}$ is the solution to the classical DARE \ref{eq:DARE-LQR} and 
-	$$\beta_x(\delta)=\underset{i,x}{\min}\left\{ B_x(x)~|~\mathrm{row}_i(C_xx)=d_{x,i} \right\},\quad \beta_u(\delta)=\underset{i,u}{\min}\left\{ B_u(u)~|~\mathrm{row}_i(C_uu)=d_{u,i} \right\}$$
+	$$\beta_x(\delta)=\underset{i,x}{\min}\left\{ B_x(x)~|~\rm{row}_i(C_xx)=d_{x,i} \right\},\quad \beta_u(\delta)=\underset{i,u}{\min}\left\{ B_u(u)~|~\rm{row}_i(C_uu)=d_{u,i} \right\}$$
 \end{theorem}
 
 Additional results were proven in the linear case, such as the existence of a procedure to find $\delta$ such that the maximum constraint violation along the closed-loop trajectories is bounded by a pre-defined tolerance.
@@ -249,16 +249,17 @@ In our nonlinear case however we will not be able to prove these more powerful r
 In this section, we consider the RRLB MPC \ref{eq:RRLB-NMPC} with nonlinear dynamics and show that the results of the previous section hold locally, in a certain neighborhood of the origin.
 
 From this point on, for an initial state $x\in\R^{n_x}$ we will denote by \newline
-$\tilde{\mathbf{x}}(x)=\left\{ \tilde{x}_0(x)=x,\tilde{x}_1(x),\dots,\tilde{x}_N(x) \right\}$ and $\tilde{\mathbf{u}}(x)=\left\{ \tilde{u}_0(x),\tilde{u}_1(x),\dots,\tilde{u}_{N-1}(x) \right\}$ the optimal sequences of states and controls found by the RRLB MPC.
+$\tilde{\bf{x}}(x)=\left\{ \tilde{x}_0(x)=x,\tilde{x}_1(x),\dots,\tilde{x}_N(x) \right\}$ and $\tilde{\bf{u}}(x)=\left\{ \tilde{u}_0(x),\tilde{u}_1(x),\dots,\tilde{u}_{N-1}(x) \right\}$ the optimal sequences of states and controls found by the RRLB MPC.
+When no confusion is possible we will drop the "$(x)$".
 
 \subsection{Nominal asymptotic stability}\label{sec:RRLB-nominal-stability}
 
 \begin{lemma}
 	\label{thm:Lipchitzianity}
 	Consider the RRLB MPC \ref{eq:RRLB-NMPC} and re-write it in a simpler way as 
-	$$\tilde{V}_N(x)=\underset{\mathbf{u}}{\min} \quad J(x,\mathbf{u})$$
-	where $J(x,\mathbf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
-	If we suppose that $D_\mathbf{u}J(x,\tilde{\mathbf{u}})=0$ and $\nabla_{\mathbf{u}\mathbf{u}}^2J(x, \tilde{\mathbf{u}})\succ 0$ (the matrix is positive definite) then :
+	$$\tilde{V}_N(x)=\underset{\bf{u}}{\min} \quad J(x,\bf{u})$$
+	where $J(x,\bf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
+	If for a certain initial state $x$ we suppose that $D_\bf{u}J(x,\tilde{\bf{u}})=0$ and $\nabla_{\bf{u}\bf{u}}^2J(x, \tilde{\bf{u}})\succ 0$ (the matrix is positive definite) then in a neighborhood of $x$ we have:
 	\begin{itemize}[label=\textbullet]
 		\item $\forall k=0,\dots,N-1,\quad \|\tilde{u}_k(x)\|=O(\|x\|)$
 		\item $\forall k=1,\dots,N,\quad \|\tilde{x}_k(x)\|=f(f(\dots,u_{k-2}),u_{k-1})=O(\|x\|)$
@@ -274,7 +275,7 @@ Now our main result :
 \begin{theorem}\label{thm:nominal-stability}
 	Let's consider the problem \ref{eq:RRLB-NMPC} and assume the following :
 	\begin{enumerate}
-		\item the assumptions of lemma \ref{thm:Lipchitzianity}
+		\item If we denote the objective function as $J(x,\bf{u})$ as in Lemma \ref{thm:Lipchitzianity}, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$
 
 		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
@@ -285,14 +286,14 @@ Now our main result :
 		\end{equation*}
 		where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
 	\end{enumerate}	
-	Then for all initial state in a certain neighborhood of the origin, the control law given by the RRLB MPC yields an asymptotically stable system, i.e. the origin is asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$\,.
+	Then for all initial state in a certain neighborhood of the origin, the control law given by the RRLB MPC yields an asymptotically stable system, i.e. the origin is locally asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$\,.
 \end{theorem}
 
 \begin{remark}~
 	The matrix $K$ can be constructed using the DARE for the following modified infinite horizon LQR problem :
 	\begin{align}
 		\begin{split}\label{eq:inf-LQR}
-			\underset{\mathbf{x},\mathbf{u}}{\min} &\quad \sum_{k=0}^\infty x_k^T(Q+\epsilon M_x)x_k+u_k^T(R+\epsilon M_u)u_k\\
+			\underset{\bf{x},\bf{u}}{\min} &\quad \sum_{k=0}^\infty x_k^T(Q+\epsilon M_x)x_k+u_k^T(R+\epsilon M_u)u_k\\
 			\text{s.t.} &\quad x_{k+1}=Ax_k+Bu_k,~k=0,\dots,N-1\\
 		\end{split}
 	\end{align}
@@ -330,9 +331,9 @@ Now our main result :
 	What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
 	
 	Now using the optimal sequence of states and controls of the RRLB MPC starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as \newline
-	$\mathbf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\mathbf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$\,.
+	$\bf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\bf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$\,.
 	Then we have :
-	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\mathbf{x}',\mathbf{u}')=\underbrace{\tilde{J}_N(\tilde{\mathbf{x}},\tilde{\mathbf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}\checkmark$$
+	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\bf{x}',\bf{u}')=\underbrace{\tilde{J}_N(\tilde{\bf{x}},\tilde{\bf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}\checkmark$$
 	We have therefore shown the descent property of our candidate Lyapunov function $\tilde{V}_N$\,.
 
 	Finally, it is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is indeed a Lyapunov function in a small neighborhood around the origin.
@@ -343,13 +344,11 @@ This section follows closely the section IV.D of \cite{RRLB-linear-MPC} but give
 In particular, will show that we can ensure the existence of a neighborhood around the origin such that if we start in it, the states and controls along the closed-loop simulation will never violate the constraints.
 However, this neighborhood cannot be easily computed because of the generality of the considered dynamics.
 
-% \begin{definition}
-% 	For our RRLB functions $B_x$ and $B_u$ we can define :
-% \end{definition}
+In the whole section, we the assumptions of Theorem \ref{thm:nominal-stability} to be true.
 
 \begin{lemma}
 	\label{thm:RRLB-bounds-guarantees}
-	Consider problem \ref{eq:RRLB-NMPC} and an initial state $x(0)$ in the neighborhood given by \ref{thm:nominal-stability}.
+	Consider the RRLB MPC \ref{eq:RRLB-NMPC} and an initial state $x(0)$ in the neighborhood given by Theorem \ref{thm:nominal-stability}.
 	Let's denote by $\left\{x(0),x(1),\dots\right\}$ and $\left\{u(0), u(1),\dots\right\}$ the closed-loop state and control trajectories (given by $u(k)=\tilde{u}_0(x(k)),~x(k+1)=f(x(k),u(k))$).
 	Then $\forall k\geq 0$:
 	\begin{align*}
@@ -381,10 +380,10 @@ We define for ease of notation the following quantities
 		\alpha(x(0))=\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))
 	\end{split}\\
 	\begin{split}
-		\beta_x=\underset{i,x}{\min}\{B_x(x)~|~\mathrm{row}_i(C_x)x=d_{x,i}\}
+		\beta_x=\underset{i,x}{\min}\{B_x(x)~|~\rm{row}_i(C_x)x=d_{x,i}\}
 	\end{split}\\
 	\begin{split}
-		\beta_u=\underset{i,u}{\min}\{B_u(u)~|~\mathrm{row}_i(C_u)u=d_{u,i}\}
+		\beta_u=\underset{i,u}{\min}\{B_u(u)~|~\rm{row}_i(C_u)u=d_{u,i}\}
 	\end{split}
 \end{align}
 

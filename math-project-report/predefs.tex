@@ -1,0 +1,122 @@
+% Margins, font size =====================================================================================================================
+%\oddsidemargin = 0.5cm \evensidemargin = 0.5cm \textwidth = 6.3in
+%\oddsidemargin = 1.2cm \evensidemargin = 1.2cm \textwidth = 6.3in
+%\textheight =8.6in
+\geometry{
+	a4paper,
+	total={170mm,257mm},
+	left=20mm,
+	top=20mm,
+}
+
+% Sections (theorems, propositions, lemmas…) =====================================================================================================================
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem*{conjecture}{\bf Conjecture}
+\newtheorem{proposition}[theorem]{Proposition}
+% \numberwithin{theorem}{section} % To display the section number in the theorem
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{exercise}{Exercise}
+\newtheorem*{solution}{Solution}
+\newtheorem*{answer}{Answer}
+\newtheorem*{claim}{Claim}
+
+\theoremstyle{remark}
+\newtheorem*{theoremno}{{\bf Theorem}}
+\newtheorem*{remark}{Remark}
+\newtheorem*{example}{Example}
+\newtheorem*{hint}{Hint}
+
+
+
+% Commands =====================================================================================================================
+\def\bb#1{\mathbb{#1}}
+\def\cal#1{\mathcal{#1}}
+\def\frak#1{\mathfrak{#1}}
+\def\rm#1{\mathrm{#1}}
+\def\bf#1{\mathbf{#1}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\K}{\mathbb{K}}
+\newcommand{\bbP}{\mathbb{P}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\calP}{\mathcal{P}}
+\newcommand{\G}{\mathcal{G}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\calC}{\mathcal{C}}
+\newcommand{\calN}{\mathcal{N}}
+\newcommand{\calF}{\mathcal{F}}
+\newcommand{\calE}{\mathcal{E}}
+\newcommand{\frakA}{\mathfrak{A}}
+\newcommand{\frakS}{\mathfrak{S}}
+\newcommand{\esp}{\mathbb{E}}
+% \P = caracs spéciaux,\S = paragraphe, \L = L barre
+
+% Existe déjà : ker, partie Im, Re, min, max, inf, sup, log, exp, sin, sinh, cos, cosh,, tan lim, liminf, limsup
+\DeclareMathOperator{\Id}{Id}
+\DeclareMathOperator{\Hom}{Hom}
+\DeclareMathOperator{\Ima}{Im}
+\DeclareMathOperator{\Homeo}{Homeo}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Bij}{Bij}
+\DeclareMathOperator{\Isom}{Isom}
+\DeclareMathOperator{\GL}{GL}
+\DeclareMathOperator{\End}{End}
+\DeclareMathOperator{\rang}{rang}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\vol}{vol}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\var}{Var}
+\DeclareMathOperator{\erf}{erf}
+\DeclareMathOperator{\spec}{spec}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\pgcd}{pgcd}
+\DeclareMathOperator{\pgdc}{pgdc}
+
+% Lois de probabilités
+\DeclareMathOperator{\Geom}{Geom}
+\DeclareMathOperator{\Bin}{Bin}
+\DeclareMathOperator{\Exp}{Exp}
+\DeclareMathOperator{\Ber}{Ber}
+\DeclareMathOperator{\Student}{Student}
+\DeclareMathOperator{\Poi}{Poi}
+\newcommand{\czero}{\calC^0}
+\newcommand{\cone}{\calC^1}
+\newcommand{\ctwo}{\calC^2}
+\newcommand{\cinf}{\calC^{\infty}}
+\newcommand{\bigpeter}[1]{\Big\langle#1\Big\rangle}
+\newcommand{\peter}[1]{\langle#1\rangle}
+\newcommand{\transp}[1]{#1^t}
+\newcommand{\series}[2]{\sum_{#1}^{\infty}#2}
+\newcommand{\intt}[4]{\int_{#1}^{#2}#3\mathrm{d}#4}
+\newcommand{\ddt}[1]{\frac{\mathrm{d}#1}{\mathrm{dt}}}
+\newcommand{\deldt}[1]{\frac{\partial#1}{\partial\mathrm{t}}}
+\newcommand{\rmd}[1]{\mathrm{d}#1}
+\newcommand{\inv}[1]{#1^{-1}}
+\newcommand{\dx}{\rmd x}
+\newcommand{\dy}{\rmd y}
+\newcommand{\dz}{\rmd z}
+\newcommand{\dt}{\rmd t}
+\newcommand{\du}{\rmd u}
+\newcommand{\dv}{\rmd v}
+\newcommand{\ds}{\rmd s}
+\newcommand{\dxy}{\rmd xy}
+\newcommand{\dyz}{\rmd yz}
+\newcommand{\dyx}{\rmd yx}
+\newcommand{\dzy}{\rmd zy}
+\newcommand{\dzx}{\rmd zx}
+\newcommand{\dxz}{\rmd xz}
+\newcommand{\gtinf}[1]{\underset{#1\to\infty}{\longrightarrow}}
+\newcommand{\sm}[4]{\begin{psmallmatrix}#1&#2\\#3&#4\end{psmallmatrix}}
+\newcommand{\map}[4]{
+	\begin{matrix}
+		#1&\to&#2\\#3&\mapsto&#4
+	\end{matrix}
+}

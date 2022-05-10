@@ -249,14 +249,16 @@ def solve_rrlb_mpc(
         nlp_prob,
         opts,
     )
+    start = time()
     sol = nlp_solver(x0=ca.vertcat(*w_start), lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
-    return sol["x"]
+    stop = time()
+    return sol["x"], 1000.0 * (stop - start)
 
     # tentative with map ======================================================
 
     # X = ca.MX.sym("X", state_dim, N + 1)
     # U = ca.MX.sym("U", control_dim, N)
-    
+
     # f_discrete_map = f_discrete.map(N, "unroll")
     # G = ca.vec(f_discrete_map(X[:, :N], U) - X[:, 1:])
     # UBG = ca.DM.zeros(N * state_dim)
@@ -345,8 +347,10 @@ def solve_mpc(
         nlp_prob,
         opts,
     )
+    start = time()
     sol = nlp_solver(x0=ca.vertcat(*w_start), lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
-    return sol["x"]
+    stop = time()
+    return sol["x"], 1000.0 * (stop - start)
 
 
 # %% solve the problem in a closed loop fashion
@@ -372,8 +376,12 @@ def createPlot(
     plt.ylim([0.0, 4.0])
     ax_concentration.set_xlabel("time [h]")
     ax_concentration.set_ylabel("concentration [mol/L]")
-    ax_concentration.plot([0, simulation_length], [float(x_S[0]), float(x_S[0])], "r")
-    ax_concentration.plot([0, simulation_length], [float(x_S[1]), float(x_S[1])], "r")
+    ax_concentration.plot(
+        [0, simulation_length - 1], [float(x_S[0]), float(x_S[0])], "r"
+    )
+    ax_concentration.plot(
+        [0, simulation_length - 1], [float(x_S[1]), float(x_S[1])], "r"
+    )
     if not final:
         (c_A,) = ax_concentration.plot(states[0, 0], "b-")
         (c_B,) = ax_concentration.plot(states[1, 0], "m-")
@@ -569,6 +577,7 @@ def run_closed_loop_simulation(
     states = np.zeros((state_dim, max_simulation_length + 1))
     controls = np.zeros((control_dim, max_simulation_length))
     states[:, 0] = custom_x_init
+    times = np.zeros(max_simulation_length)
 
     # Get a feasible trajectory as an initial guess (for the plot creation)
     u_start = ca.horzcat(*([u_S] * N))
@@ -603,16 +612,15 @@ def run_closed_loop_simulation(
 
     while not converged(i) and i < max_simulation_length:
         # retrieve solution data
-        start = time()
-        sol = method(
+        sol, solve_time = method(
             x_init=states[:, i],
             x_start=x_start,
             u_start=u_start,
             solver=solver,
             opts=opts,
         )
-        stop = time()
-        print("time for iteration {} : {} ms".format(i, 1000 * (stop - start)))
+        times[i] = solve_time
+        # print("time for iteration {} : {} ms".format(i, solve_time))
         c_A_pred = sol[0::6]
         c_B_pred = sol[1::6]
         theta_pred = sol[2::6]
@@ -655,10 +663,11 @@ def run_closed_loop_simulation(
 
         i += 1
 
-    print("Final state: ", states[:, i + 1])
-    print("Final control: ", controls[:, i])
+    print("Final state: ", states[:, i])
+    print("Final control: ", controls[:, i - 1])
     states = np.delete(states, list(range(i + 1, max_simulation_length + 1)), axis=1)
     controls = np.delete(controls, list(range(i, max_simulation_length)), axis=1)
+    times = np.delete(times, list(range(i, max_simulation_length)), axis=0)
 
     if step_by_step:
         plt.show()
@@ -672,7 +681,19 @@ def run_closed_loop_simulation(
             final=True,
         )
         if not converged(i):
-            plt.title("NOT CONVERGED")
+            plt.gcf()
+            plt.title(
+                "NOT CONVERGED, discrepancy = {}, control discrepancy = {}".format(
+                    np.sqrt(np.sum(np.square(states[:, i] - x_S))),
+                    np.sqrt(np.sum(np.square(controls[:, i - 1] - u_S))),
+                )
+            )
+            print(
+                "NOT CONVERGED, state discrepancy = {}, control discrepancy = {}".format(
+                    np.sqrt(np.sum(np.square(states[:, i] - x_S))),
+                    np.sqrt(np.sum(np.square(controls[:, i - 1] - u_S))),
+                ),
+            )
         plt.savefig(
             os.path.join(os.path.dirname(__file__), name + ".png"),
             dpi=300,
@@ -697,4 +718,4 @@ def run_closed_loop_simulation(
     if not (98.0 <= states[2, i] and 92.0 <= states[3, i]):
         constraints_violated = True
 
-    return float(total_cost), i, constraints_violated
+    return float(total_cost), i, constraints_violated, times
