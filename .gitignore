@@ -11,6 +11,7 @@ math-project-questions/*
 math-project-presentation/*
 !math-project-presentation/math-project-presentation.tex
 !math-project-presentation/math-project-presentation.pdf
+!math-project-presentation/Logo.pdf
 
 *.mp4
 CSTR_setting.m
