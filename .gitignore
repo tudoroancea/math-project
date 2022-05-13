@@ -17,6 +17,7 @@ math-project-presentation/*
 CSTR_setting.m
 ODE_CSTR.m
 *.pyc
+venv
 
 .vscode
 .idea
