@@ -1,16 +1,16 @@
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
+
 def createPlot(
-    states,
-    controls,
-    state_prediction,
-    control_prediction,
-    simulation_length,
     xr,
     ur,
-    N,
-    final=False,
+    states,
+    controls,
+    times,
+    state_prediction=None,
+    control_prediction=None,
+    simulation_length=None,  # if None we plot only the necessary length on xaxis will be plot
 ):
     """Creates a plot and adds the initial data provided by the arguments"""
 
@@ -19,19 +19,37 @@ def createPlot(
     plt.clf()
     gs = GridSpec(4, 1, figure=fig)
 
+    titles = [
+        "c_A",
+        "c_B",
+        "theta",
+        "theta_K",
+        "Feed Inflow Rate",
+        "Heat Removal Rate",
+    ]
+    xlabel = "Time [s]"
+    ylabels = [
+        "Concentration [mol/L]",
+        "Concentration [mol/L]",
+        "Temperature [°C]",
+        "Temperature [°C]",
+        "Feed Inflow [s^-1]",
+        "Heat Removal [kJ/s]",
+    ]
+
     # Plot concentrations
+
+    
+
+
     ax_concentration = fig.add_subplot(gs[0, 0])
     ax_concentration.grid("both")
     ax_concentration.set_title("evolution of concentrations over time")
     plt.ylim([0.0, 4.0])
-    ax_concentration.set_xlabel("time [h]")
+    ax_concentration.set_xlabel("time [s]")
     ax_concentration.set_ylabel("concentration [mol/L]")
-    ax_concentration.plot(
-        [0, simulation_length - 1], [float(xr[0]), float(xr[0])], "r"
-    )
-    ax_concentration.plot(
-        [0, simulation_length - 1], [float(xr[1]), float(xr[1])], "r"
-    )
+    ax_concentration.plot([0, simulation_length - 1], [float(xr[0]), float(xr[0])], "r")
+    ax_concentration.plot([0, simulation_length - 1], [float(xr[1]), float(xr[1])], "r")
     if not final:
         (c_A,) = ax_concentration.plot(states[0, 0], "b-")
         (c_B,) = ax_concentration.plot(states[1, 0], "m-")
@@ -63,12 +81,8 @@ def createPlot(
     ax_temperatures.set_xlabel("time [h]")
     ax_temperatures.set_ylabel("temperature [°C]")
     plt.ylim([95.0, 120.0])
-    ax_temperatures.plot(
-        [0, simulation_length - 1], [float(xr[2]), float(xr[2])], "r"
-    )
-    ax_temperatures.plot(
-        [0, simulation_length - 1], [float(xr[3]), float(xr[3])], "r"
-    )
+    ax_temperatures.plot([0, simulation_length - 1], [float(xr[2]), float(xr[2])], "r")
+    ax_temperatures.plot([0, simulation_length - 1], [float(xr[3]), float(xr[3])], "r")
     if not final:
         (theta,) = ax_temperatures.plot(states[2, 0], "b-")
         (theta_K,) = ax_temperatures.plot(states[3, 0], "m-")
@@ -125,9 +139,7 @@ def createPlot(
     ax_heat_removal.set_title("evolution of heat removal rate")
     ax_heat_removal.set_xlabel("time [h]")
     ax_heat_removal.set_ylabel("heat removal rate [kJ/h]")
-    ax_heat_removal.plot(
-        [0, simulation_length - 1], [float(ur[1]), float(ur[1])], "r"
-    )
+    ax_heat_removal.plot([0, simulation_length - 1], [float(ur[1]), float(ur[1])], "r")
     ax_heat_removal.plot([0, simulation_length - 1], [-9000.0, -9000.0], "r:")
     ax_heat_removal.plot([0, simulation_length - 1], [0.0, 0.0], "r:")
     if not final:

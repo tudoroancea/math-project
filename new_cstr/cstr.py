@@ -27,6 +27,8 @@ class CSTR:
     nz = (
         nx * (N + 1) + nu * N
     )  # dimension of the vector with all states and control variables concatenaed
+    states_idx = list(range(nx))
+    controls_idx = list(range(nx, nx + nu))
 
     # constraints
     C_x = -sparse.eye(2, nx)
@@ -371,7 +373,17 @@ class CSTR:
         )
         return result
 
-    def preparation_phase(self, prediction, RRLB = True):
+    def preparation_phase(
+        self, prediction, RRLB=True
+    ) -> Tuple[
+        sparse.csc_array,
+        np.ndarray,
+        sparse.csc_array,
+        np.ndarray,
+        np.ndarray,
+        float,
+        float,
+    ]:
         """
         Note : x_0 in l and u is to be updated at the beginning of the feedback phase
         """
