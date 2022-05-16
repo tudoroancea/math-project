@@ -124,15 +124,15 @@ M_x = hess_B_x(x_S)
 
 
 B_u_1 = ca.if_else(
-    35.0 - u[0] > delta, ca.log(20.81) - ca.log(35.0 - u[0]), beta(35.0 - u[0])
+    35.0 - u[0] > delta, ca.log(35.0-u_S[0]) - ca.log(35.0 - u[0]), beta(35.0 - u[0])
 )
 B_u_2 = ca.if_else(
-    u[0] - 3.0 > delta, ca.log(11.19) - ca.log(u[0] - 3.0), beta(u[0] - 3.0)
+    u[0] - 3.0 > delta, ca.log(u_S[0]-3.0) - ca.log(u[0] - 3.0), beta(u[0] - 3.0)
 )
-B_u_3 = ca.if_else(-u[1] > delta, ca.log(1113.5) - ca.log(-u[1]), beta(-u[1]))
+B_u_3 = ca.if_else(-u[1] > delta, ca.log(-u_S[1]) - ca.log(-u[1]), beta(-u[1]))
 B_u_4 = ca.if_else(
     9000.0 + u[1] > delta,
-    ca.log(7886.5) - ca.log(9000.0 + u[1]),
+    ca.log(9000.0+u_S[1]) - ca.log(9000.0 + u[1]),
     beta(9000.0 + u[1]),
 )
 grad_B_u_1 = ca.Function("grad_B_u_1", [u], [ca.jacobian(B_u_1, u)])
@@ -200,11 +200,10 @@ def solve_rrlb_mpc(
     """
     returns the optimal solution with all the variables from all the stages
     """
-    x_0 = ca.MX.sym("x_0", state_dim)
-    x_k = x_0
+    x_k = ca.MX.sym("x_0", state_dim)
 
     J = 0  # objective function
-    w = [x_0]  # list of all the variables x and u concatenated
+    w = [x_k]  # list of all the variables x and u concatenated
     w_start = [x_start[0]]  # initial guess
     g = []  # equality constraints
 
@@ -216,7 +215,7 @@ def solve_rrlb_mpc(
         w_start += [u_start[k]]
 
         x_k_end = f_discrete(x_k, u_k)
-        J = J + l_tilde(x_k, u_k)
+        J += l_tilde(x_k, u_k)
 
         x_k = ca.MX.sym(
             "x_" + str(k + 1), state_dim
@@ -231,6 +230,7 @@ def solve_rrlb_mpc(
     # Concatenate decision variables and constraint terms
     w = ca.vertcat(*w)
     g = ca.vertcat(*g)
+    w_start = ca.vertcat(*w_start)
 
     lbw = (
         x_init.tolist() + [-np.inf] * (state_dim + control_dim) * N
@@ -250,7 +250,7 @@ def solve_rrlb_mpc(
         opts,
     )
     start = time()
-    sol = nlp_solver(x0=ca.vertcat(*w_start), lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+    sol = nlp_solver(x0=w_start, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
     stop = time()
     return sol["x"], 1000.0 * (stop - start)
 
@@ -630,7 +630,11 @@ def run_closed_loop_simulation(
         states_pred = np.concatenate(
             (c_A_pred, c_B_pred, theta_pred, theta_K_pred), axis=1
         ).T
+        if i == 0:
+            print("states_pred: ", states_pred.ravel("F"))
         controls_pred = np.concatenate((u_1_pred, u_2_pred), axis=1).T
+        if i == 0:
+            print("controls_pred: ", controls_pred.ravel("F"))
 
         # update the states and controls
         controls[:, i] = controls_pred[:, 0]

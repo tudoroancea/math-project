@@ -124,7 +124,7 @@ start_prob_setup = time()
 prob = osqp.OSQP()
 
 # Setup workspace
-prob.setup(P, q, A, l, u, warm_start=True)
+prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
 
 stop_prob_setup = time()
 print("Problem setup took %.5f ms" % (1000.0 * (stop_prob_setup - start_prob_setup)))

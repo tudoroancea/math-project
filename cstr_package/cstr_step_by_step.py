@@ -9,8 +9,8 @@ total_cost, iterations, constraints_violated, times = run_closed_loop_simulation
     solver="ipopt",
     opts={
         "print_time": 0,
-        "ipopt": {"print_level": 0, "max_iter": 1, "max_cpu_time": 10.0},
-        # "ipopt": {"print_level": 0, "max_cpu_time": 10.0},
+        "ipopt": {"sb": "yes", "print_level": 0, "max_iter": 1, "max_cpu_time": 10.0},
+        # "ipopt": {"sb": "yes", "print_level": 0, "max_cpu_time": 10.0},
     },
     # solver="sqpmethod",
     # opts={

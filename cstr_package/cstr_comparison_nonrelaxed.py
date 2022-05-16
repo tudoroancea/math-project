@@ -4,14 +4,14 @@ from cstr import *
 start = time()
 print("RRLB MPC : \n==========================")
 total_cost, iterations, constraints_violated, times_rrlb = run_closed_loop_simulation(
-    max_simulation_length=simulation_length,
+    max_simulation_length=1,
     method=solve_rrlb_mpc,
     step_by_step=False,
     name="rrlb_mpc",
     solver="ipopt",
     opts={
         "print_time": 0,
-        "ipopt": {"sb": "yes", "print_level": 0, "max_iter": 1, "max_cpu_time": 10.0},
+        "ipopt": {"sb": "yes", "print_level": 0, "max_cpu_time": 10.0},
     },
 )
 print(
@@ -23,14 +23,14 @@ print(
 
 print("MPC : \n==========================")
 total_cost, iterations, constraints_violated, times = run_closed_loop_simulation(
-    max_simulation_length=simulation_length,
+    max_simulation_length=1,
     method=solve_mpc,
     step_by_step=False,
     name="mpc",
     solver="ipopt",
     opts={
         "print_time": 0,
-        "ipopt": {"sb": "yes", "print_level": 0, "max_iter": 1, "max_cpu_time": 10.0},
+        "ipopt": {"sb": "yes", "print_level": 0, "max_cpu_time": 10.0},
     },
 )
 print(

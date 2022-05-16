@@ -1,14 +1,10 @@
 # %% imports and global parameters
-import os
-import sys
 from time import time
 from typing import Tuple
 
 import casadi as ca
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg as la
-from matplotlib.gridspec import GridSpec
 from scipy import sparse
 
 x_init = np.array([1.0, 0.5, 100.0, 100.0])  # initial state
@@ -51,7 +47,8 @@ class CSTR:
     hess_B_u: ca.Function
     M_x: np.ndarray
     M_u: np.ndarray
-    delta = np.min(np.concatenate((d_x, d_u), axis=0))  # relaxation parameter
+    delta = 10.0  # relaxation parameter
+    # delta = np.min(np.concatenate((d_x, d_u), axis=0))  # relaxation parameter
 
     # dynamics
     f: ca.Function
@@ -61,6 +58,11 @@ class CSTR:
     # costs
     Q = sparse.diags([[0.2, 1.0, 0.5, 0.2]], [0])
     R = sparse.diags([[0.5, 5.0e-7]], [0])
+    P: np.ndarray
+    K: np.ndarray
+    l: ca.Function
+    l_tilde: ca.Function
+    F: ca.Function
 
     def __init__(
         self,
@@ -140,8 +142,6 @@ class CSTR:
             new_x = new_x + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         self.f_special = ca.Function("f", [x, u, h], [new_x])
 
-        # cost function
-
         self.set_reference(initial_xr, initial_ur)
 
     def compute_RRLB(self) -> None:
@@ -184,7 +184,7 @@ class CSTR:
         )
         B_u_2 = ca.if_else(
             u[0] - 3.0 > self.delta,
-            ca.log(3.0 + self.ur[0]) - ca.log(u[0] - 3.0),
+            ca.log(self.ur[0] - 3.0) - ca.log(u[0] - 3.0),
             beta(u[0] - 3.0),
         )
         B_u_3 = ca.if_else(
@@ -238,12 +238,36 @@ class CSTR:
         self.ur = ur
         self.compute_RRLB()
         self.compute_terminal_cost()
+
+        x = ca.SX.sym("x", self.nx)
+        u = ca.SX.sym("u", self.nu)
+        self.l = ca.Function(
+            "l",
+            [x, u],
+            [
+                # ca.bilin(self.Q, x - self.xr, x - self.xr)
+                # + ca.bilin(self.R, u - self.ur, u - self.ur)
+                0.2 * (x[0] - self.xr[0]) ** 2
+                + 1.0 * (x[1] - self.xr[1]) ** 2
+                + 0.5 * (x[2] - self.xr[2]) ** 2
+                + 0.2 * (x[3] - self.xr[3]) ** 2
+                + 0.5 * (u[0] - self.ur[0]) ** 2
+                + 5.0e-7 * (u[1] - self.ur[1]) ** 2
+            ],
+        )
+        self.l_tilde = ca.Function(
+            "l_tilde",
+            [x, u],
+            [self.l(x, u) + self.epsilon * self.B_x(x) + self.epsilon * self.B_u(u)],
+        )
+        self.F = ca.Function("F", [x], [ca.bilin(self.P, (x - self.xr), (x - self.xr))])
+
         assumptions_verified, err_msg = self.check_stability_assumptions()
         assert assumptions_verified, err_msg
 
-    def check_stability_assumptions(self) -> Tuple(bool, str):
+    def check_stability_assumptions(self):
         # TODO : implement check for stability assumptions
-        return True, ""
+        return True, "bruh"
 
     def initial_prediction(
         self, initial_state: np.ndarray, RRLB: bool = True
@@ -252,26 +276,10 @@ class CSTR:
         Compute the initial prediction of the state and the control input in the format
         (x_0, x_1, ...,x_N, u_0, u_1, ..., u_{N-1})
         """
-        x = ca.SX.sym("x", self.n_x)
-        u = ca.SX.sym("u", self.n_u)
-        l = ca.Function(
-            "l",
-            [x, u],
-            ca.bilin(self.Q, x - self.xr, x - self.xr)
-            + ca.bilin(self.R, u - self.ur, u - self.ur),
-        )
-        l_tilde = ca.Function(
-            "l_tilde",
-            [x, u],
-            [l(x, u) + self.epsilon * self.B_x(x) + self.epsilon * self.B_u(u)],
-        )
-        F = ca.Function("F", [x], [ca.bilin(self.P, (x - self.xr), (x - self.xr))])
-
-        x_0 = ca.MX.sym("x_0", self.nx)
-        x_k = x_0
+        x_k = ca.MX.sym("x_0", self.nx)
 
         J = 0  # objective function
-        w_x = [x_0]  # list of all state variables
+        w_x = [x_k]  # list of all state variables
         w_u = []  # list of all control variables
         g = []  # equality constraints
 
@@ -284,8 +292,10 @@ class CSTR:
             u_k = ca.MX.sym("u_" + str(k), self.nu)
             w_u += [u_k]
 
+            x_k_end = self.f(x_k, u_k)
+
             # increment cost by one stage
-            J = J + l_tilde(x_k, u_k)
+            J += self.l_tilde(x_k, u_k)
 
             # new NLP variable for the state
             x_k = ca.MX.sym(
@@ -294,14 +304,13 @@ class CSTR:
             w_x += [x_k]
 
             # Add equality constraint
-            x_k_end = self.f(x_k, u_k)
             g += [x_k_end - x_k]
 
             # compute initial guess
+            w_start_u += [self.ur]  # [-self.K @ w_start_x[-1]]
             w_start_x += [self.f(w_start_x[-1], w_start_u[-1])]
-            w_start_u += [-self.K @ w_start_x[-1]]
 
-        J += F(x_k)  # here x_k represents x_N
+        J += self.F(x_k)  # here x_k represents x_N
 
         # Concatenate stuff
         w = w_x + w_u
@@ -341,7 +350,7 @@ class CSTR:
             nlp_prob,
             {
                 "print_time": 0,
-                "ipopt": {"sb": "yes", "print_level": 0},
+                "ipopt": {"sb": "yes", "max_iter": 1, "print_level": 1},
             },
         )
 
@@ -349,28 +358,82 @@ class CSTR:
         start = time()
         sol = nlp_solver(x0=w_start, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
         stop = time()
-        print(f"Initial prediction computed in {stop - start:.5f} seconds")
+        print(f"Initial prediction computed in {1000.0*(stop - start):.5f} ms")
 
-        return sol["x"].full()
+        result = sol["x"].full().ravel()
+        assert not np.isnan(result).any(), "NaNs found in initial prediction"
+        return result
 
     def shift_prediction(self, prediction: np.ndarray) -> np.ndarray:
         """
         Shift the prediction by one stage
         """
-        result = np.zeros(self.nx * (self.N + 1) + self.nu * self.N)
-        # shifted old predictions
-        result[0 : self.nx * self.N] = prediction[self.nx : self.nx * (self.N + 1)]
-        result[
-            self.nx * (self.N + 1) : self.nx * (self.N + 1) + self.nu * (self.N - 1)
-        ] = prediction[self.nx * (self.N + 1) + self.nu :]
-        # append new control and state
-        result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :] = (
-            -self.K @ prediction[self.nx * self.N : self.nx * (self.N + 1)]
+        bruh1 = sparse.hstack(
+            [
+                sparse.csc_matrix((self.nx * self.N, self.nx)),
+                sparse.eye(self.nx * self.N),
+                sparse.csc_matrix((self.nx * self.N, self.nu * self.N)),
+            ],
+            format="csc",
         )
-        result[self.nx * self.N : self.nx * (self.N + 1)] = self.f(
-            result[self.nx * (self.N_1) : self.nx * self.N],
-            result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :],
+
+        bruh2 = sparse.vstack(
+            [
+                sparse.hstack(
+                    [
+                        sparse.csc_matrix(
+                            (self.nu * (self.N - 1), self.nx * (self.N + 1) + self.nu)
+                        ),
+                        sparse.eye(self.nu * (self.N - 1)),
+                    ],
+                    format="csc",
+                ),
+                sparse.hstack(
+                    [
+                        sparse.csc_matrix((self.nu, self.nx * self.N)),
+                        self.K,
+                        sparse.csc_matrix((self.nu, self.nu * self.N)),
+                    ],
+                    format="csc",
+                ),
+            ],
+            format="csc",
         )
+
+        tpr1 = bruh1.dot(prediction)
+        tpr2 = bruh2.dot(prediction)
+        result = np.concatenate(
+            (
+                tpr1,
+                self.f(
+                    prediction[self.get_state_idx(self.N)],
+                    tpr2[-self.nu :],
+                )
+                .full()
+                .ravel(),
+                tpr2,
+            ),
+            axis=0,
+        )
+
+        # result = np.zeros(self.nx * (self.N + 1) + self.nu * self.N)
+        # # shifted old predictions
+        # result[0 : self.nx * self.N] = prediction[self.nx : self.nx * (self.N + 1)]
+        # result[
+        #     self.nx * (self.N + 1) : self.nx * (self.N + 1) + self.nu * (self.N - 1)
+        # ] = prediction[self.nx * (self.N + 1) + self.nu :]
+        # # append new control and state
+        # result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :] = (
+        #     self.K @ prediction[self.nx * self.N : self.nx * (self.N + 1)]
+        # )
+        # result[self.nx * self.N : self.nx * (self.N + 1)] = (
+        #     self.f(
+        #         result[self.nx * (self.N - 1) : self.nx * self.N],
+        #         result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :],
+        #     )
+        #     .full()
+        #     .ravel()
+        # )
         return result
 
     def preparation_phase(
@@ -394,9 +457,9 @@ class CSTR:
         start = time()
         tpr = []
         for k in range(self.N + 1):
-            tpr += [self.grad_B_x(prediction[self.get_state_idx(k)])]
+            tpr += [self.grad_B_x(prediction[self.get_state_idx(k)]).full().ravel()]
         for k in range(self.N):
-            tpr += [self.grad_B_u(prediction[self.get_control_idx(k)])]
+            tpr += [self.grad_B_u(prediction[self.get_control_idx(k)]).full().ravel()]
         stop = time()
         sensitivity_computation_time += 1000.0 * (stop - start)
 
@@ -416,9 +479,9 @@ class CSTR:
         start = time()
         tpr = []
         for k in range(self.N + 1):
-            tpr += [self.hess_B_x(prediction[self.get_state_idx(k)])]
+            tpr += [self.hess_B_x(prediction[self.get_state_idx(k)]).sparse()]
         for k in range(self.N):
-            tpr += [self.hess_B_u(prediction[self.get_control_idx(k)])]
+            tpr += [self.hess_B_u(prediction[self.get_control_idx(k)]).sparse()]
         stop = time()
         sensitivity_computation_time += 1000.0 * (stop - start)
 
@@ -438,31 +501,42 @@ class CSTR:
                 self.f_jac_x(
                     prediction[self.get_state_idx(k)],
                     prediction[self.get_control_idx(k)],
-                )
+                ).sparse()
             ]
             tpr2 += [
                 self.f_jac_u(
                     prediction[self.get_state_idx(k)],
                     prediction[self.get_control_idx(k)],
-                )
+                ).sparse()
             ]
         stop = time()
         sensitivity_computation_time += 1000.0 * (stop - start)
 
         start = time()
+
         Ax = sparse.diags(
-            [[sparse.eye(self.nx)] + [-sparse.eye(self.nx)], l],
-            offsets=[0, -1],
+            [[1.0] * self.nx + [-1.0] * self.nx * self.N], [0], format="csc"
+        ) + sparse.bmat(
+            [
+                [None, sparse.csc_matrix((self.nx, self.nx))],
+                [sparse.block_diag(mats=tpr, format="csc"), None],
+            ],
             format="csc",
         )
-        Bu = sparse.diags([tpr2], offsets=[-1], format="csc")
+        Bu = sparse.bmat(
+            [
+                [sparse.csc_matrix((self.nx, self.nu * self.N))],
+                [sparse.block_diag(mats=tpr2, format="csc")],
+            ],
+            format="csc",
+        )
         A = sparse.hstack([Ax, Bu])
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 
         # compute l and u =======================================================
         start = time()
-        tpr = []
+        tpr = [-prediction[self.get_state_idx(0)]]
         for k in range(self.N):
             tpr += [
                 prediction[self.get_state_idx(k + 1)]
@@ -470,6 +544,8 @@ class CSTR:
                     prediction[self.get_state_idx(k)],
                     prediction[self.get_control_idx(k)],
                 )
+                .full()
+                .ravel()
             ]
         stop = time()
         sensitivity_computation_time += 1000.0 * (stop - start)
