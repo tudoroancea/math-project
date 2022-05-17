@@ -7,7 +7,7 @@ from simulation import run_closed_loop_simulation
     sensitivites_computation_times,
     condensation_times,
     solve_times,
-) = run_closed_loop_simulation()
+) = run_closed_loop_simulation(RRLB=True)
 print(
     "total_cost = {}, constraints_violated = {}".format(
         total_cost, constraints_violated

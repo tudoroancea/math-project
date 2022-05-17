@@ -1,4 +1,5 @@
 # %% imports and global parameters
+import sys
 from time import time
 from typing import Tuple
 
@@ -27,7 +28,7 @@ class CSTR:
     controls_idx = list(range(nx, nx + nu))
 
     # constraints
-    C_x = -sparse.eye(2, nx)
+    C_x = sparse.hstack([sparse.csc_matrix((2, 2)), -sparse.eye(2)])
     C_u = sparse.vstack(
         (sparse.diags([[1.0, -1.0]], [0]), sparse.diags([[1.0, -1.0]], [0]))
     )
@@ -52,8 +53,11 @@ class CSTR:
 
     # dynamics
     f: ca.Function
-    f_jac_x: ca.Function
-    f_jac_u: ca.Function
+    f_cont: ca.Function
+    jac_f_x: ca.Function
+    jac_f_u: ca.Function
+    A: np.ndarray
+    B: np.ndarray
 
     # costs
     Q = sparse.diags([[0.2, 1.0, 0.5, 0.2]], [0])
@@ -102,7 +106,7 @@ class CSTR:
         k_2 = k_20 * ca.exp(E_2 / (x[2] + 273.15))
         k_3 = k_30 * ca.exp(E_3 / (x[2] + 273.15))
 
-        f_cont = ca.Function(
+        self.f_cont = ca.Function(
             "f_cont",
             [x, u],
             [
@@ -122,23 +126,23 @@ class CSTR:
         DT = self.T / self.N / self.M
         new_x = x
         for i in range(self.M):
-            k1 = f_cont(new_x, u)
-            k2 = f_cont(new_x + DT / 2 * k1, u)
-            k3 = f_cont(new_x + DT / 2 * k2, u)
-            k4 = f_cont(new_x + DT * k3, u)
+            k1 = self.f_cont(new_x, u)
+            k2 = self.f_cont(new_x + DT / 2 * k1, u)
+            k3 = self.f_cont(new_x + DT / 2 * k2, u)
+            k4 = self.f_cont(new_x + DT * k3, u)
             new_x = new_x + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         self.f = ca.Function("f", [x, u], [new_x])
-        self.f_jac_x = ca.Function("f_jac_x", [x, u], [ca.jacobian(new_x, x)])
-        self.f_jac_u = ca.Function("f_jac_u", [x, u], [ca.jacobian(new_x, u)])
+        self.jac_f_x = ca.Function("f_jac_x", [x, u], [ca.jacobian(new_x, x)])
+        self.jac_f_u = ca.Function("f_jac_u", [x, u], [ca.jacobian(new_x, u)])
 
         h = ca.SX.sym("h")
         DT = h / self.M
         new_x = x
         for i in range(self.M):
-            k1 = f_cont(new_x, u)
-            k2 = f_cont(new_x + DT / 2 * k1, u)
-            k3 = f_cont(new_x + DT / 2 * k2, u)
-            k4 = f_cont(new_x + DT * k3, u)
+            k1 = self.f_cont(new_x, u)
+            k2 = self.f_cont(new_x + DT / 2 * k1, u)
+            k3 = self.f_cont(new_x + DT / 2 * k2, u)
+            k4 = self.f_cont(new_x + DT * k3, u)
             new_x = new_x + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         self.f_special = ca.Function("f", [x, u, h], [new_x])
 
@@ -219,18 +223,21 @@ class CSTR:
         self.M_u = self.hess_B_u(self.ur).full()
 
     def compute_terminal_cost(self) -> None:
-        A = np.array(self.f_jac_x(self.xr, self.ur))
-        B = np.array(self.f_jac_u(self.xr, self.ur))
+        self.A = np.array(self.jac_f_x(self.xr, self.ur))
+        self.B = np.array(self.jac_f_u(self.xr, self.ur))
         self.P = np.array(
             la.solve_discrete_are(
-                A, B, self.Q + self.epsilon * self.M_x, self.R + self.epsilon * self.M_u
+                self.A,
+                self.B,
+                self.Q + self.epsilon * self.M_x,
+                self.R + self.epsilon * self.M_u,
             )
         )
         self.K = (
-            -la.inv(self.R + self.epsilon * self.M_u + B.T @ self.P @ B)
-            @ B.T
+            -la.inv(self.R + self.epsilon * self.M_u + self.B.T @ self.P @ self.B)
+            @ self.B.T
             @ self.P
-            @ A
+            @ self.A
         )
 
     def set_reference(self, xr: np.ndarray, ur: np.ndarray) -> None:
@@ -266,8 +273,123 @@ class CSTR:
         assert assumptions_verified, err_msg
 
     def check_stability_assumptions(self):
-        # TODO : implement check for stability assumptions
-        return True, "bruh"
+        err = (False,)
+        err_msg = ""
+        # ====================================================================================================
+        # Check that gradients of barrier functions are 0 at target state/control
+        # ====================================================================================================
+        if ca.norm_2(self.grad_B_x(self.xr)) >= 1e-6:
+            err = True
+            err_msg += "ERROR : grad_B_x(xr) = {}, norm = {}\n".format(
+                self.grad_B_x(self.xr), ca.norm_2(self.grad_B_x(self.xr))
+            )
+
+        if ca.norm_2(self.grad_B_u(self.ur)) >= 1e-6:
+            err = True
+            err_msg += "ERROR : grad_B_u(ur) = {}, norm = {}\n".format(
+                self.grad_B_u(self.ur), ca.norm_2(self.grad_B_u(self.ur))
+            )
+
+        # ====================================================================================================
+        # Check controllability/stabilizability
+        # ====================================================================================================
+        def check_controllability(my_A, my_B):
+            controllability_matrix = np.tile(my_B, (1, self.N))
+            for i in range(1, self.N):
+                controllability_matrix[:, i * self.nu : (i + 1) * self.nu] = (
+                    my_A @ controllability_matrix[:, (i - 1) * self.nu : i * self.nu]
+                )
+            rank = np.linalg.matrix_rank(controllability_matrix)
+            if rank != self.nx:
+                err = True
+                err_msg += "\tERROR : (A,B) is not controllable, rank = {}\n".format(
+                    rank
+                )
+
+        def check_stabilizability(my_A, my_B, my_K):
+            discrete_eig = np.linalg.eig(my_A + my_B @ my_K)[0]
+            not_in_unit_disk = []
+            for val in discrete_eig:
+                if np.linalg.norm(val) >= 1.0:
+                    not_in_unit_disk.append(np.linalg.norm(val))
+
+            if len(not_in_unit_disk) != 0:
+                err = True
+                err_msg += (
+                    "\tERROR : (A,B) is not stabilizable, eigenvalues = {}\n".format(
+                        not_in_unit_disk
+                    )
+                )
+
+        # Discrete time
+        err_msg += "Discrete time stabilizability / controllability:\n"
+        check_controllability(self.A, self.B)
+        check_stabilizability(self.A, self.B, self.K)
+
+        # Continuous time
+        err_msg += "Continuous time stabilizability / controllability:\n"
+        x = ca.SX.sym("x", self.nx)
+        u = ca.SX.sym("u", self.nu)
+        A_cont_func = ca.Function(
+            "A_cont_func", [x, u], [ca.jacobian(self.f_cont(x, u), x)]
+        )
+        B_cont_func = ca.Function(
+            "B_cont_func", [x, u], [ca.jacobian(self.f_cont(x, u), u)]
+        )
+        A_cont = np.array(A_cont_func(self.xr, self.ur))
+        B_cont = np.array(B_cont_func(self.xr, self.ur))
+        check_controllability(A_cont, B_cont)
+
+        P_cont = la.solve_continuous_are(
+            A_cont,
+            B_cont,
+            self.Q + self.epsilon * self.M_x,
+            self.R + self.epsilon * self.M_u,
+        )
+        K_cont = -la.inv(self.R + self.epsilon * self.M_u) @ B_cont.T @ P_cont
+        check_stabilizability(A_cont, B_cont, K_cont)
+
+        # ====================================================================================================
+        # Check the positive definiteness of the hessian of the objective at the target state/control
+        # (for Lipschitzianity)
+        # ====================================================================================================
+        x_0 = ca.MX.sym("x_0", self.nx)
+        x_k = x_0
+        u = []
+
+        objective = 0
+        for k in range(self.N):
+            u_k = ca.MX.sym("u_" + str(k), self.nu)
+            u.append(u_k)
+            x_k = self.f(x_k, u_k)
+            objective += self.l(x_k, u_k)
+
+        objective += self.F(x_k)
+        u = ca.vertcat(*u)
+        hess_at = ca.Function("hess_at", [x_0, u], [ca.hessian(objective, u)[0]])
+        eigvalues = np.linalg.eig(
+            np.array(hess_at(self.xr, ca.vertcat(*([self.ur] * self.N))))
+        )[0]
+        if np.any(eigvalues <= 0):
+            err = True
+            err_msg += "ERROR : hessian of the objective wrt controls at the origin is \
+                not positive definite. Eigen values are : {}\n".format(
+                eigvalues
+            )
+
+        # ====================================================================================================
+        # Check positive definiteness of hessian of B_u at the target controls
+        # ====================================================================================================
+
+        eigvalues = np.linalg.eig(np.array(self.hess_B_u(ca.DM.zeros(self.nu))))[0]
+        if np.any(eigvalues <= 0):
+            err = True
+            err_msg += "ERROR: hessian of B_u wrt controls at the origin is not \
+                positive definite. Eigen values are : {}\n".format(
+                eigvalues
+            )
+
+        return err, err_msg
 
     def initial_prediction(
         self, initial_state: np.ndarray, RRLB: bool = True
@@ -295,7 +417,7 @@ class CSTR:
             x_k_end = self.f(x_k, u_k)
 
             # increment cost by one stage
-            J += self.l_tilde(x_k, u_k)
+            J += self.l_tilde(x_k, u_k) if RRLB else self.l(x_k, u_k)
 
             # new NLP variable for the state
             x_k = ca.MX.sym(
@@ -350,7 +472,11 @@ class CSTR:
             nlp_prob,
             {
                 "print_time": 0,
-                "ipopt": {"sb": "yes", "max_iter": 1, "print_level": 1},
+                "ipopt": {
+                    "sb": "yes",
+                    # "max_iter": 1 if RRLB else 1000,
+                    "print_level": 1,
+                },
             },
         )
 
@@ -389,7 +515,7 @@ class CSTR:
         return result
 
     def preparation_phase(
-        self, prediction, RRLB=True
+        self, prediction, RRLB: bool = True
     ) -> Tuple[
         sparse.csc_array,
         np.ndarray,
@@ -406,41 +532,46 @@ class CSTR:
         sensitivity_computation_time, condensing_time = 0.0, 0.0
 
         # compute q =============================================================
-        start = time()
-        tpr = []
-        for k in range(self.N + 1):
-            tpr += [self.grad_B_x(prediction[self.get_state_idx(k)]).full().ravel()]
-        for k in range(self.N):
-            tpr += [self.grad_B_u(prediction[self.get_control_idx(k)]).full().ravel()]
-        stop = time()
-        sensitivity_computation_time += 1000.0 * (stop - start)
+        if RRLB:
+            start = time()
+            tpr = []
+            for k in range(self.N + 1):
+                tpr += [self.grad_B_x(prediction[self.get_state_idx(k)]).full().ravel()]
+            for k in range(self.N):
+                tpr += [
+                    self.grad_B_u(prediction[self.get_control_idx(k)]).full().ravel()
+                ]
+            stop = time()
+            sensitivity_computation_time += 1000.0 * (stop - start)
 
         start = time()
+        # TODO : try multiplying and the condensing
         q = sparse.block_diag(
             [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
         ) @ (
             prediction
             - np.concatenate((np.tile(self.xr, self.N + 1), np.tile(self.ur, self.N)))
-        ) + self.epsilon * np.concatenate(
-            tpr
+        ) + (
+            self.epsilon * np.concatenate(tpr) if RRLB else 0.0
         )
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 
         # compute P =======================================================
-        start = time()
-        tpr = []
-        for k in range(self.N + 1):
-            tpr += [self.hess_B_x(prediction[self.get_state_idx(k)]).sparse()]
-        for k in range(self.N):
-            tpr += [self.hess_B_u(prediction[self.get_control_idx(k)]).sparse()]
-        stop = time()
-        sensitivity_computation_time += 1000.0 * (stop - start)
+        if RRLB:
+            start = time()
+            tpr = []
+            for k in range(self.N + 1):
+                tpr += [self.hess_B_x(prediction[self.get_state_idx(k)]).sparse()]
+            for k in range(self.N):
+                tpr += [self.hess_B_u(prediction[self.get_control_idx(k)]).sparse()]
+            stop = time()
+            sensitivity_computation_time += 1000.0 * (stop - start)
 
         start = time()
         P = 2 * sparse.block_diag(
             [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
-        ) + 2 * self.epsilon * sparse.block_diag(tpr, format="csc")
+        ) + (2 * self.epsilon * sparse.block_diag(tpr, format="csc") if RRLB else 0.0)
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 
@@ -450,13 +581,13 @@ class CSTR:
         tpr2 = []
         for k in range(self.N):
             tpr += [
-                self.f_jac_x(
+                self.jac_f_x(
                     prediction[self.get_state_idx(k)],
                     prediction[self.get_control_idx(k)],
                 ).sparse()
             ]
             tpr2 += [
-                self.f_jac_u(
+                self.jac_f_u(
                     prediction[self.get_state_idx(k)],
                     prediction[self.get_control_idx(k)],
                 ).sparse()
@@ -483,6 +614,29 @@ class CSTR:
             format="csc",
         )
         A = sparse.hstack([Ax, Bu])
+        if not RRLB:
+            A = sparse.vstack(
+                [
+                    A,
+                    sparse.bmat(
+                        [
+                            [
+                                sparse.block_diag(
+                                    mats=[self.C_x] * (self.N + 1), format="csc"
+                                ),
+                                None,
+                            ],
+                            [
+                                None,
+                                sparse.block_diag(
+                                    mats=[self.C_u] * self.N, format="csc"
+                                ),
+                            ],
+                        ],
+                        format="csc",
+                    ),
+                ]
+            )
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 
@@ -507,6 +661,28 @@ class CSTR:
         u = l
         stop = time()
         condensing_time += 1000.0 * (stop - start)
+        if not RRLB:
+            start = time()
+            tpr = []
+            for k in range(self.N + 1):
+                tpr += [self.d_x - self.C_x @ prediction[self.get_state_idx(k)]]
+            for k in range(self.N):
+                tpr += [self.d_u - self.C_u @ prediction[self.get_control_idx(k)]]
+            stop = time()
+            sensitivity_computation_time += 1000.0 * (stop - start)
+            start = time()
+            l = np.concatenate(
+                [
+                    l,
+                    np.full(
+                        self.C_x.shape[0] * (self.N + 1) + self.C_u.shape[0] * self.N,
+                        -np.inf,
+                    ),
+                ]
+            )
+            u = np.concatenate([u, np.concatenate(tpr)])
+            stop = time()
+            condensing_time += 1000.0 * (stop - start)
 
         return P, q, A, l, u, sensitivity_computation_time, condensing_time
 

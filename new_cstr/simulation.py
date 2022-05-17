@@ -38,7 +38,7 @@ def run_closed_loop_simulation(
 
     data[cstr.controls_idx, 0] = prediction[cstr.get_control_idx(0)]
 
-    # first preparation phase
+    # first preparation phase =================================================================
     (
         P,
         q,
@@ -47,7 +47,7 @@ def run_closed_loop_simulation(
         u,
         sensitivites_computation_times[0],
         condensation_times[0],
-    ) = cstr.preparation_phase(prediction)
+    ) = cstr.preparation_phase(prediction, RRLB)
 
     prob = osqp.OSQP()
     prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
@@ -55,7 +55,8 @@ def run_closed_loop_simulation(
 
     times[1] = cstr.T / cstr.N / 1000.0
 
-    # first feedback phase
+    # first feedback phase =================================================================
+    # get current data
     data[cstr.controls_idx, 1] = data[cstr.controls_idx, 0]
     data[cstr.states_idx, 1] = (
         cstr.f_special(data[cstr.states_idx, 0], data[cstr.controls_idx, 0], times[1])
@@ -103,9 +104,8 @@ def run_closed_loop_simulation(
             u,
             sensitivites_computation_times[i],
             condensation_times[i],
-        ) = cstr.preparation_phase(prediction)
-        # TODO : see if we could just update the values of P and A instead of creating a new solver
-        # instance each time
+        ) = cstr.preparation_phase(prediction, RRLB)
+
         prob = osqp.OSQP()
         prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
         prob.warm_start(reference - prediction)
@@ -123,7 +123,9 @@ def run_closed_loop_simulation(
             .full()
             .ravel()
         )
+
         start = time()
+        
         l[: cstr.nx] = (
             data[cstr.states_idx, 2 * i + 1] - prediction[cstr.get_state_idx(0)]
         )
@@ -135,6 +137,7 @@ def run_closed_loop_simulation(
         if res.info.status != "solved":
             raise ValueError("OSQP did not solve the problem!")
         prediction += res.x
+
         stop = time()
 
         times[2 * i + 2] = 1000.0 * (stop - start)
@@ -224,10 +227,7 @@ def run_closed_loop_simulation(
     total_cost = 0.0
     # np.sum(np.sqrt(np.sum((np.square(states - np.array(x_S))), axis=0)))
     for k in range(0, 2 * i, 2):
-        total_cost += (
-            data[cstr.states_idx, k] @ cstr.Q @ data[cstr.states_idx, k]
-            + data[cstr.controls_idx, k] @ cstr.R @ data[cstr.controls_idx, k]
-        )
+        total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
         if not constraints_violated:
             for j in range(cstr.N):
                 if not (
