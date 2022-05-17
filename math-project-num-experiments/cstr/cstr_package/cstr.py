@@ -15,10 +15,10 @@ class CSTR:
     # misc
     nx = 4  # dimension of state
     nu = 2  # dimension of control
-    T = 2000.0  # time horizon
-    N = 100  # number of control intervals
+    T = 1500.0  # time horizon
+    N = 70  # number of control intervals
     M = 6  # RK4 integration steps
-    epsilon = 0.05  # barrier parameter
+    epsilon = 0.1  # barrier parameter
     nz = (
         nx * (N + 1) + nu * N
     )  # dimension of the vector with all states and control variables concatenaed
@@ -568,7 +568,9 @@ class CSTR:
         start = time()
         P = 2 * sparse.block_diag(
             [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
-        ) + (2 * self.epsilon * sparse.block_diag(tpr, format="csc") if RRLB else 0.0)
+        )
+        if RRLB:
+            P += 2 * self.epsilon * sparse.block_diag(tpr, format="csc")
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 

@@ -1,8 +1,10 @@
 import sys
 import os
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import numpy as np
+import matplotlib.pyplot as plt
 from cstr_package import run_closed_loop_simulation
 
 (
@@ -12,6 +14,11 @@ from cstr_package import run_closed_loop_simulation
     condensation_times,
     solve_times,
 ) = run_closed_loop_simulation(RRLB=True)
+# plt.gcf()
+# plt.savefig(
+#     os.path.join(os.path.dirname(__file__), "cstr_rrlb.png"), dpi=300, format="png"
+# )
+
 print(
     "total_cost = {}, constraints_violated = {}".format(
         total_cost, constraints_violated

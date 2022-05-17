@@ -3,7 +3,8 @@ import sys
 from time import time
 import numpy as np
 import matplotlib.pyplot as plt
-import osqp
+from osqp import OSQP
+import scipy.sparse.linalg as sla
 
 from . import CSTR, CSTRAnimation
 
@@ -11,7 +12,6 @@ from . import CSTR, CSTRAnimation
 def run_closed_loop_simulation(
     custom_x_init=np.array([1.0, 0.5, 100.0, 100.0]),
     stop_tol=1.0e-3,
-    max_nbr_feedbacks: int = 100,
     RRLB=True,
     step_by_step: bool = True,
     name: str = None,
@@ -20,8 +20,56 @@ def run_closed_loop_simulation(
     Returns the total cost of the run until convergence, the number of iterations taken to reach
     convergence, and if there was any constraint violation
     """
-    cstr = CSTR()
-    reference = np.concatenate((np.tile(cstr.xr, cstr.N + 1), np.tile(cstr.ur, cstr.N)))
+    cstr = CSTR(
+        initial_xr=np.array(
+            [
+                2.1402105301746182e00,
+                1.0903043613077321e00,
+                1.1419108442079495e02,
+                1.1290659291045561e02,
+            ]
+        ),
+        initial_ur=np.array([14.19, -1113.50]),
+    )
+    reference_points = np.array(
+        [
+            [
+                2.1402105301746182e00,
+                1.0903043613077321e00,
+                1.1419108442079495e02,
+                1.1290659291045561e02,
+                14.19,
+                -1113.50,
+            ],
+            # [
+            #     3.5,
+            #     0.75,
+            #     100.0,
+            #     95.0,
+            #     14.19,
+            #     -1113.50,
+            # ],
+            # [
+            #     2.7,
+            #     1.0,
+            #     105.0,
+            #     100.0,
+            #     14.19,
+            #     -1113.50,
+            # ],
+        ]
+    ).T
+    current_reference_idx = 0
+    print("started with reference point n°1")
+    current_reference = np.concatenate(
+        (
+            np.tile(
+                reference_points[cstr.states_idx, current_reference_idx], cstr.N + 1
+            ),
+            np.tile(reference_points[cstr.controls_idx, current_reference_idx], cstr.N),
+        )
+    )
+    max_nbr_feedbacks = int(3000.0 * reference_points.shape[1] / (cstr.T / cstr.N)) + 1
 
     # data for the closed loop simulation
     constraints_violated = False
@@ -51,9 +99,9 @@ def run_closed_loop_simulation(
         condensation_times[0],
     ) = cstr.preparation_phase(prediction, RRLB)
 
-    prob = osqp.OSQP()
+    prob = OSQP()
     prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
-    prob.warm_start(reference - prediction)
+    prob.warm_start(current_reference - prediction)
 
     times[1] = cstr.T / cstr.N / 1000.0
 
@@ -89,13 +137,36 @@ def run_closed_loop_simulation(
     )
 
     def converged(i: int) -> bool:
-        return (
-            np.sqrt(np.sum(np.square(data[cstr.states_idx, 2 * i] - cstr.xr)))
-            < stop_tol
-        )
+        if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
+            return (
+                np.sqrt(np.sum(np.square(data[cstr.states_idx, 2 * i] - cstr.xr)))
+                < stop_tol
+            )
+        else:
+            return False
 
     i = 1
     while not converged(i) and i < max_nbr_feedbacks:
+        if int(np.sum(times[: 2 * i]) / 3000.0) > current_reference_idx:
+            current_reference_idx += 1
+            current_reference = np.concatenate(
+                (
+                    np.tile(
+                        reference_points[cstr.states_idx, current_reference_idx],
+                        cstr.N + 1,
+                    ),
+                    np.tile(
+                        reference_points[cstr.controls_idx, current_reference_idx],
+                        cstr.N,
+                    ),
+                )
+            )
+            cstr.set_reference(
+                xr=reference_points[cstr.states_idx, current_reference_idx],
+                ur=reference_points[cstr.controls_idx, current_reference_idx],
+            )
+            print("changed reference point to point n°", current_reference_idx + 1)
+
         # preparation phase ========================================================
         prediction = cstr.shift_prediction(prediction)
         (
@@ -108,9 +179,9 @@ def run_closed_loop_simulation(
             condensation_times[i],
         ) = cstr.preparation_phase(prediction, RRLB)
 
-        prob = osqp.OSQP()
+        prob = OSQP()
         prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
-        prob.warm_start(reference - prediction)
+        prob.warm_start(current_reference - prediction)
 
         times[2 * i + 1] = cstr.T / cstr.N - times[2 * i]
 
@@ -158,21 +229,13 @@ def run_closed_loop_simulation(
 
         # if the simulation will stop at next iteration (either because it has converged or because we
         #  have reached the maximum number of iterations), we say what happened
-        if converged(i + 1):
-            print("Converged at iteration {}".format(i))
-        elif i == max_nbr_feedbacks - 1:
-            sys.stderr.write("Not converged after {max_nbr_feedbacks} feedbacks.\n")
-
-        # # plot the simulation data if need be
-        # if step_by_step:
-        #     updatePlots(
-        #         states,
-        #         controls,
-        #         states_pred,
-        #         controls_pred,
-        #         i,
-        #     )
-        #     plt.draw()
+        if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
+            if converged(i + 1):
+                print("Converged at iteration {}".format(i))
+            elif i == max_nbr_feedbacks - 1:
+                sys.stderr.write(
+                    f"Not converged after {max_nbr_feedbacks} feedbacks.\n"
+                )
 
         i += 1
 
@@ -191,12 +254,10 @@ def run_closed_loop_simulation(
     print("Final state: ", data[cstr.states_idx, -1])
     print("Final control: ", data[cstr.controls_idx, -1])
 
-    plot = CSTRAnimation(cstr, data, prediction, times)
+    plot = CSTRAnimation(cstr, reference_points, data, prediction, times)
     plt.show()
 
-    # if step_by_step:
-    #     plt.show()
-    # elif name != None:
+    # if name != None:
     #     createPlot(
     #         states,
     #         controls,
@@ -225,10 +286,9 @@ def run_closed_loop_simulation(
     #         format="png",
     #     )
 
-    # compute the performance measure ()total cost along the closed loop trajectory)
+    # compute the performance measure (total cost along the closed loop trajectory)
     total_cost = 0.0
-    # np.sum(np.sqrt(np.sum((np.square(states - np.array(x_S))), axis=0)))
-    for k in range(0, 2 * i, 2):
+    for k in range(0, 2 * i):
         total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
         if not constraints_violated:
             for j in range(cstr.N):

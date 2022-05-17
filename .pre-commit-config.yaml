@@ -9,7 +9,3 @@ repos:
     rev: 21.12b0
     hooks:
     -   id: black
--   repo: https://github.com/asottile/blacken-docs
-    rev: master
-    hooks:
-    -   id: blacken-docs
