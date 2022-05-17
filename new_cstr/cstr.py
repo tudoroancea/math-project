@@ -48,7 +48,7 @@ class CSTR:
     M_x: np.ndarray
     M_u: np.ndarray
     delta = 10.0  # relaxation parameter
-    # delta = np.min(np.concatenate((d_x, d_u), axis=0))  # relaxation parameter
+    # delta = np.min(np.abs(np.concatenate((d_x, d_u), axis=0)))  # relaxation parameter
 
     # dynamics
     f: ca.Function
@@ -368,72 +368,24 @@ class CSTR:
         """
         Shift the prediction by one stage
         """
-        bruh1 = sparse.hstack(
-            [
-                sparse.csc_matrix((self.nx * self.N, self.nx)),
-                sparse.eye(self.nx * self.N),
-                sparse.csc_matrix((self.nx * self.N, self.nu * self.N)),
-            ],
-            format="csc",
+        result = np.zeros(self.nx * (self.N + 1) + self.nu * self.N)
+        # shifted old predictions
+        result[0 : self.nx * self.N] = prediction[self.nx : self.nx * (self.N + 1)]
+        result[
+            self.nx * (self.N + 1) : self.nx * (self.N + 1) + self.nu * (self.N - 1)
+        ] = prediction[self.nx * (self.N + 1) + self.nu :]
+        # append new control and state
+        result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :] = (
+            self.K @ prediction[self.nx * self.N : self.nx * (self.N + 1)]
         )
-
-        bruh2 = sparse.vstack(
-            [
-                sparse.hstack(
-                    [
-                        sparse.csc_matrix(
-                            (self.nu * (self.N - 1), self.nx * (self.N + 1) + self.nu)
-                        ),
-                        sparse.eye(self.nu * (self.N - 1)),
-                    ],
-                    format="csc",
-                ),
-                sparse.hstack(
-                    [
-                        sparse.csc_matrix((self.nu, self.nx * self.N)),
-                        self.K,
-                        sparse.csc_matrix((self.nu, self.nu * self.N)),
-                    ],
-                    format="csc",
-                ),
-            ],
-            format="csc",
+        result[self.nx * self.N : self.nx * (self.N + 1)] = (
+            self.f(
+                result[self.nx * (self.N - 1) : self.nx * self.N],
+                result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :],
+            )
+            .full()
+            .ravel()
         )
-
-        tpr1 = bruh1.dot(prediction)
-        tpr2 = bruh2.dot(prediction)
-        result = np.concatenate(
-            (
-                tpr1,
-                self.f(
-                    prediction[self.get_state_idx(self.N)],
-                    tpr2[-self.nu :],
-                )
-                .full()
-                .ravel(),
-                tpr2,
-            ),
-            axis=0,
-        )
-
-        # result = np.zeros(self.nx * (self.N + 1) + self.nu * self.N)
-        # # shifted old predictions
-        # result[0 : self.nx * self.N] = prediction[self.nx : self.nx * (self.N + 1)]
-        # result[
-        #     self.nx * (self.N + 1) : self.nx * (self.N + 1) + self.nu * (self.N - 1)
-        # ] = prediction[self.nx * (self.N + 1) + self.nu :]
-        # # append new control and state
-        # result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :] = (
-        #     self.K @ prediction[self.nx * self.N : self.nx * (self.N + 1)]
-        # )
-        # result[self.nx * self.N : self.nx * (self.N + 1)] = (
-        #     self.f(
-        #         result[self.nx * (self.N - 1) : self.nx * self.N],
-        #         result[self.nx * (self.N + 1) + self.nu * (self.N - 1) :],
-        #     )
-        #     .full()
-        #     .ravel()
-        # )
         return result
 
     def preparation_phase(

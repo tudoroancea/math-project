@@ -630,11 +630,7 @@ def run_closed_loop_simulation(
         states_pred = np.concatenate(
             (c_A_pred, c_B_pred, theta_pred, theta_K_pred), axis=1
         ).T
-        if i == 0:
-            print("states_pred: ", states_pred.ravel("F"))
         controls_pred = np.concatenate((u_1_pred, u_2_pred), axis=1).T
-        if i == 0:
-            print("controls_pred: ", controls_pred.ravel("F"))
 
         # update the states and controls
         controls[:, i] = controls_pred[:, 0]

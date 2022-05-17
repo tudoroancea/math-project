@@ -19,6 +19,7 @@ def run_closed_loop_simulation(
     convergence, and if there was any constraint violation
     """
     cstr = CSTR()
+    reference = np.concatenate((np.tile(cstr.xr, cstr.N + 1), np.tile(cstr.ur, cstr.N)))
 
     # data for the closed loop simulation
     constraints_violated = False
@@ -28,13 +29,12 @@ def run_closed_loop_simulation(
         2 * max_nbr_feedbacks + 1
     )  # time elapsed between two time points : times[i] = t_i-t_{i-1} and times[0]=0.0
 
-    sensitivites_computation_times = np.zeros(max_nbr_feedbacks + 1)
-    condensation_times = np.zeros(max_nbr_feedbacks + 1)
+    sensitivites_computation_times = np.zeros(max_nbr_feedbacks)
+    condensation_times = np.zeros(max_nbr_feedbacks)
     solve_times = np.zeros(max_nbr_feedbacks)
 
     # Get initial prediction off-line with great precision (use fully converged IP instead of RTI)
     prediction = cstr.initial_prediction(custom_x_init, RRLB)
-    print("prediction = {}".format(prediction))
 
     data[cstr.controls_idx, 0] = prediction[cstr.get_control_idx(0)]
 
@@ -51,14 +51,17 @@ def run_closed_loop_simulation(
 
     prob = osqp.OSQP()
     prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
+    prob.warm_start(reference - prediction)
 
     times[1] = cstr.T / cstr.N / 1000.0
 
     # first feedback phase
     data[cstr.controls_idx, 1] = data[cstr.controls_idx, 0]
-    data[cstr.states_idx, 1] = cstr.f_special(
-        data[cstr.states_idx, 0], data[cstr.controls_idx, 0], times[1]
-    ).full().ravel()
+    data[cstr.states_idx, 1] = (
+        cstr.f_special(data[cstr.states_idx, 0], data[cstr.controls_idx, 0], times[1])
+        .full()
+        .ravel()
+    )
 
     start = time()
 
@@ -68,7 +71,7 @@ def run_closed_loop_simulation(
     res = prob.solve()
     if res.info.status != "solved":
         raise ValueError("OSQP did not solve the problem!")
-    prediction = res.x
+    prediction += res.x
 
     stop = time()
 
@@ -76,9 +79,11 @@ def run_closed_loop_simulation(
     solve_times[0] = 1000.0 * res.info.solve_time
 
     data[cstr.controls_idx, 2] = prediction[cstr.get_control_idx(0)]
-    data[cstr.states_idx, 2] = cstr.f_special(
-        data[cstr.states_idx, 1], data[cstr.controls_idx, 2], times[2]
-    ).full().ravel()
+    data[cstr.states_idx, 2] = (
+        cstr.f_special(data[cstr.states_idx, 1], data[cstr.controls_idx, 2], times[2])
+        .full()
+        .ravel()
+    )
 
     def converged(i: int) -> bool:
         return (
@@ -88,7 +93,7 @@ def run_closed_loop_simulation(
 
     i = 1
     while not converged(i) and i < max_nbr_feedbacks:
-        # preparation phase
+        # preparation phase ========================================================
         prediction = cstr.shift_prediction(prediction)
         (
             P,
@@ -103,16 +108,21 @@ def run_closed_loop_simulation(
         # instance each time
         prob = osqp.OSQP()
         prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
+        prob.warm_start(reference - prediction)
 
         times[2 * i + 1] = cstr.T / cstr.N - times[2 * i]
 
-        # feedback phase
+        # feedback phase ===========================================================
         data[cstr.controls_idx, 2 * i + 1] = data[cstr.controls_idx, 2 * i]
-        data[cstr.states_idx, 2 * i + 1] = cstr.f_special(
-            data[cstr.states_idx, 2 * i],
-            data[cstr.controls_idx, 2 * i],
-            times[2 * i + 1],
-        ).full().ravel()
+        data[cstr.states_idx, 2 * i + 1] = (
+            cstr.f_special(
+                data[cstr.states_idx, 2 * i],
+                data[cstr.controls_idx, 2 * i],
+                times[2 * i + 1],
+            )
+            .full()
+            .ravel()
+        )
         start = time()
         l[: cstr.nx] = (
             data[cstr.states_idx, 2 * i + 1] - prediction[cstr.get_state_idx(0)]
@@ -131,11 +141,15 @@ def run_closed_loop_simulation(
         solve_times[i] = 1000.0 * res.info.solve_time
 
         data[cstr.controls_idx, 2 * i + 2] = prediction[cstr.get_control_idx(0)]
-        data[cstr.states_idx, 2 * i + 2] = cstr.f_special(
-            data[cstr.states_idx, 2 * i + 1],
-            data[cstr.controls_idx, 2 * i + 1],
-            times[2 * i + 2],
-        ).full().ravel()
+        data[cstr.states_idx, 2 * i + 2] = (
+            cstr.f_special(
+                data[cstr.states_idx, 2 * i + 1],
+                data[cstr.controls_idx, 2 * i + 1],
+                times[2 * i + 2],
+            )
+            .full()
+            .ravel()
+        )
 
         # if the simulation will stop at next iteration (either because it has converged or because we
         #  have reached the maximum number of iterations), we say what happened
@@ -159,6 +173,16 @@ def run_closed_loop_simulation(
 
     data = np.delete(data, list(range(2 * i + 1, data.shape[1])), axis=1)
     times = np.delete(times, list(range(2 * i + 1, times.shape[0])), axis=0)
+    solve_times = np.delete(solve_times, list(range(i, solve_times.shape[0])), axis=0)
+    sensitivites_computation_times = np.delete(
+        sensitivites_computation_times,
+        list(range(i, sensitivites_computation_times.shape[0])),
+        axis=0,
+    )
+    condensation_times = np.delete(
+        condensation_times, list(range(i, condensation_times.shape[0])), axis=0
+    )
+
     print("Final state: ", data[cstr.states_idx, -1])
     print("Final control: ", data[cstr.controls_idx, -1])
 
@@ -199,7 +223,7 @@ def run_closed_loop_simulation(
     # compute the performance measure ()total cost along the closed loop trajectory)
     total_cost = 0.0
     # np.sum(np.sqrt(np.sum((np.square(states - np.array(x_S))), axis=0)))
-    for k in range(2*i):
+    for k in range(0, 2 * i, 2):
         total_cost += (
             data[cstr.states_idx, k] @ cstr.Q @ data[cstr.states_idx, k]
             + data[cstr.controls_idx, k] @ cstr.R @ data[cstr.controls_idx, k]
@@ -207,14 +231,20 @@ def run_closed_loop_simulation(
         if not constraints_violated:
             for j in range(cstr.N):
                 if not (
-                    3.0 <= data[4+0, k] <= 35.0
-                    and -9000.0 <= data[4+1, k] <= 0.0
+                    3.0 <= data[4 + 0, k] <= 35.0
+                    and -9000.0 <= data[4 + 1, k] <= 0.0
                     and 98.0 <= data[2, k]
                     and 92.0 <= data[3, k]
                 ):
                     constraints_violated = True
-    total_cost += data[cstr.states_idx, 2*i] @ cstr.P @ data[cstr.states_idx, 2*i]
-    if not (98.0 <= data[2, 2*i] and 92.0 <= data[3, 2*i]):
+    total_cost += data[cstr.states_idx, 2 * i] @ cstr.P @ data[cstr.states_idx, 2 * i]
+    if not (98.0 <= data[2, 2 * i] and 92.0 <= data[3, 2 * i]):
         constraints_violated = True
 
-    return float(total_cost), constraints_violated, times
+    return (
+        float(total_cost),
+        constraints_violated,
+        sensitivites_computation_times,
+        condensation_times,
+        solve_times,
+    )
