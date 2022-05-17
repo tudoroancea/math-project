@@ -8,8 +8,6 @@ import numpy as np
 import scipy.linalg as la
 from scipy import sparse
 
-x_init = np.array([1.0, 0.5, 100.0, 100.0])  # initial state
-
 
 class CSTR:
     # contains dynamics, constraints, RRLB functions,
@@ -528,7 +526,6 @@ class CSTR:
         """
         Note : x_0 in l and u is to be updated at the beginning of the feedback phase
         """
-        # TODO : add different preparation phase for regular MPC
         sensitivity_computation_time, condensing_time = 0.0, 0.0
 
         # compute q =============================================================

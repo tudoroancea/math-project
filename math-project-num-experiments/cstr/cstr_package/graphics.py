@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-from cstr import CSTR
 import numpy as np
+from matplotlib.gridspec import GridSpec
+
+from .cstr import CSTR
 
 
 class CSTRAnimation:
@@ -34,14 +35,14 @@ class CSTRAnimation:
         # Create empty plot
         fig = plt.figure(figsize=(15, 7))
         plt.clf()
-        gs = GridSpec(model.nx+model.nu, 1, figure=fig)
+        gs = GridSpec(model.nx + model.nu, 1, figure=fig)
 
         zr = np.concatenate(
             (model.xr, model.ur),
             axis=(0 if len(model.xr.shape) == 1 and len(model.ur.shape) == 1 else 1),
         )
-        self.axes = list(range(model.nx+model.nu))
-        for i in range(model.nx+model.nu):
+        self.axes = list(range(model.nx + model.nu))
+        for i in range(model.nx + model.nu):
             self.axes[i] = fig.add_subplot(gs[i, 0])
             plt.title(self.titles[i])
             # plt.xlabel(self.xlabel)
@@ -72,7 +73,7 @@ class CSTRAnimation:
                 #     "b--",
                 # )
             else:
-                plt.step(np.cumsum(times), initial_data[i,:], "g-")
+                plt.step(np.cumsum(times), initial_data[i, :], "g-")
 
                 # plt.step(
                 #     np.linspace(times[-1], times[-1] + model.T, model.N),
@@ -85,8 +86,8 @@ class CSTRAnimation:
     def update_plot(self, data, prediction, times, iteration):
         """
         Update the plot with the new data and prediction.
-        The data, prediction and times are all numpy arrays with pre-allocated space for the whole 
-        simulation, so not all the values are relevant at the call of this function, only those up 
+        The data, prediction and times are all numpy arrays with pre-allocated space for the whole
+        simulation, so not all the values are relevant at the call of this function, only those up
         until the index iteration.
         """
         for i in len(self.axes):

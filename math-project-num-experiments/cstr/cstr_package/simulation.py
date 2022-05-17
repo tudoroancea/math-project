@@ -1,13 +1,15 @@
 import sys
 
+from time import time
+import numpy as np
+import matplotlib.pyplot as plt
 import osqp
 
-from cstr import *
-from graphics import *
+from . import CSTR, CSTRAnimation
 
 
 def run_closed_loop_simulation(
-    custom_x_init=x_init,
+    custom_x_init=np.array([1.0, 0.5, 100.0, 100.0]),
     stop_tol=1.0e-3,
     max_nbr_feedbacks: int = 100,
     RRLB=True,
@@ -125,7 +127,7 @@ def run_closed_loop_simulation(
         )
 
         start = time()
-        
+
         l[: cstr.nx] = (
             data[cstr.states_idx, 2 * i + 1] - prediction[cstr.get_state_idx(0)]
         )

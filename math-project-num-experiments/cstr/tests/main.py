@@ -1,5 +1,9 @@
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 import numpy as np
-from simulation import run_closed_loop_simulation
+from cstr_package import run_closed_loop_simulation
 
 (
     total_cost,
