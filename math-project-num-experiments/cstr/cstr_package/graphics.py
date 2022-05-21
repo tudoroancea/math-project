@@ -40,6 +40,27 @@ class CSTRAnimation:
         - reference_points : each row corresponds to a physical value (either state or \
             control) and each column to one reference point
         """
+        initial_prediction = np.concatenate(
+            (
+                np.reshape(
+                    initial_prediction[: model.nx * (model.N + 1)],
+                    (model.nx, model.N + 1),
+                    order="F",
+                ),
+                np.concatenate(
+                    (
+                        np.reshape(
+                            initial_prediction[-model.nu * model.N :],
+                            (model.nu, model.N),
+                            order="F",
+                        ),
+                        np.zeros((model.nu, 1)),
+                    ),
+                    axis=1,
+                ),
+            ),
+            axis=0,
+        )
         # Create empty plot
         fig = plt.figure(figsize=(15, 7))
         plt.clf()
@@ -82,19 +103,19 @@ class CSTRAnimation:
             if i < model.nx:
                 plt.plot(np.cumsum(times), initial_data[i, :], "b-")
 
-                # plt.plot(
-                #     np.linspace(times[-1], times[-1] + model.T, model.N),
-                #     initial_prediction[i, :],
-                #     "b--",
-                # )
+                plt.plot(
+                    np.linspace(np.sum(times), np.sum(times) + model.T, model.N + 1),
+                    initial_prediction[i, :],
+                    "b--",
+                )
             else:
                 plt.step(np.cumsum(times), initial_data[i, :], "g-")
 
-                # plt.step(
-                #     np.linspace(times[-1], times[-1] + model.T, model.N),
-                #     initial_prediction[i, :],
-                #     "g--",
-                # )
+                plt.step(
+                    np.linspace(np.sum(times), np.sum(times) + model.T, model.N),
+                    initial_prediction[i, :-1],
+                    "g--",
+                )
 
         plt.tight_layout()
 
@@ -114,14 +135,18 @@ class CSTRAnimation:
             if i < self.model.nx:
                 self.axes[i].plot(np.cumsum(times), data[:, i], "b-")
                 self.axes[i].plot(
-                    np.linspace(times[-1], times[-1] + self.model.T, self.model.N),
+                    np.linspace(
+                        np.sum(times), np.sum(times) + self.model.T, self.model.N
+                    ),
                     prediction[i, :],
                     "b--",
                 )
             else:
                 self.axes[i].step(np.cumsum(times), data[:, i], "g-")
                 self.axes[i].step(
-                    np.linspace(times[-1], times[-1] + self.model.T, self.model.N),
+                    np.linspace(
+                        np.sum(times), np.sum(times) + self.model.T, self.model.N
+                    ),
                     prediction[i, :],
                     "g--",
                 )

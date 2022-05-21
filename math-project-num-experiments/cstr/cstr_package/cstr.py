@@ -1,4 +1,5 @@
 # %% imports and global parameters
+import os
 import sys
 from time import time
 from typing import Tuple
@@ -15,8 +16,8 @@ class CSTR:
     # misc
     nx = 4  # dimension of state
     nu = 2  # dimension of control
-    T = 1500.0  # time horizon
-    N = 70  # number of control intervals
+    T = 2000.0  # time horizon
+    N = 100  # number of control intervals
     M = 6  # RK4 integration steps
     epsilon = 0.1  # barrier parameter
     nz = (
@@ -130,8 +131,8 @@ class CSTR:
             k4 = self.f_cont(new_x + DT * k3, u)
             new_x = new_x + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         self.f = ca.Function("f", [x, u], [new_x])
-        self.jac_f_x = ca.Function("f_jac_x", [x, u], [ca.jacobian(new_x, x)])
-        self.jac_f_u = ca.Function("f_jac_u", [x, u], [ca.jacobian(new_x, u)])
+        self.jac_f_x = ca.Function("jac_f_x", [x, u], [ca.jacobian(new_x, x)])
+        self.jac_f_u = ca.Function("jac_f_u", [x, u], [ca.jacobian(new_x, u)])
 
         h = ca.SX.sym("h")
         DT = h / self.M
@@ -542,7 +543,7 @@ class CSTR:
             sensitivity_computation_time += 1000.0 * (stop - start)
 
         start = time()
-        # TODO : try multiplying and the condensing
+
         q = sparse.block_diag(
             [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
         ) @ (
@@ -662,13 +663,17 @@ class CSTR:
         condensing_time += 1000.0 * (stop - start)
         if not RRLB:
             start = time()
+
             tpr = []
             for k in range(self.N + 1):
-                tpr += [self.d_x - self.C_x @ prediction[self.get_state_idx(k)]]
+                tpr.append(self.d_x - self.C_x @ prediction[self.get_state_idx(k)])
             for k in range(self.N):
-                tpr += [self.d_u - self.C_u @ prediction[self.get_control_idx(k)]]
+                tpr.append(self.d_u - self.C_u @ prediction[self.get_control_idx(k)])
+
             stop = time()
+
             sensitivity_computation_time += 1000.0 * (stop - start)
+
             start = time()
             l = np.concatenate(
                 [
@@ -680,7 +685,9 @@ class CSTR:
                 ]
             )
             u = np.concatenate([u, np.concatenate(tpr)])
+
             stop = time()
+
             condensing_time += 1000.0 * (stop - start)
 
         return P, q, A, l, u, sensitivity_computation_time, condensing_time
@@ -693,3 +700,23 @@ class CSTR:
 
     def get_state_idx(self, k: int) -> np.ndarray:
         return range(self.nx * k, self.nx * (k + 1))
+
+    def gencode(self):
+        # generate C-code for grad_B_x, grad_B_u, hess_B_x, hess_B_u
+        codegen = ca.CodeGenerator("gen.c")
+        codegen.add(self.f)
+        codegen.add(self.jac_f_x)
+        codegen.add(self.jac_f_u)
+        codegen.add(self.grad_B_x)
+        codegen.add(self.grad_B_u)
+        codegen.add(self.hess_B_x)
+        codegen.add(self.hess_B_u)
+        codegen.generate()
+        os.system("gcc -fPIC -O2 -shared -o gen.so gen.c")
+        self.f = ca.external("f", "./gen.so")
+        self.jac_f_x = ca.external("jac_f_x", "./gen.so")
+        self.jac_f_u = ca.external("jac_f_u", "./gen.so")
+        self.grad_B_x = ca.external("grad_B_x", "./gen.so")
+        self.grad_B_u = ca.external("grad_B_u", "./gen.so")
+        self.hess_B_x = ca.external("hess_B_x", "./gen.so")
+        self.hess_B_u = ca.external("hess_B_u", "./gen.so")

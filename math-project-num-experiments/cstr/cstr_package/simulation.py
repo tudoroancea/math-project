@@ -105,6 +105,8 @@ def run_closed_loop_simulation(
 
     times[1] = cstr.T / cstr.N / 1000.0
 
+    # cstr.gencode()
+
     # first feedback phase =================================================================
     # get current data
     data[cstr.controls_idx, 1] = data[cstr.controls_idx, 0]
@@ -147,6 +149,8 @@ def run_closed_loop_simulation(
 
     i = 1
     while not converged(i) and i < max_nbr_feedbacks:
+        # plot = CSTRAnimation(cstr, reference_points, data, prediction, times)
+        # plt.show()
         if int(np.sum(times[: 2 * i]) / 3000.0) > current_reference_idx:
             current_reference_idx += 1
             current_reference = np.concatenate(
@@ -255,7 +259,7 @@ def run_closed_loop_simulation(
     print("Final control: ", data[cstr.controls_idx, -1])
 
     plot = CSTRAnimation(cstr, reference_points, data, prediction, times)
-    plt.show()
+    # plt.show()
 
     # if name != None:
     #     createPlot(
@@ -288,7 +292,7 @@ def run_closed_loop_simulation(
 
     # compute the performance measure (total cost along the closed loop trajectory)
     total_cost = 0.0
-    for k in range(0, 2 * i):
+    for k in range(0, 2 * i, 2):
         total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
         if not constraints_violated:
             for j in range(cstr.N):
