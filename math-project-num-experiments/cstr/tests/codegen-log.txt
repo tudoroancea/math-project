@@ -1,0 +1,140 @@
+…/math-project-repo on  main [📝🤷‍ ✓] via C via 🐍 v3.9.9 (venv) took 2m34s
+➜ /Users/tudoroancea/Desktop/epfl/ba6/math-project/math-project-repo/venv/bin/python /Users/tudoroancea/Desktop/epfl/ba6/math-project/math-project-repo/math-project-num-experiments/cstr/tests/main2.py
+Running RRLB MPC for xr0 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 189.44788 ms
+Generating C-code for the functions...
+C-code generated.
+Converged at iteration 75
+Final state:  [  2.14006738   1.09043617 114.19196151 112.906973  ]
+Final control:  [   14.19003445 -1113.98412546]
+RRLB MPC for xr0 done ------------------------------------------------
+
+Running regular MPC for xr0 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 177.37412 ms
+Generating C-code for the functions...
+C-code generated.
+Converged at iteration 152
+Final state:  [  2.13991139   1.09031148 114.19047131 112.90589125]
+Final control:  [   14.18535218 -1113.50004626]
+regular MPC for xr0 done ------------------------------------------------
+
+Running RRLB MPC for xr1 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 128.36003 ms
+Generating C-code for the functions...
+C-code generated.
+Converged at iteration 59
+Final state:  [  2.71557145   1.02261212 105.50577015 100.89191157]
+Final control:  [   13.66636479 -3999.59817352]
+RRLB MPC for xr1 done ------------------------------------------------
+
+Running regular MPC for xr1 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 130.18703 ms
+Generating C-code for the functions...
+C-code generated.
+Not converged after 501 feedbacks.
+        state discrepancy : 0.006107679127867238
+        control discrepancy : 0.00973335209768565
+Final state:  [  2.71490865   1.02353583 105.50153968 100.88775716]
+Final control:  [   13.65935274 -3999.5957933 ]
+regular MPC for xr1 done ------------------------------------------------
+
+Running RRLB MPC for xr2 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 47.79911 ms
+Generating C-code for the functions...
+C-code generated.
+Converged at iteration 72
+Final state:  [  2.97517279   0.95300128 101.14930141  95.19381319]
+Final control:  [   12.98018456 -5162.70141592]
+RRLB MPC for xr2 done ------------------------------------------------
+
+Running regular MPC for xr2 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 92.56482 ms
+Generating C-code for the functions...
+C-code generated.
+Not converged after 501 feedbacks.
+        state discrepancy : 0.00807946858261269
+        control discrepancy : 0.009741541396079719
+Final state:  [  2.97503658   0.95383692 101.15536272  95.1995803 ]
+Final control:  [   12.98589199 -5162.94866233]
+regular MPC for xr2 done ------------------------------------------------
+
+
+
+
+
+sensitivites_computation_averages_RRLB:  [70.66508970762554, 63.98273309071859, 63.98331629086847]
+condensation_averages_RRLB:  [62.046518451289124, 57.44152069091797, 56.930558322227164]
+solve_averages_RRLB:  [0.8141908421052632, 0.7338292499999999, 0.7305507260273973]
+sensitivites_computation_averages_reg:  [36.58214893216401, 38.83050016300407, 38.34332962949833]
+condensation_averages_reg:  [54.94113996917126, 58.02545290507242, 57.08723629782062]
+…/math-project-repo on  main [📝🤷‍ ✓] via C v13.1.6-clang via 🐍 v3.9.9 (venv) took 2m42s
+➜ /Users/tudoroancea/Desktop/epfl/ba6/math-project/math-project-repo/venv/bin/python /Users/tudoroancea/Desktop/epfl/ba6/math-project/math-project-repo/math-project-num-experiments/cstr/tests/main2.py
+Running RRLB MPC for xr0 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 197.79801 ms
+Converged at iteration 75
+Final state:  [  2.14006756   1.09043574 114.19195926 112.90697243]
+Final control:  [   14.19003424 -1113.9829832 ]
+RRLB MPC for xr0 done ------------------------------------------------
+
+Running regular MPC for xr0 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 264.24193 ms
+Converged at iteration 152
+Final state:  [  2.13991138   1.09031148 114.19047135 112.9058913 ]
+Final control:  [   14.18535218 -1113.50004626]
+regular MPC for xr0 done ------------------------------------------------
+
+Running RRLB MPC for xr1 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 146.73471 ms
+Converged at iteration 59
+Final state:  [  2.71557076   1.02261304 105.50577078 100.89191243]
+Final control:  [   13.66636481 -3999.59822819]
+RRLB MPC for xr1 done ------------------------------------------------
+
+Running regular MPC for xr1 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 139.39810 ms
+Not converged after 501 feedbacks.
+        state discrepancy : 0.006107679127927292
+        control discrepancy : 0.00973335209767149
+Final state:  [  2.71490865   1.02353583 105.50153968 100.88775716]
+Final control:  [   13.65935274 -3999.5957933 ]
+regular MPC for xr1 done ------------------------------------------------
+
+Running RRLB MPC for xr2 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 61.56588 ms
+Converged at iteration 72
+Final state:  [  2.97517265   0.9530014  101.14930175  95.19381336]
+Final control:  [   12.98018455 -5162.70152816]
+RRLB MPC for xr2 done ------------------------------------------------
+
+Running regular MPC for xr2 ------------------------------------------------
+started with reference point n°1
+Initial prediction computed in 93.98603 ms
+Not converged after 501 feedbacks.
+        state discrepancy : 0.008079468581317265
+        control discrepancy : 0.009741541396997584
+Final state:  [  2.97503658   0.95383692 101.15536272  95.1995803 ]
+Final control:  [   12.98589199 -5162.94866233]
+regular MPC for xr2 done ------------------------------------------------
+
+
+
+
+
+sensitivites_computation_averages_RRLB:  [83.6611264630368, 71.37953440348308, 69.1620846317239]
+condensation_averages_RRLB:  [69.93052206541363, 59.977575143178306, 58.12153750902986]
+solve_averages_RRLB:  [0.8809282631578943, 0.7638550333333333, 0.7388654520547945]
+sensitivites_computation_averages_reg:  [43.72665149713654, 42.409808335903875, 43.15940824573387]
+condensation_averages_reg:  [59.00385644700792, 57.519236486591026, 58.050888503145075]
+solve_averages_reg:  [0.574816385620915, 1.0430332115768461, 1.043113499001996]
+…/math-project-repo on  main [📝🤷‍ ✓] via C v13.1.6-clang via 🐍 v3.9.9 (venv) took 2m40s

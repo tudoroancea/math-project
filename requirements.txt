@@ -5,3 +5,4 @@ casadi~=3.5.5
 black~=22.3.0
 pre-commit~=2.18.1
 osqp
+pandas

@@ -10,6 +10,21 @@ import scipy.linalg as la
 from scipy import sparse
 
 
+xr1 = np.array(
+    [
+        2.1402105301746182e00,
+        1.0903043613077321e00,
+        1.1419108442079495e02,
+        1.1290659291045561e02,
+    ]
+)
+ur1 = np.array([14.19, -1113.50])
+xr2 = np.array([2.7151681, 1.02349152, 105.50585058, 100.8920758])
+ur2 = np.array([13.66640639, -3999.58908628])
+xr3 = np.array([2.97496989, 0.95384459, 101.14965441, 95.19386292])
+ur3 = np.array([12.980148, -5162.95653026])
+
+
 class CSTR:
     # contains dynamics, constraints, RRLB functions,
 
@@ -69,15 +84,8 @@ class CSTR:
 
     def __init__(
         self,
-        initial_xr: np.ndarray = np.array(
-            [
-                2.1402105301746182e00,
-                1.0903043613077321e00,
-                1.1419108442079495e02,
-                1.1290659291045561e02,
-            ]
-        ),
-        initial_ur: np.ndarray = np.array([14.19, -1113.50]),
+        xr: np.ndarray = xr1,
+        ur: np.ndarray = ur1,
     ) -> None:
         # dynamics
         x = ca.SX.sym("x", self.nx)
@@ -145,7 +153,7 @@ class CSTR:
             new_x = new_x + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         self.f_special = ca.Function("f", [x, u, h], [new_x])
 
-        self.set_reference(initial_xr, initial_ur)
+        self.set_reference(xr, ur)
 
     def compute_RRLB(self) -> None:
         # reimplement everything in a more generic way
@@ -703,7 +711,14 @@ class CSTR:
         return range(self.nx * k, self.nx * (k + 1))
 
     def gencode(self):
-        # generate C-code for grad_B_x, grad_B_u, hess_B_x, hess_B_u
+        """
+        Generates C-code for grad_B_x, grad_B_u, hess_B_x, hess_B_u, f, jac_f_x, jac_f_u and loads back
+        these functions into the class.
+
+        Please note that this disables the symbolic nature of these Functions, and therefore should not
+        be called if we need it (in particular, it has to be called only after )
+        """
+        print("Generating C-code for the functions...")
         codegen = ca.CodeGenerator("gen.c")
         codegen.add(self.f)
         codegen.add(self.jac_f_x)
@@ -713,7 +728,7 @@ class CSTR:
         codegen.add(self.hess_B_x)
         codegen.add(self.hess_B_u)
         codegen.generate()
-        os.system("gcc -fPIC -O2 -shared -o gen.so gen.c")
+        os.system("gcc -fPIC -O3 -shared -o gen.so gen.c")
         self.f = ca.external("f", "./gen.so")
         self.jac_f_x = ca.external("jac_f_x", "./gen.so")
         self.jac_f_u = ca.external("jac_f_u", "./gen.so")
@@ -721,3 +736,4 @@ class CSTR:
         self.grad_B_u = ca.external("grad_B_u", "./gen.so")
         self.hess_B_x = ca.external("hess_B_x", "./gen.so")
         self.hess_B_u = ca.external("hess_B_u", "./gen.so")
+        print("C-code generated.")

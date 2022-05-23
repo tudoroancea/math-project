@@ -17,12 +17,12 @@ class CSTRAnimation:
     ]
     xlabel = "Time [s]"
     ylabels = [
-        "Concentration [mol/L]",
-        "Concentration [mol/L]",
-        "Temperature [°C]",
-        "Temperature [°C]",
-        "Feed Inflow [s^-1]",
-        "Heat Removal [kJ/s]",
+        "c_A [mol/L]",
+        "c_B [mol/L]",
+        "theta [°C]",
+        "theta_K [°C]",
+        "Feed Inflow rate [s^-1]",
+        "Heat Removal rate [kJ/s]",
     ]
     axes = []
 
@@ -40,6 +40,8 @@ class CSTRAnimation:
         - reference_points : each row corresponds to a physical value (either state or \
             control) and each column to one reference point
         """
+        # transform the initial prediction (in the form of a long vector with all the states and
+        # contorls concatenated) into a matrix
         initial_prediction = np.concatenate(
             (
                 np.reshape(
@@ -61,8 +63,9 @@ class CSTRAnimation:
             ),
             axis=0,
         )
+
         # Create empty plot
-        fig = plt.figure(figsize=(15, 7))
+        fig = plt.gcf()
         plt.clf()
         gs = GridSpec(model.nx + model.nu, 1, figure=fig)
 
@@ -74,8 +77,6 @@ class CSTRAnimation:
             # plt.ylabel(self.ylabels[i])
             plt.grid("both")
             plt.xlim([0.0, np.sum(times) + model.T])
-            # if i == 5:
-            #     plt.ylim([-2000.0, 200.0])
 
             if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
                 plt.plot(

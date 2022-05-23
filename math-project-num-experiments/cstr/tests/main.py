@@ -1,20 +1,33 @@
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-import numpy as np
 import matplotlib.pyplot as plt
-from cstr_package import run_closed_loop_simulation
+import numpy as np
+from cstr_package import *
 
 RRLB = True
+if RRLB:
+    print("Running RRLB MPC --------------------------------------------------")
+else:
+    print("Running regular MPC --------------------------------------------------")
+
+fig = plt.figure(figsize=(15, 7))
+plt.title("RRLB" if RRLB else "Regular MPC")
+
 (
     total_cost,
+    _,
     constraints_violated,
     sensitivites_computation_times,
     condensation_times,
     solve_times,
-) = run_closed_loop_simulation(RRLB=RRLB)
+) = run_closed_loop_simulation(
+    RRLB=RRLB,
+    xr=xr1,
+    ur=ur1,
+)
 plt.gcf()
 plt.savefig(
     os.path.join(os.path.dirname(__file__), "cstr_rrlb.png" if RRLB else "cstr.png"),
