@@ -28,8 +28,8 @@ class CSTR:
 
     # constraints
     C_x = sparse.hstack([sparse.csc_matrix((2, 2)), -sparse.eye(2)])
-    C_u = sparse.vstack(
-        (sparse.diags([[1.0, -1.0]], [0]), sparse.diags([[1.0, -1.0]], [0]))
+    C_u = sparse.csr_matrix(
+        np.array([[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
     )
     d_x = np.array([-98.0, -92.0])
     d_u = np.array([35.0, -3.0, 0.0, 9000.0])
@@ -405,7 +405,7 @@ class CSTR:
         g = []  # equality constraints
 
         w_start_x = [initial_state]  # initial guess
-        w_start_u = []
+        w_start_u = [self.ur] * self.N
 
         # Formulate the NLP
         for k in range(self.N):
@@ -428,10 +428,10 @@ class CSTR:
             g += [x_k_end - x_k]
 
             # compute initial guess
-            w_start_u += [self.ur]  # [-self.K @ w_start_x[-1]]
             w_start_x += [self.f(w_start_x[-1], w_start_u[-1])]
 
-        J += self.F(x_k)  # here x_k represents x_N
+        if RRLB:
+            J += self.F(x_k)  # here x_k represents x_N
 
         # Concatenate stuff
         w = w_x + w_u
@@ -475,6 +475,7 @@ class CSTR:
                     "sb": "yes",
                     # "max_iter": 1 if RRLB else 1000,
                     "print_level": 1,
+                    "warm_start_init_point": "yes",
                 },
             },
         )

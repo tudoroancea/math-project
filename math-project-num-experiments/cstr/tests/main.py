@@ -7,17 +7,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from cstr_package import run_closed_loop_simulation
 
+RRLB = True
 (
     total_cost,
     constraints_violated,
     sensitivites_computation_times,
     condensation_times,
     solve_times,
-) = run_closed_loop_simulation(RRLB=False)
-# plt.gcf()
-# plt.savefig(
-#     os.path.join(os.path.dirname(__file__), "cstr_rrlb.png"), dpi=300, format="png"
-# )
+) = run_closed_loop_simulation(RRLB=RRLB)
+plt.gcf()
+plt.savefig(
+    os.path.join(os.path.dirname(__file__), "cstr_rrlb.png" if RRLB else "cstr.png"),
+    dpi=300,
+    format="png",
+)
 
 print(
     "total_cost = {}, constraints_violated = {}".format(

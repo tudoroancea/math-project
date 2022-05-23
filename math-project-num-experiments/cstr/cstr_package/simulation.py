@@ -118,6 +118,7 @@ def run_closed_loop_simulation(
 
     start = time()
 
+    # solve the QP problem
     l[: cstr.nx] = data[cstr.states_idx, 1] - prediction[cstr.get_state_idx(0)]
     u[: cstr.nx] = data[cstr.states_idx, 1] - prediction[cstr.get_state_idx(0)]
     prob.update(l=l, u=u)
@@ -131,6 +132,7 @@ def run_closed_loop_simulation(
     times[2] = 1000.0 * (stop - start)
     solve_times[0] = 1000.0 * res.info.solve_time
 
+    # update the states and constraints
     data[cstr.controls_idx, 2] = prediction[cstr.get_control_idx(0)]
     data[cstr.states_idx, 2] = (
         cstr.f_special(data[cstr.states_idx, 1], data[cstr.controls_idx, 2], times[2])
@@ -212,7 +214,9 @@ def run_closed_loop_simulation(
         prob.update(l=l, u=u)
         res = prob.solve()
         if res.info.status != "solved":
-            raise ValueError("OSQP did not solve the problem!")
+            raise ValueError(
+                "OSQP did not solve the problem! exitflag : ", res.info.status
+            )
         prediction += res.x
 
         stop = time()
