@@ -22,6 +22,26 @@
   publisher = {Nob Hill Publishing}
 }
 
+@article{mpc-rti,
+  author  = {Gros, Sebastien and Zanon, Mario and Quirynen, Rien and Bemporad, Alberto and Diehl, Moritz},
+  year    = {2016},
+  month   = {09},
+  pages   = {1-19},
+  title   = {From linear to nonlinear MPC: bridging the gap via the real-time iteration},
+  volume  = {93},
+  journal = {International Journal of Control},
+  doi     = {10.1080/00207179.2016.1222553}
+}
+
+@book{nocedal-wright,
+  author    = {Jorge Nocedal and Stephen J. Wright},
+  publisher = {Springer},
+  title     = {Numerical Optimization},
+  year      = {2006},
+  address   = {New York, NY, USA},
+  edition   = {2e}
+}
+
 @inproceedings{RLB,
   author    = {Feller, Christian and Ebenbauer, Christian},
   booktitle = {2015 American Control Conference (ACC)},
@@ -42,4 +62,23 @@
   number  = {3},
   pages   = {1223-1238},
   doi     = {10.1109/TAC.2016.2582040}
+}
+@article{rti-diehl,
+  author   = {Diehl, Moritz and Bock, Hans Georg and Schlöder, Johannes P.},
+  title    = {A Real-Time Iteration Scheme for Nonlinear Optimization in Optimal Feedback Control},
+  journal  = {SIAM Journal on Control and Optimization},
+  volume   = {43},
+  number   = {5},
+  pages    = {1714-1736},
+  year     = {2005},
+  doi      = {10.1137/S0363012902400713},
+  url      = {
+              https://doi.org/10.1137/S0363012902400713
+
+              },
+  eprint   = {
+              https://doi.org/10.1137/S0363012902400713
+
+              },
+  abstract = { An efficient Newton-type scheme for the approximate on-line solution of optimization problems as they occur in optimal feedback control is presented. The scheme allows a fast reaction to disturbances by delivering approximations of the exact optimal feedback control which are iteratively refined during the runtime of the controlled process. The contractivity of this real-time iteration scheme is proven, and a bound on the loss of optimality---compared with the theoretical optimal solution---is given. The robustness and excellent real-time performance of the method is demonstrated in a numerical experiment, the control of an unstable system, namely, an airborne kite that shall fly loops. }
 }
