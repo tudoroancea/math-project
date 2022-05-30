@@ -68,7 +68,7 @@
 \begin{frame}
     \frametitle{Problem formulation - RRLB functions}
 
-    For $\cal{X}=\left\{ x~|~C_xx\leq d_x \right\}$ we define 
+    For $\cal{X}=\left\{ x~|~C_xx\leq d_x \right\}$ we define
     \begin{align*}
         B_x(x)&=\sum_{i=1}^{q_x}(1+w_{x,i})B_{x,i}(x)\\
         \text{ with }B_{x,i}(x)&=\begin{cases}
@@ -91,7 +91,7 @@
             \item If we denote the objective function as $J(x,\bf{u})$, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$.
 
             \item When $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that $(A,B)$ is stabilizable ($\implies \exists K$ such that $A_K:=A+BK$ Hurwitz)
-            
+
             \item $P$ solution to $P=A_K^TPA_K+\mu Q_K$ where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
         \end{itemize}
         then 0 is asymptotically stable for all initial state in a nbh of 0.
@@ -101,13 +101,13 @@
 \begin{frame}
     \frametitle{Theoretical results - Nominal stability}
     \begin{proof}[Sketch of proof]
-        
+
         By our definitions, we have $\tilde{l}(x,Kx)=x^TQ_Kx+O(\|x\|^3)$ and $\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0,~\forall x\in\bb{R}^{n_x}$\,.
-        Now by the proof in the book, we have locally 
+        Now by the proof in the book, we have locally
         $$\tilde{F}(f(x,Kx))+x^T Q_K x-\tilde{F}(x)\leq 0
 		\Longleftrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx) = O(\|x\|^3)$$
         and now from optimal solutions $\tilde{\bf{x}}=\left\{ \tilde{x}_0,\dots,\tilde{x}_N \right\}$ and $\tilde{\bf{u}}=\left\{ \tilde{u}_0,\dots,\tilde{u}_{N-1} \right\}$ we construct feasible solutions $\bf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\bf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$ and we have
-        
+
         $$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\bf{x}',\bf{u}')=\underbrace{\tilde{J}_N(\tilde{\bf{x}},\tilde{\bf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}$$
     \end{proof}
 \end{frame}
@@ -132,8 +132,8 @@
     \end{itemize}
 
     \textbf{\textit{Results}}:
-    Both converged after 74 time steps with similar total costs along the closed-loop trajectory.    
-    % Comparison : 
+    Both converged after 74 time steps with similar total costs along the closed-loop trajectory.
+    % Comparison :
     % ==========================
     % solve times RRLB MPC :
     % mean=25.537693822706068
@@ -163,7 +163,7 @@
 \end{frame}
 
 \begin{frame}
-    \frametitle{Numerical experiments - CSTR}    
+    \frametitle{Numerical experiments - CSTR}
     % solve times RRLB MPC :
     % mean=25.537693822706068
     % std=2.862889028359942

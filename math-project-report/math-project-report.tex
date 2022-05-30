@@ -20,6 +20,8 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{chronosys}
+\usepackage{csvsimple}
+\usepackage{longtable}
 \addbibresource{refs.bib}
 
 \include{predefs}
@@ -567,7 +569,52 @@ This is the scope of next subsection, in which we will not worry about this dist
 \subsection{Numerical experiments}\label{sec:RRLB-numerical-experiments}
 
 In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used as benchmark for comparing different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR) system.
-We can find descriptions of this model in \cite{diehl-dissertation} and \cite{cstr-ref}, but we are going to recall
+
+
+This system has 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\theta$ the temperature in the reactor and $\theta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
+We can find the ODE describing the model, the constraints as well as the MPC costs in \cite{diehl-dissertation} and \cite{cstr-ref}.
+By a simple steady state analysis procedure, we determined 3 viable reference points for states and controls that can be found (at $10^{-3}$ precision and in SI units) in table \ref{tab:CSTR-ref-points}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|c|c|c|c|c|c|c|}
+		\hline
+		Ref point & $c_A^*$ & $c_B^*$ & $\theta^*$ & $\theta_K^*$ & $u_1^*$ & $u_2^*$ \\
+		\hline
+		1 & 2.140 & 1.090 & 114.191 & 112.907 & 14.19 & -1113.50 \\
+		\hline
+		2 & 2.715 & 1.023 & 105.506 & 100.892 & 13.666 & -3999.589 \\
+		\hline
+		3 & 2.975 &  0.954 & 101.150 & 95.194 & 12.980 & -5162.957 \\
+		\hline
+	\end{tabular}
+	\caption{Reference points for the CSTR system}
+	\label{tab:CSTR-ref-points}
+\end{table}
+
+We used as suggested in \cite{diehl-dissertation} we chose a horizon size of 1000 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
+
+Some general remarks on the implementation :
+\begin{itemize}[label=\textbullet]
+	\item The initial prediction (as described in \ref{sec:RTI-scheme}) is computed using the interior point method solver IPOPT (see \cite{ipopt}) through the algorithmic differentiation package CasADi (see \cite{casadi}).
+
+	\item RTI was implemented from scratch using OSQP (see \cite{osqp}) to solve the quadratic subproblems.
+
+	\item The whole implementation for this project was done in Python and can be found in the folder \verb|cstr| attached to the project report.
+	To test the code, we recommend creating a virtual environment using the \verb|requirements.txt| file provided.
+	The code is heavily documented and general indications on the structure of the code are given in the \verb|README.md| file.
+\end{itemize}
+
+\subsubsection*{Experimental procedure}
+
+We designed the following experiments to evaluate the behavior of
+
+\subsubsection*{Results}
+
+\subsubsection*{Discussion}
+
+
+\csvautolongtable{cstr_closed_loop_simulation_results.csv}
 
 \newpage
 

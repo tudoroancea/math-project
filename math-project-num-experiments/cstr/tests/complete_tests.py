@@ -63,7 +63,7 @@ for i in range(3):
                             "Ref point": [i + 1],
                             "Scheme": [scheme_str],
                             "Nbr iterations to convergence": [None],
-                            "Performance measure": [total_cost_inf],
+                            "Performance measure": [round(float(total_cost_inf), 3)],
                             "Average Sensitivities Computation time": [None],
                             "Std err Sensitivities Computation time": [None],
                             "Average Condensation time": [None],
@@ -112,17 +112,21 @@ for i in range(3):
                             "Nbr iterations to convergence": [
                                 nbr_iterations_to_convergence
                             ],
-                            "Performance measure": [total_cost],
+                            "Performance measure": [round(total_cost, 3)],
                             "Average Sensitivities Computation time": [
-                                np.mean(sensitivites_computation_times)
+                                round(np.mean(sensitivites_computation_times), 2)
                             ],
                             "Std err Sensitivities Computation time": [
-                                np.std(sensitivites_computation_times)
+                                round(np.std(sensitivites_computation_times), 2)
                             ],
-                            "Average Condensation time": [np.mean(condensation_times)],
-                            "Std err Condensation time": [np.std(condensation_times)],
-                            "Average Solving time": [np.mean(solve_times)],
-                            "Std err Solving time": [np.std(solve_times)],
+                            "Average Condensation time": [
+                                round(np.mean(condensation_times), 2)
+                            ],
+                            "Std err Condensation time": [
+                                round(np.std(condensation_times), 2)
+                            ],
+                            "Average Solving time": [round(np.mean(solve_times), 2)],
+                            "Std err Solving time": [round(np.std(solve_times), 2)],
                         }
                     ),
                 ),

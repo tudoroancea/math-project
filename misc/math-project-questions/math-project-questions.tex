@@ -147,13 +147,13 @@
 
 \noindent Here are my questions in decreasing order of importance :
 \begin{enumerate}
-	\item 
+	\item
 	Basically my first and most important question is : what should I actually prove ?
 	There are actually 4 different formulations in the paper on the Relaxed Logarithmic Barrier Function Based Linear MPC and I don't know which one I should use, or if I should try to generalize all of them.
 	\item[] \textcolor{red}{This one we have already been talked since we firstly discussed the problem in details. We wanna to work out the one with terminal cost but no terminal constraint at the initial stage. Well, it should be also possible to build the theory if you consider the terminal constraint. Basically, you only need to assume that terminal constraint is control forward invariant in nonlinear case as the book proposed.}
 	\item I still don't understand the cubic error equation $V_\infty(x)=M(x)+O(||x||^3)$ in your paper so could we see a more explicit proof tomorrow ? Also in the Riccati equation associated shouldn't it be $A^T$ instead of $A$ in the last term ?
-	
-	\item[] \textcolor{red}{Regarding your first question, we need firstly recall the problem considered in my previous paper, according to the assumption maded in that paper, we basically have no constraint active locally such that we have 
+
+	\item[] \textcolor{red}{Regarding your first question, we need firstly recall the problem considered in my previous paper, according to the assumption maded in that paper, we basically have no constraint active locally such that we have
 	\[
 	\begin{aligned}
 	V_N(x_0) =& \min_{u,x}\;\;\sum_{k=0}^{N-1}\ell(x_k,u_k) + M(x_N) \quad \text{s.t.}\;\;x_{k+1} = f(x_k,u_k)\\
@@ -161,19 +161,19 @@
 	M(x_0) =& \min_{u,x}\;\;\sum_{k=0}^{\infty}x_k^\top Q x_k + 2 x_k^\top S u_k + u_k^\top R u_k \quad \text{s.t.}\;\;x_{k+1} = A x_k + B u_k
 	\end{aligned}
 	\]
-	Here, one can see that $M(x_0) = x_0^\top P x_0$ follows the dynamic programming and the matrix $P$ is the solution of the algebraic Riccati equation below. In order to show the cubic error term, we first need to work out the derivative of $V_\infty(\cdot)$ at the origin. We have known already known that $V_\infty(\cdot)\geq  0$ and $V_\infty(x)=0$ holds at $x=0$. According to the assumption that $\ell $ and $f$ are twice Lipschitz-continuously differentiable locally near the origin, we have $V_\infty$ is also twice continuously differentiable (this follows the implicit function theorem if you work out the optimality condition by using the dynamic programming, i.e., 
+	Here, one can see that $M(x_0) = x_0^\top P x_0$ follows the dynamic programming and the matrix $P$ is the solution of the algebraic Riccati equation below. In order to show the cubic error term, we first need to work out the derivative of $V_\infty(\cdot)$ at the origin. We have known already known that $V_\infty(\cdot)\geq  0$ and $V_\infty(x)=0$ holds at $x=0$. According to the assumption that $\ell $ and $f$ are twice Lipschitz-continuously differentiable locally near the origin, we have $V_\infty$ is also twice continuously differentiable (this follows the implicit function theorem if you work out the optimality condition by using the dynamic programming, i.e.,
 	\begin{equation}\label{eq::optimality}
 	V_\infty(x) = \min_u\;\ell(x,u)+V_\infty(f(x,u)),
-	\end{equation} 
+	\end{equation}
 	and
 	$
-	\nabla V_\infty(0) =0 
+	\nabla V_\infty(0) =0
 	$
-	as $x=0$ is the minimizer or stationary point of $V_\infty$. Therefore, we have 
+	as $x=0$ is the minimizer or stationary point of $V_\infty$. Therefore, we have
 	\[
-     V_\infty(x) = x^\top \underbrace{\left(\frac{1}{2} \nabla^2 V_\infty(0)\right)}_{P} x + \mathbf{O}(\|x\|^3) 
+     V_\infty(x) = x^\top \underbrace{\left(\frac{1}{2} \nabla^2 V_\infty(0)\right)}_{P} x + \mathbf{O}(\|x\|^3)
 	\]
-    such that we need to show $\frac{1}{2}\nabla^2 V_\infty(0)=P$ (note that we have considered scaling $1/2$ in the definition of $Q$, $R$ and $S$). It is clear that if you do second orde Taylor expansion of the optimality condition~\eqref{eq::optimality}, you will get the definition of $M(\cdot)$ such that the $\frac{1}{2}\nabla^2 V_\infty(0)$ can be obtained by solving the algebraic Riccati equation, i.e., 
+    such that we need to show $\frac{1}{2}\nabla^2 V_\infty(0)=P$ (note that we have considered scaling $1/2$ in the definition of $Q$, $R$ and $S$). It is clear that if you do second orde Taylor expansion of the optimality condition~\eqref{eq::optimality}, you will get the definition of $M(\cdot)$ such that the $\frac{1}{2}\nabla^2 V_\infty(0)$ can be obtained by solving the algebraic Riccati equation, i.e.,
     \[
     M(x) = \min_u x_k^\top Q x_k + 2 x_k^\top S u_k + u_k^\top R u_k + M(Ax+Bu)
     \]
@@ -190,11 +190,11 @@
 		&\quad\quad\quad\quad\quad\quad+\mathbf{O}(\|Ax+Bu+\mathbf{O}(\|x\|^2+\|u\|^2)\|^3)\\
 		&=\mathbf{O}(\|x\|^3)+\min_u\; x^\top Q x + 2 x^\top S u + u^\top R u + V_\infty(Ax+Bu)\\
 	\end{align*}
-	
-	
+
+
 	$$f(x,u)=Ax+Bu+\mathbf{O}(\|x\|^2+\|u\|^2)$$
 
-	\item[] \textcolor{red}{Regarding your second question, it is a typo, the riccati equation should 
+	\item[] \textcolor{red}{Regarding your second question, it is a typo, the riccati equation should
 	\[
 	P = A^\top P A +Q - (A^\top PB + S)(R+B^\top P B)^{-1}(A^\top PB + S)^\top.
 	\]}
@@ -206,13 +206,13 @@
 	Is this interpretation true ?
 	And also should the $x_1$ in the definition of stabilizability be stable ?
 	The only clear definition I found for stabilizability was the one in Exercise 1.19 in the book, but I find it kind of limiting. Are there other more general definitions ? (for more general forms of matrices $A$ and $B$)
-    \item[] \textcolor{red}{My understanding from the mathematical point of view is as follows: consider a given LTI system $x^+ = A x+ Bu$, 
+    \item[] \textcolor{red}{My understanding from the mathematical point of view is as follows: consider a given LTI system $x^+ = A x+ Bu$,
     \begin{quote}
         the pair of $(A,B)$ is controllable means matrix $[B\;AB\;A^2B\;...\;A^{n_x-1}B]$ is full row rank;\\
         the pair of $(A,B)$ is (asymptotically) stabilizable means there exists a matrix $K$ such that $A+BK$ has all eigenvalues' magnitude strictly smaller than 1.
     \end{quote}
     For nonlinear system, if you need strict definitions, maybe you could have a look at another book "Nonlinear Model Predictive Control" by Lars Grüne and Jürgen Pannek. But notice that we normally talk about these two definition for linear system.}
-    
+
 	\item Is there some actual linear algebra theory that justifies the existence of solutions to the Riccati equation(s) (like the one of the form $P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA$) ? the solutions is always assumed to exist but there is never a real justification for this.
     \item[] \textcolor{red}{Read the paper "The algebraic Riccati equation: conditions for the existence and uniqueness of solutions" by Harald K.Wimmer}
 	\item I started looking in the implementation of the control of the predator-prey-fishing model and since it is a continuous problem we should discretize it.
