@@ -593,6 +593,7 @@ By a simple steady state analysis procedure, we determined 3 viable reference po
 \end{table}
 
 We used as suggested in \cite{diehl-dissertation} we chose a horizon size of 1000 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
+In all our experiments we set the maximum runtime to $5000.0s$ (simulated seconds, since the sampling time is very long, we skipped the parts where nothing happened) and ran the simulation in closed loop (i.e. applying to the system the control computed by the MPC) until the state converged to the reference state within a $10^{-3}$ tolerance in norm.
 
 Some general remarks on the implementation :
 \begin{itemize}[label=\textbullet]
@@ -668,11 +669,18 @@ The measures of all the quantities described above are presented in the followin
 	}
 
 	\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+	\subcaption*{where ASCT : Average Sensitivity Computation Time, SESCT : Standard Error of Sensitivity Computation Time, ACT : Average Condensation Time, SECT : Standard Error of Condensation Time, AST : Average Solving Time, SEST : Standard Error of Solving Time}
 	\label{tab:RTI-runtimes}
 \end{table}
 
 \subsubsection*{Discussion}
 
+From the previous tables, we can notice two things :
+\begin{itemize}[label=\textbullet]
+	\item Contrary to our initial hypothesis, the solve times are not shorter for RRLB MPC, which would indicate that the optimization problem is not necessarily easier to solve than for Regular MPC.
+
+	\item The convergence to the objective is always taking fewer iterations with RRLB than with Regular MPC. In particular, for reference points n°2 and 3, there is no convergence for Regular MPC at the end of the $5000s$ of simulation.
+\end{itemize}
 
 
 \newpage
