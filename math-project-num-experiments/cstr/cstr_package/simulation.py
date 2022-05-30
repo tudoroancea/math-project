@@ -214,8 +214,8 @@ def run_closed_loop_simulation(
         CSTRAnimation(cstr, current_reference, data, prediction, times)
 
     # compute the performance measure (total cost along the closed loop trajectory)
-    total_cost = 0.0
-    for k in range(0, 2 * i, 2):
+    total_cost = cstr.l(data[cstr.states_idx, 0], data[cstr.controls_idx, 0])
+    for k in range(1, 2 * i, 2):
         total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
         if not constraints_violated:
             for j in range(cstr.N):

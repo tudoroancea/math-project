@@ -2,8 +2,9 @@ import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from cstr_package import *
 
 schemes = [
@@ -15,16 +16,16 @@ ref_points = [(xr1, ur1), (xr2, ur2), (xr3, ur3)]
 
 df = pd.DataFrame(
     columns=[
-        "Ref point",
+        "RefPoint",
         "Scheme",
-        "Nbr iterations to convergence",
-        "Performance measure",
-        "Average Sensitivities Computation time",
-        "Std err Sensitivities Computation time",
-        "Average Condensation time",
-        "Std err Condensation time",
-        "Average Solving time",
-        "Std err Solving time",
+        "NbrIterationsToConvergence",
+        "PerformanceMeasure",
+        "AverageSensitivitiesComputationTime",
+        "StdErrSensitivitiesComputationTime",
+        "AverageCondensationTime",
+        "StdErrCondensationTime",
+        "AverageSolvingTime",
+        "StdErrSolvingTime",
     ]
 )
 
@@ -50,7 +51,17 @@ for i in range(3):
             inf_cstr = CSTR(xr=ref_points[i][0], ur=ref_points[i][1], scheme=scheme)
             prediction = inf_cstr.initial_prediction(np.array([1.0, 0.5, 100.0, 100.0]))
             total_cost_inf = 0.0
+            convergence = 0
             for k in range(inf_cstr.N):
+                if (
+                    convergence == 0
+                    and np.linalg.norm(
+                        prediction[inf_cstr.get_state_idx(k)] - inf_cstr.xr
+                    )
+                    < 1e-3
+                ):
+                    convergence = k
+
                 total_cost_inf += inf_cstr.l(
                     prediction[inf_cstr.get_state_idx(k)],
                     prediction[inf_cstr.get_control_idx(k)],
@@ -60,16 +71,16 @@ for i in range(3):
                     df,
                     pd.DataFrame.from_dict(
                         {
-                            "Ref point": [i + 1],
+                            "RefPoint": [i + 1],
                             "Scheme": [scheme_str],
-                            "Nbr iterations to convergence": [None],
-                            "Performance measure": [round(float(total_cost_inf), 3)],
-                            "Average Sensitivities Computation time": [None],
-                            "Std err Sensitivities Computation time": [None],
-                            "Average Condensation time": [None],
-                            "Std err Condensation time": [None],
-                            "Average Solving time": [None],
-                            "Std err Solving time": [None],
+                            "NbrIterationsToConvergence": [None],
+                            "PerformanceMeasure": [round(float(total_cost_inf), 3)],
+                            "AverageSensitivitiesComputationTime": [None],
+                            "StdErrSensitivitiesComputationTime": [None],
+                            "AverageCondensationTime": [None],
+                            "StdErrCondensationTime": [None],
+                            "AverageSolvingTime": [None],
+                            "StdErrSolvingTime": [None],
                         }
                     ),
                 ),
@@ -107,26 +118,26 @@ for i in range(3):
                     df,
                     pd.DataFrame.from_dict(
                         {
-                            "Ref point": [i + 1],
+                            "RefPoint": [i + 1],
                             "Scheme": [scheme_str],
-                            "Nbr iterations to convergence": [
+                            "NbrIterationsToConvergence": [
                                 nbr_iterations_to_convergence
                             ],
-                            "Performance measure": [round(total_cost, 3)],
-                            "Average Sensitivities Computation time": [
+                            "PerformanceMeasure": [round(total_cost, 3)],
+                            "AverageSensitivitiesComputationTime": [
                                 round(np.mean(sensitivites_computation_times), 2)
                             ],
-                            "Std err Sensitivities Computation time": [
+                            "StdErrSensitivitiesComputationTime": [
                                 round(np.std(sensitivites_computation_times), 2)
                             ],
-                            "Average Condensation time": [
+                            "AverageCondensationTime": [
                                 round(np.mean(condensation_times), 2)
                             ],
-                            "Std err Condensation time": [
+                            "StdErrCondensationTime": [
                                 round(np.std(condensation_times), 2)
                             ],
-                            "Average Solving time": [round(np.mean(solve_times), 2)],
-                            "Std err Solving time": [round(np.std(solve_times), 2)],
+                            "AverageSolvingTime": [round(np.mean(solve_times), 2)],
+                            "StdErrSolvingTime": [round(np.std(solve_times), 2)],
                         }
                     ),
                 ),

@@ -521,7 +521,6 @@ Instead of presenting RTI with pseudocode as in algorithm \ref{algo:general-SQP}
 \vskip 1cm
 
 \begin{figure}[H]
-	\label{fig:RTI-timeline}
 	\startchronology[startyear=-3,stopyear=5,startdate=false,dates=false,color=black,width=\textwidth, arrow=true]
 	\chronoperiode[color=cyan, dates=false]{-3}{0}{\textcolor{cyan}{off-line initialization}}
 	\chronoevent[year=false]{0}{\color{green}{m}}
@@ -537,6 +536,7 @@ Instead of presenting RTI with pseudocode as in algorithm \ref{algo:general-SQP}
 	\chronoevent[year=false]{5}{\color{green}{m}}
 	\stopchronology
 	\caption{RTI timeline}
+	\label{fig:RTI-timeline}
 \end{figure}
 
 Several important points should be highlighted :
@@ -607,14 +607,73 @@ Some general remarks on the implementation :
 
 \subsubsection*{Experimental procedure}
 
-We designed the following experiments to evaluate the behavior of
+We designed the following experiments to evaluate the behavior of a given MPC scheme :
+\begin{enumerate}[label=Exp\arabic*]
+	\item \underline{Number of iterations to convergence} : we see how quickly a scheme makes the state converge to the reference (within a tolerance of $10^{-3}$).
+
+	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC} : i.e. the sum of all the stage costs evaluated at every time step of the simulation.
+	For the RTI scheme, this corresponds to the time steps when a measurement is available (see \ref{fig:RTI-timeline}), and for the infinite horizon MPC (approximated by a 5 times bigger horizon).
+
+	\item \underline{Compute the runtime of each step of RTI} : i.e. sensitivities computation, condensation
+\end{enumerate}
+These experiments were performed with both regular MPC and RRLB MPC to see the advantages of our new formulation.
 
 \subsubsection*{Results}
+
+The results of experiments Exp1, Exp2 and Exp3 predented above are presented in tables \ref{tab:iterations-to-convergence}, \ref{tab:performance-measure} and \ref{tab:RTI-runtimes}.
+
+The measures of all the quantities described above are presented in the following table (all the times are in milliseconds) :
+
+\begin{table}[H]
+	\centering
+	\csvreader[
+		tabular				= |c|c|c|,
+		table head			= \hline Ref & Scheme & Iterations to convergence \\\hline,
+		late after line 	= \\\hline,
+		table foot			=  \hline,
+		filter not strcmp	= {\scheme}{infhorz}
+	]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,NbrIterationsToConvergence=\iter}{
+		\refpoint & \scheme & \iter
+	}
+
+	\caption{Number of iterations needed for convergence (within $10^{-3}$ tolerance) of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+	\label{tab:iterations-to-convergence}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\csvreader[
+		tabular			= |c|c|c|,
+		table head		= \hline Ref & Scheme & Perf \\\hline,
+		late after line = \\\hline,
+		table foot		=  \hline
+	]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,PerformanceMeasure=\perf}{
+		\refpoint & \scheme & \perf
+	}
+
+	\caption{Performance Measure of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+	\label{tab:performance-measure}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\csvreader[
+		tabular			= |c|c|c|c|c|c|c|c|,
+		table head		= \hline Ref & Scheme & ASCT & SESCT & ACT & SECT & AST & SEST \\\hline,
+		late after line = \\\hline,
+		table foot		=  \hline,
+		filter not strcmp	= {\scheme}{infhorz}
+	]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,AverageSensitivitiesComputationTime=\asct,StdErrSensitivitiesComputationTime=\sesct,AverageCondensationTime=\act,StdErrCondensationTime=\sect,AverageSolvingTime=\ast,StdErrSolvingTime=\sest}{
+		\refpoint & \scheme & \asct & \sesct & \act & \sect & \ast & \sest
+	}
+
+	\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+	\label{tab:RTI-runtimes}
+\end{table}
 
 \subsubsection*{Discussion}
 
 
-\csvautolongtable{cstr_closed_loop_simulation_results.csv}
 
 \newpage
 
