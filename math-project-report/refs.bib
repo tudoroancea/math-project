@@ -7,6 +7,28 @@
   year    = {In Press, 2018}
 }
 
+@article{cstr-ref,
+  title    = {An auto-generated real-time iteration algorithm for nonlinear MPC in the microsecond range},
+  journal  = {Automatica},
+  volume   = {47},
+  number   = {10},
+  pages    = {2279-2285},
+  year     = {2011},
+  issn     = {0005-1098},
+  doi      = {https://doi.org/10.1016/j.automatica.2011.08.020},
+  url      = {https://www.sciencedirect.com/science/article/pii/S0005109811003918},
+  author   = {Boris Houska and Hans Joachim Ferreau and Moritz Diehl},
+  keywords = {Nonlinear model predictive control, Automatic C-code generation, Real-time algorithms},
+  abstract = {In this paper, we present an automatic C-code generation strategy for real-time nonlinear model predictive control (NMPC), which is designed for applications with kilohertz sample rates. The corresponding code export module has been implemented within the software package ACADO Toolkit. It is capable of exporting fixed step-size integrators together with their sensitivities as well as a real-time Gauss–Newton method. Here, we employ the symbolic representation of optimal control problems in ACADO in order to auto-generate plain C-code which is optimized for final production. The exported code has been tested for model predictive control scenarios comprising constrained nonlinear dynamic systems with four states and a control horizon of ten samples. The numerical simulations show a promising performance of the exported code being able to provide feedback in much less than a millisecond.}
+}
+
+@phdthesis{diehl-dissertation,
+  author = {Moritz Diehl},
+  school = {Universität Heidelberg},
+  title  = {Real-Time Optimization for Large Scale Nonlinear Processes},
+  year   = {2001}
+}
+
 @misc{lectures-parametric-optimization,
   author = {Georg Still},
   title  = {Lectures on parametric optimization : an introduction},
@@ -41,7 +63,6 @@
   address   = {New York, NY, USA},
   edition   = {2e}
 }
-
 @inproceedings{RLB,
   author    = {Feller, Christian and Ebenbauer, Christian},
   booktitle = {2015 American Control Conference (ACC)},
@@ -63,6 +84,7 @@
   pages   = {1223-1238},
   doi     = {10.1109/TAC.2016.2582040}
 }
+
 @article{rti-diehl,
   author   = {Diehl, Moritz and Bock, Hans Georg and Schlöder, Johannes P.},
   title    = {A Real-Time Iteration Scheme for Nonlinear Optimization in Optimal Feedback Control},
