@@ -348,7 +348,7 @@ Now our main result :
 \subsection{Constraints satisfaction guarantees}\label{sec:constraints-satisfaction-guarantees}
 This section follows closely the section IV.D of \cite{RRLB-linear-MPC} but gives more loose results that cannot take us as far.
 In particular, will show that we can ensure the existence of a neighborhood around the origin such that if we start in it, the states and controls along the closed-loop simulation will never violate the constraints.
-However, this neighborhood cannot be easily computed because of the generality of the considered dynamics.
+However, this neighborhood cannot be easily computed because of the generality of the considered dynamics, and will therefore not be verified experimentally in section \ref{sec:RRLB-numerical-experiments}.
 
 In the whole section, we the assumptions of Theorem \ref{thm:nominal-stability} to be true.
 
@@ -556,18 +556,25 @@ More practical details on RTI will be given in subsection \ref{sec:RRLB-numerica
 \subsection{Asymptotic stability of RTI scheme}\label{sec:RRLB-real-time-stability}
 
 Section \ref{sec:RRLB-theoretical-properties} proved several important theoretical properties of RRLB MPC, and the next subsection presents some experimental verifications of these theorems.
-However, it should be noted that all the solution to problem \ref{eq:RRLB-NMPC} found in these experiments are by essence inexact, and we can therefore not easily claim that the asymptotic stability and the constraint satisfaction still hold in practice.
-Moritz Diehl, the inventor of RTI, studied under which assumptions such properties could be at least partially preserved.
-We discuss them briefly but without any rigorous mathematical proof that would without a doubt be out of scope for this project.
+However, it should be noted that all the solution to problem \ref{eq:RRLB-NMPC} found in these experiments are by essence inexact, and we can therefore not easily claim that the asymptotic stability and the constraint satisfaction still hold in practice. That's why we make the distinction between \textit{nominal stability} and \textit{real-time stability}.
+
+The determination of assumptions and results guaranteeing these properties in the real-time framework have been studied for example by Mortiz Diehl or Andrea Zanelli, although in slightly different contexts than ours.
+The managed to derive powerful theorems but their assumptions are hard or even impossible to verify in practice and they are not really verified in practice.
+Instead, the desired properties are verified experimentally by means of a simple simulation of the system at hand.
+This is the scope of next subsection, in which we will not worry about this distinction between nominal and real-time stability.
+
 
 \subsection{Numerical experiments}\label{sec:RRLB-numerical-experiments}
 
-CSTR described in \cite{diehl-dissertation} and \cite{cstr-ref}
+In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used as benchmark for comparing different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR) system.
+We can find descriptions of this model in \cite{diehl-dissertation} and \cite{cstr-ref}, but we are going to recall
 
 \newpage
 
 \section{Appendix}
 \printbibliography
+
+\newpage
 
 \subsection*{Controllable vs. Stabilizable}\label{sec:controllability-stabilizability}
 

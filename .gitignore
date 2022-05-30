@@ -1,10 +1,10 @@
-math-project-report/*
+math-project-report/math-project-report*
 !math-project-report/math-project-report.tex
 !math-project-report/math-project-report.pdf
 !math-project-report/predefs.tex
 !math-project-report/refs.bib
 
-math-project-questions/*
+math-project-questions/math-project-questions*
 !math-project-questions/math-project-questions.tex
 !math-project-questions/math-project-questions.pdf
 
@@ -12,6 +12,10 @@ math-project-presentation/math-project-presentation*
 !math-project-presentation/math-project-presentation.tex
 !math-project-presentation/math-project-presentation.pdf
 !math-project-presentation/Logo.pdf
+
+math-project-num-experiments/cstr/tests/*.png
+math-project-num-experiments/cstr/tests/*.csv
+math-project-num-experiments/cstr/tests/*.txt
 
 *.mp4
 CSTR_setting.m

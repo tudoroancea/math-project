@@ -1,9 +1,7 @@
 import sys
 from time import time
 
-import matplotlib.pyplot as plt
 import numpy as np
-import scipy.sparse.linalg as sla
 from osqp import OSQP
 
 from .cstr import *
@@ -15,8 +13,9 @@ def run_closed_loop_simulation(
     xr: np.ndarray = xr1,
     ur: np.ndarray = ur1,
     stop_tol=1.0e-3,
-    RRLB=True,
+    scheme: Scheme = Scheme.RRLB,
     graphics: bool = True,
+    verbose: bool = False,
 ):
     """
     Returns the total cost of the run until convergence, the number of iterations taken to reach
@@ -25,23 +24,13 @@ def run_closed_loop_simulation(
     cstr = CSTR(
         xr=xr,
         ur=ur,
+        scheme=scheme,
     )
-    reference_points = np.array(
-        [
-            np.concatenate((xr, ur)),
-        ]
-    ).T
-    current_reference_idx = 0
-    print("started with reference point n°1")
-    current_reference = np.concatenate(
-        (
-            np.tile(
-                reference_points[cstr.states_idx, current_reference_idx], cstr.N + 1
-            ),
-            np.tile(reference_points[cstr.controls_idx, current_reference_idx], cstr.N),
-        )
+    current_reference = np.concatenate((xr, ur))
+    current_reference_warm_start = np.concatenate(
+        (np.tile(xr, cstr.N + 1), np.tile(ur, cstr.N))
     )
-    max_nbr_feedbacks = int(5000.0 * reference_points.shape[1] / (cstr.T / cstr.N)) + 1
+    max_nbr_feedbacks = int(5000.0 / (cstr.T / cstr.N)) + 1
 
     # data for the closed loop simulation
     constraints_violated = False
@@ -56,12 +45,16 @@ def run_closed_loop_simulation(
     solve_times = np.zeros(max_nbr_feedbacks)
 
     # Get initial prediction off-line with great precision (use fully converged IP instead of RTI)
-    prediction = cstr.initial_prediction(custom_x_init, RRLB)
+    start = time()
+    prediction = cstr.initial_prediction(custom_x_init)
+    stop = time()
+    if verbose:
+        print(f"Initial prediction computed in {1000.0*(stop - start):.5f} ms")
 
     data[cstr.controls_idx, 0] = prediction[cstr.get_control_idx(0)]
 
     # generate C-code since now we don't need the symbolic expressions anymore
-    cstr.gencode()
+    # cstr.gencode()
 
     # first preparation phase =================================================================
     (
@@ -72,11 +65,11 @@ def run_closed_loop_simulation(
         u,
         sensitivites_computation_times[0],
         condensation_times[0],
-    ) = cstr.preparation_phase(prediction, RRLB)
+    ) = cstr.preparation_phase(prediction)
 
     prob = OSQP()
     prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
-    prob.warm_start(current_reference - prediction)
+    prob.warm_start(current_reference_warm_start - prediction)
 
     times[1] = cstr.T / cstr.N / 1000.0
 
@@ -114,38 +107,13 @@ def run_closed_loop_simulation(
     )
 
     def converged(i: int) -> bool:
-        if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
-            return (
-                np.sqrt(np.sum(np.square(data[cstr.states_idx, 2 * i] - cstr.xr)))
-                < stop_tol
-            )
-        else:
-            return False
+        return (
+            np.sqrt(np.sum(np.square(data[cstr.states_idx, 2 * i] - cstr.xr)))
+            < stop_tol
+        )
 
     i = 1
     while not converged(i) and i < max_nbr_feedbacks:
-        # change current reference points if necessary
-        if int(np.sum(times[: 2 * i]) / 5000.0) > current_reference_idx:
-            current_reference_idx += 1
-            current_reference = np.concatenate(
-                (
-                    np.tile(
-                        reference_points[cstr.states_idx, current_reference_idx],
-                        cstr.N + 1,
-                    ),
-                    np.tile(
-                        reference_points[cstr.controls_idx, current_reference_idx],
-                        cstr.N,
-                    ),
-                )
-            )
-            cstr.set_reference(
-                xr=reference_points[cstr.states_idx, current_reference_idx],
-                ur=reference_points[cstr.controls_idx, current_reference_idx],
-            )
-            cstr.gencode()
-            print("changed reference point to point n°", current_reference_idx + 1)
-
         # preparation phase ========================================================
         prediction = cstr.shift_prediction(prediction)
         (
@@ -156,11 +124,11 @@ def run_closed_loop_simulation(
             u,
             sensitivites_computation_times[i],
             condensation_times[i],
-        ) = cstr.preparation_phase(prediction, RRLB)
+        ) = cstr.preparation_phase(prediction)
 
         prob = OSQP()
         prob.setup(P, q, A, l, u, warm_start=True, verbose=False)
-        prob.warm_start(current_reference - prediction)
+        prob.warm_start(current_reference_warm_start - prediction)
 
         times[2 * i + 1] = cstr.T / cstr.N - times[2 * i]
 
@@ -210,7 +178,7 @@ def run_closed_loop_simulation(
 
         # if the simulation will stop at next iteration (either because it has converged or because we
         #  have reached the maximum number of iterations), we say what happened
-        if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
+        if verbose:
             if converged(i + 1):
                 print("Converged at iteration {}".format(i))
             elif i == max_nbr_feedbacks - 1:
@@ -236,13 +204,14 @@ def run_closed_loop_simulation(
         condensation_times, list(range(i, condensation_times.shape[0])), axis=0
     )
 
-    print("Final state: ", data[cstr.states_idx, -1])
-    print("Final control: ", data[cstr.controls_idx, -1])
+    if verbose:
+        print("Final state: ", data[cstr.states_idx, -1])
+        print("Final control: ", data[cstr.controls_idx, -1])
 
     # create the simulation but don't show it yet, show it instead after all the treatments outside
     # this function are done
     if graphics:
-        CSTRAnimation(cstr, reference_points, data, prediction, times)
+        CSTRAnimation(cstr, current_reference, data, prediction, times)
 
     # compute the performance measure (total cost along the closed loop trajectory)
     total_cost = 0.0

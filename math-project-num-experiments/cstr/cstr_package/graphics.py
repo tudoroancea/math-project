@@ -67,7 +67,7 @@ class CSTRAnimation:
         # Create empty plot
         fig = plt.gcf()
         plt.clf()
-        gs = GridSpec(model.nx + model.nu, 1, figure=fig)
+        gs = fig.add_gridspec(model.nx + model.nu, 1)
 
         self.axes = list(range(model.nx + model.nu))
         for i in range(model.nx + model.nu):
@@ -78,17 +78,15 @@ class CSTRAnimation:
             plt.grid("both")
             plt.xlim([0.0, np.sum(times) + model.T])
 
-            if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
-                plt.plot(
-                    [0.0, 3000.0], [reference_points[i], reference_points[i]], "r-"
-                )
-            else:
-                for j in range(reference_points.shape[1]):
-                    plt.plot(
-                        [3000.0 * j, 3000.0 * (j + 1)],
-                        [reference_points[i, j], reference_points[i, j]],
-                        "r-",
-                    )
+            # if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
+            plt.plot([0.0, 3000.0], [reference_points[i], reference_points[i]], "r-")
+            # else:
+            #     for j in range(reference_points.shape[1]):
+            #         plt.plot(
+            #             [3000.0 * j, 3000.0 * (j + 1)],
+            #             [reference_points[i, j], reference_points[i, j]],
+            #             "r-",
+            #         )
 
             if i == 2:
                 plt.plot([0.0, np.sum(times) + model.T], [98.0, 98.0], "r:")

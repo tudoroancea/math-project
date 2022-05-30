@@ -1,6 +1,6 @@
 # %% imports and global parameters
 import os
-import sys
+from enum import Enum
 from time import time
 from typing import Tuple
 
@@ -8,6 +8,12 @@ import casadi as ca
 import numpy as np
 import scipy.linalg as la
 from scipy import sparse
+
+
+class Scheme(Enum):
+    RRLB = 1
+    REGULAR = 2
+    INFINITE_HORIZON = 3
 
 
 xr1 = np.array(
@@ -26,22 +32,26 @@ ur3 = np.array([12.980148, -5162.95653026])
 
 
 class CSTR:
-    # contains dynamics, constraints, RRLB functions,
+    """
+    Class created to encapsulate the dynamical model of the CSTR system, all the cost functions and
+    parameters of the MPC, and some auxiliary functions used for preparing an RTI iteration.
+    """
 
     # misc
     nx = 4  # dimension of state
     nu = 2  # dimension of control
-    T = 2000.0  # time horizon
-    N = 100  # number of control intervals
+    states_idx = list(range(nx))  # indices of states in a stage vector (x_k, u_k)
+    controls_idx = list(
+        range(nx, nx + nu)
+    )  # indices of controls in a stage vector (x_k, u_k)
+    nz: int  # dimension of the vector with all states and control variables concatenaed
+    T: float  # time horizon
+    N: int  # number of control intervals
     M = 6  # RK4 integration steps
-    epsilon = 0.1  # barrier parameter
-    nz = (
-        nx * (N + 1) + nu * N
-    )  # dimension of the vector with all states and control variables concatenaed
-    states_idx = list(range(nx))
-    controls_idx = list(range(nx, nx + nu))
+    epsilon: float  # barrier parameter
+    is_RRLB: bool  # whether to compute the RRLB functions or not
 
-    # constraints
+    # constraints (see the paper for notations)
     C_x = sparse.hstack([sparse.csc_matrix((2, 2)), -sparse.eye(2)])
     C_u = sparse.csr_matrix(
         np.array([[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
@@ -50,10 +60,10 @@ class CSTR:
     d_u = np.array([35.0, -3.0, 0.0, 9000.0])
 
     # reference points
-    xr: np.ndarray
-    ur: np.ndarray
+    xr: np.ndarray  # target / reference state
+    ur: np.ndarray  # target / reference control
 
-    # RRLB functions
+    # RRLB functions (see paper for notations)
     B_x: ca.Function
     B_u: ca.Function
     grad_B_x: ca.Function
@@ -63,9 +73,8 @@ class CSTR:
     M_x: np.ndarray
     M_u: np.ndarray
     delta = 10.0  # relaxation parameter
-    # delta = np.min(np.abs(np.concatenate((d_x, d_u), axis=0)))  # relaxation parameter
 
-    # dynamics
+    # dynamics (see paper for notations)
     f: ca.Function
     f_cont: ca.Function
     jac_f_x: ca.Function
@@ -86,8 +95,26 @@ class CSTR:
         self,
         xr: np.ndarray = xr1,
         ur: np.ndarray = ur1,
+        epsilon: float = 0.1,
+        delta: float = 10.0,
+        scheme: Scheme = Scheme.RRLB,
     ) -> None:
-        # dynamics
+        # Setting up the MPC ===================================================
+        if scheme == Scheme.RRLB or scheme == Scheme.REGULAR:
+            self.T = 2000.0
+            self.N = 100
+        else:
+            self.T = 5 * 2000.0
+            self.N = 5 * 100
+        self.nz = self.nx * (self.N + 1) + self.nu * self.N
+        self.epsilon = epsilon
+        self.delta = delta
+        if scheme == Scheme.RRLB:
+            self.is_RRLB = True
+        else:
+            self.is_RRLB = False
+
+        # Defining model dynamics =========================================================
         x = ca.SX.sym("x", self.nx)
         u = ca.SX.sym("u", self.nu)
         k_10 = 1.287e12  # [h^-1]
@@ -153,12 +180,12 @@ class CSTR:
             new_x = new_x + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         self.f_special = ca.Function("f", [x, u, h], [new_x])
 
-        self.set_reference(xr, ur)
+        # Setting reference point ===========================================================
+        self.xr = xr
+        self.ur = ur
 
-    def compute_RRLB(self) -> None:
-        # reimplement everything in a more generic way
-        x = ca.SX.sym("x", self.nx)
-        u = ca.SX.sym("u", self.nu)
+        # Computing RRLB functions ==========================================================
+        # TODO : reimplement everything in a more generic way using linear system solver
         z = ca.SX.sym("z")
         beta = ca.Function(
             "beta",
@@ -229,7 +256,7 @@ class CSTR:
         self.hess_B_u = ca.Function("hess_B_u", [u], [ca.hessian(self.B_u(u), u)[0]])
         self.M_u = self.hess_B_u(self.ur).full()
 
-    def compute_terminal_cost(self) -> None:
+        # Defining costs functions ==========================================================
         self.A = np.array(self.jac_f_x(self.xr, self.ur))
         self.B = np.array(self.jac_f_u(self.xr, self.ur))
         self.P = np.array(
@@ -246,15 +273,6 @@ class CSTR:
             @ self.P
             @ self.A
         )
-
-    def set_reference(self, xr: np.ndarray, ur: np.ndarray) -> None:
-        self.xr = xr
-        self.ur = ur
-        self.compute_RRLB()
-        self.compute_terminal_cost()
-
-        x = ca.SX.sym("x", self.nx)
-        u = ca.SX.sym("u", self.nu)
         self.l = ca.Function(
             "l",
             [x, u],
@@ -276,8 +294,9 @@ class CSTR:
         )
         self.F = ca.Function("F", [x], [ca.bilin(self.P, (x - self.xr), (x - self.xr))])
 
-        assumptions_verified, err_msg = self.check_stability_assumptions()
-        assert assumptions_verified, err_msg
+        # Verify all assumptions ============================================================
+        # assumptions_verified, err_msg = self.check_stability_assumptions()
+        # assert assumptions_verified, err_msg
 
     def check_stability_assumptions(self):
         err = (False,)
@@ -398,9 +417,7 @@ class CSTR:
 
         return err, err_msg
 
-    def initial_prediction(
-        self, initial_state: np.ndarray, RRLB: bool = True
-    ) -> np.ndarray:
+    def initial_prediction(self, initial_state: np.ndarray) -> np.ndarray:
         """
         Compute the initial prediction of the state and the control input in the format
         (x_0, x_1, ...,x_N, u_0, u_1, ..., u_{N-1})
@@ -424,7 +441,7 @@ class CSTR:
             x_k_end = self.f(x_k, u_k)
 
             # increment cost by one stage
-            J += self.l_tilde(x_k, u_k) if RRLB else self.l(x_k, u_k)
+            J += self.l_tilde(x_k, u_k) if self.is_RRLB else self.l(x_k, u_k)
 
             # new NLP variable for the state
             x_k = ca.MX.sym(
@@ -438,7 +455,7 @@ class CSTR:
             # compute initial guess
             w_start_x += [self.f(w_start_x[-1], w_start_u[-1])]
 
-        if RRLB:
+        if self.is_RRLB:
             J += self.F(x_k)  # here x_k represents x_N
 
         # Concatenate stuff
@@ -449,7 +466,7 @@ class CSTR:
         w_start = ca.vertcat(*w_start)
 
         # bounds on NLP variables
-        if RRLB:
+        if self.is_RRLB:
             lbw = (
                 initial_state.tolist() + [-np.inf] * (self.nx + self.nu) * self.N
             )  # lower bound for all the variables
@@ -481,7 +498,7 @@ class CSTR:
                 "print_time": 0,
                 "ipopt": {
                     "sb": "yes",
-                    # "max_iter": 1 if RRLB else 1000,
+                    # "max_iter": 1 if self.is_RRLB else 1000,
                     "print_level": 1,
                     "warm_start_init_point": "yes",
                 },
@@ -489,10 +506,7 @@ class CSTR:
         )
 
         # Solve the NLP
-        start = time()
         sol = nlp_solver(x0=w_start, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
-        stop = time()
-        print(f"Initial prediction computed in {1000.0*(stop - start):.5f} ms")
 
         result = sol["x"].full().ravel()
         assert not np.isnan(result).any(), "NaNs found in initial prediction"
@@ -500,7 +514,7 @@ class CSTR:
 
     def shift_prediction(self, prediction: np.ndarray) -> np.ndarray:
         """
-        Shift the prediction by one stage
+        Shift the prediction of the form (x_0, x_1, ...,x_N, u_0, u_1, ..., u_{N-1}) by one stage
         """
         result = np.zeros(self.nx * (self.N + 1) + self.nu * self.N)
         # shifted old predictions
@@ -523,7 +537,7 @@ class CSTR:
         return result
 
     def preparation_phase(
-        self, prediction, RRLB: bool = True
+        self, prediction
     ) -> Tuple[
         sparse.csc_array,
         np.ndarray,
@@ -539,7 +553,7 @@ class CSTR:
         sensitivity_computation_time, condensing_time = 0.0, 0.0
 
         # compute q =============================================================
-        if RRLB:
+        if self.is_RRLB:
             start = time()
             tpr = []
             for k in range(self.N + 1):
@@ -559,13 +573,13 @@ class CSTR:
             prediction
             - np.concatenate((np.tile(self.xr, self.N + 1), np.tile(self.ur, self.N)))
         ) + (
-            self.epsilon * np.concatenate(tpr) if RRLB else 0.0
+            self.epsilon * np.concatenate(tpr) if self.is_RRLB else 0.0
         )
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 
         # compute P =======================================================
-        if RRLB:
+        if self.is_RRLB:
             start = time()
             tpr = []
             for k in range(self.N + 1):
@@ -579,7 +593,7 @@ class CSTR:
         P = 2 * sparse.block_diag(
             [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
         )
-        if RRLB:
+        if self.is_RRLB:
             P += 2 * self.epsilon * sparse.block_diag(tpr, format="csc")
         stop = time()
         condensing_time += 1000.0 * (stop - start)
@@ -623,7 +637,7 @@ class CSTR:
             format="csc",
         )
         A = sparse.hstack([Ax, Bu])
-        if not RRLB:
+        if not self.is_RRLB:
             A = sparse.vstack(
                 [
                     A,
@@ -670,7 +684,7 @@ class CSTR:
         u = l
         stop = time()
         condensing_time += 1000.0 * (stop - start)
-        if not RRLB:
+        if not self.is_RRLB:
             start = time()
 
             tpr = []
@@ -715,8 +729,8 @@ class CSTR:
         Generates C-code for grad_B_x, grad_B_u, hess_B_x, hess_B_u, f, jac_f_x, jac_f_u and loads back
         these functions into the class.
 
-        Please note that this disables the symbolic nature of these Functions, and therefore should not
-        be called if we need it (in particular, it has to be called only after )
+        Please note that this disables the symbolic nature of these Functions, so it should not be
+        called before calling initial_prediction()
         """
         print("Generating C-code for the functions...")
         codegen = ca.CodeGenerator("gen.c")
