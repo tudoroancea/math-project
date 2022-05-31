@@ -22,6 +22,7 @@
 \usepackage{chronosys}
 \usepackage{csvsimple}
 \usepackage{longtable}
+% \usepackage[dvipsnames]{xcolor}
 \addbibresource{refs.bib}
 
 \include{predefs}
@@ -426,74 +427,106 @@ Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delt
 \section{Numerical aspects of RRLB}\label{sec:RRLB-numerical-aspects}
 
 In this section we take a more concrete look at the numerical methods employed to solve MPC problems in practice.
-One of the more important challenges of such implementations resides in the complexity of the NLP to be solved, that may not permit finding an accurate solution when the sampling time is very short.
+One of the more important challenges of such implementations resides in the large number of variables and more generally the complexity of the NLP to be solved, that may not permit finding an accurate solution when the sampling time is very short.
 This issue is deeply aggravated on embedded platforms where the computational power is often limited.
-This is why, historically, the first successful implementations of MPC in industrial applications were found in chemical engineering, where the sampling time are usually long enough to find an accurate solutions.
+This is why, historically, the first successful implementations of MPC in industrial applications were found in chemical engineering, where the sampling time (duration between two state measurement, and therefore time available to compute a new control) are usually long enough to find an accurate solutions.
+For instance, in the chemical system studied in subsection \ref{sec:RRLB-numerical-experiments}, the sampling time is of $200.0s$, while in robotics or autonomous driving the sampling time is rather in the order of the $10.0ms$.
 
-A great deal of effort has been put in the past decaded to design algorithms that make best use of the computational power to deliver usable results on embedded systems that necessitate very fast response times, such as autonomous cars where the typical sampling time is in the order of the millisecond.
+A great deal of effort has been put in the past decaded to design algorithms that make best use of scarce computational power to deliver usable results on embedded systems that necessitate very fast response times.
 One that rapidly gained interest is a variant of \textit{Sequential Quadratic Programming} (or SQP) called \textit{Real Time Iteration} (or RTI).
-Invented by Moritz Diehl and published in \cite{rti-diehl}, it can roughly be defined as SQP with a fixed number of iterations, usually only one, that makes use of the solutions found at the previous MPC predictions to warm-start the solver to ensure both computational efficiency and accuracy.
+Invented by Moritz Diehl and published in \cite{rti-diehl}, it can roughly be defined as SQP with a fixed number of iterations, usually only one, that makes use of the solutions found at the previous MPC prediction to warm-start the solver and to ensure both computational efficiency and accuracy.
 
-In subsection \ref{sec:RTI-scheme} we formally introduce the RTI scheme for general MPC and the specialize it for RRLB MPC, then briefly discuss it stability properties in subsection \ref{sec:RRLB-real-time-stability} and finally present numerical results verifying the theoretical properties of RRLB MPC and compare its performance with  regular MPC in subsection \ref{sec:RRLB-numerical-experiments}.
+In subsection \ref{sec:RTI-scheme} we formally introduce the RTI scheme for general MPC and the specialize it for RRLB MPC, then briefly discuss it stability properties in subsection \ref{sec:RRLB-real-time-stability} and finally present numerical results verifying the theoretical properties of RRLB MPC and compare its performance with regular MPC in subsection \ref{sec:RRLB-numerical-experiments}.
 
 \subsection{The RTI scheme}\label{sec:RTI-scheme}
 
-We assume in this section familiarity with the SQP framework for general NLPs, as described for example in \cite{nocedal-wright}, and describe it in the context of a general MPC with quadratic satge and terminal costs but with general dynamics and state/control constraints.
-% TODO : talk about the assumptions of SQP ?
+We assume in this section familiarity with the SQP framework for general NLPs, as described for example in \cite{nocedal-wright}, and describe it in the context of MPC.
+We don't explicitely deal with the assumptions necessary for SQP to converge.
+% TODO : do we really ignore them ?
+
+\subsubsection{SQP for regular MPC}
+
 Just as in sections \ref{sec:RRLB-MPC} and \ref{sec:RRLB-theoretical-properties}, we are going to consider the target state and controls to be the origin, which will simplify our notations inspired from \cite{mpc-rti}.
-With the following MPC :
+With the following general MPC :
+
 \begin{align*}
-	\mathrm{MPC}(x)=\underset{\bf{x},\bf{u}}{\min} &\quad \sum_{k=0}^{N-1}\begin{pmatrix}x_k\\u_k\end{pmatrix}^T\begin{pmatrix}
-		Q & 0\\
-		0 & R\\
-	\end{pmatrix}\begin{pmatrix}x_k\\u_k\end{pmatrix}~+~x_N^TPx_N\\
+	\mathrm{MPC}(x)=\underset{\bf{x},\bf{u}}{\min} &\quad \sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)\\
 	\text{s.t.} &\quad x_0=x\text{ and }x_{k+1}=f(x_k,u_k),~k=0,\dots,N-1\\
 	&\quad h_x(x_k)\leq 0,~k=0,\dots,N\\
 	&\quad h_u(u_k)\leq 0,~k=0,\dots,N-1
 \end{align*}
-we can define the following QP subproblem :
-\begin{align}
-	\begin{split}
-		\label{eq:SQP-QP}
-		\mathrm{QP}(x, \mathbf{x}_i, \mathbf{u}_i)=\underset{\Delta\mathbf{x}_i,\Delta\mathbf{u}_i}{\mathrm{argmin}} & \quad \sum_{k=0}^{N_1}\begin{pmatrix}\Delta x_{i,k}\\\Delta u_{i,k}\end{pmatrix}^T\begin{pmatrix}Q & 0\\0 & R\\\end{pmatrix}\begin{pmatrix}\Delta x_{i,k}\\\Delta u_{i,k}\end{pmatrix}+J_{i,k}^T\begin{pmatrix}\Delta x_{i,k}\\\Delta u_{i,k}\end{pmatrix}\\
-		&\quad +\Delta x_{i,N}^TP\Delta x_{i,N}+J_{i,N}^T\begin{pmatrix}\Delta x_{i,N}\\\Delta u_{i,N}\end{pmatrix}\\
-		\text{s.t.} &\quad \Delta x_0=x-x_{i,0}\\
-		&\quad \Delta x_{i,k+1}=A_{i,k}\Delta x_{i,k}+B_{i,k}\Delta u_{i,k}+r_{i,k},~k=0,\dots,N-1\\
-		&\quad C_{i,k}\Delta x_{i,k}+h_{x,i,k}\leq 0,~k=0,\dots,N\\
-		&\quad D_{i,k}\Delta x_{i,k}+h_{u,i,k}\leq 0,~k=0,\dots,N-1
-	\end{split}
-\end{align}
-with
-\begin{align}
-	\begin{split}
-		\label{eq:SQP-sensitivities}
+
+\noindent we can define the following QP subproblem :
+
+\begin{align*}
+	\mathrm{QP}(x, \mathbf{x}_i, \mathbf{u}_i)=\underset{\Delta\mathbf{x}_i,\Delta\mathbf{u}_i}{\mathrm{argmin}} & \quad \sum_{k=0}^{N-1}\begin{pmatrix}\Delta x_{i,k}\\\Delta u_{i,k}\end{pmatrix}^TH_{i,k}\begin{pmatrix}\Delta x_{i,k}\\\Delta u_{i,k}\end{pmatrix}+J_{i,k}^T\begin{pmatrix}\Delta x_{i,k}\\\Delta u_{i,k}\end{pmatrix}\\
+	&\quad +\Delta x_{i,N}^TH_{i,N}\Delta x_{i,N}+J_{i,N}^T\begin{pmatrix}\Delta x_{i,N}\\\Delta u_{i,N}\end{pmatrix}\\
+	\text{s.t.} &\quad \Delta x_0=x-x_{i,0}\\
+	&\quad \Delta x_{i,k+1}=A_{i,k}\Delta x_{i,k}+B_{i,k}\Delta u_{i,k}+r_{i,k},~k=0,\dots,N-1\\
+	&\quad C_{i,k}\Delta x_{i,k}+h_{x,i,k}\leq 0,~k=0,\dots,N\\
+	&\quad D_{i,k}\Delta x_{i,k}+h_{u,i,k}\leq 0,~k=0,\dots,N-1
+\end{align*}
+
+\noindent with the sensitivities :
+
+\begin{align*}
 		&A_{i,k}=D_xf(x_{i,k}, u_{i,k}),~B_{i,k}=D_uf(x_{i,k}, u_{i,k}),~C_{i,k}=D_xh(x_{i,k}, u_{i,k}),~D_{i,k}=D_uh(x_{i,k}, u_{i,k})\\
+		&J_{i,k}=\nabla l(\Delta x_{i,k},\Delta u_{i,k}),~J_{i,N}=\nabla F(\Delta x_N)\\
 		&r_{i,k}=f(x_{i,k}, u_{i,k})-x_{i,k+1},\quad h_{x,i,k}=h_x(x_{i,k}),\quad h_{u,i,k}(u_{i,k})
-	\end{split}
-\end{align}
-and then the SQP method reads :
+\end{align*}
+
+\noindent and $H_{i,k}\approx \nabla^2_{(x_k,u_k),(x_k,u_k)}\calL(\mathbf{x}_i,\mathbf{u}_i),~H_{i,N}\approx\nabla^2_{x_N,x_N,u_N}\calL(\mathbf{x}_i,\mathbf{u}_i)$, where $\calL$ is the Lagrangian of the MPC problem.
+
+When using quadratic stage and terminal costs and when we choose to use Gauss-Newton approximation for the Hessian, we get :
+\begin{equation*}
+	H_{i,k}=\begin{pmatrix}Q&0\\0&R\end{pmatrix},\quad H_{i,N}=P,\quad J_{i,k}=\begin{pmatrix}Q&0\\0&R\end{pmatrix}\begin{pmatrix}\Delta x_{i,N}\\\Delta u_{i,N}\end{pmatrix},\quad J_{i,N}=P\begin{pmatrix}\Delta x_{i,N}\\\Delta u_{i,N}\end{pmatrix}
+\end{equation*}
+
+\noindent What's more, when the constraints are polytopic, some sensitivities become explicit :
+
+\begin{equation*}
+	C_{i,k}=C_x,~D_{i,k}=C_u,~h_{x,i,k}=C_xx_{i,k}-d_x,~h_{u,i,k}=C_uu_{i,k}-d_u
+\end{equation*}
+
+These two particular cases make up the MPC we have been studying in this whole paper, that we will call in this section the \textit{regular MPC}.
+
+
+\noindent With all these definitions, the complete SQP method reads :
+
 \begin{algorithm}[H]
-	\caption{general SQP method for MPC}
-	\label{algo:general-SQP}
+	\caption{SQP method for regular MPC}
+	\label{algo:SQP-reg}
 	\begin{algorithmic}[1]
 	\Procedure{SQP}{x, $\mathbf{x}^{init}$, $\mathbf{u}^{init}$}
 	\State{$\mathbf{x}_0\gets\mathbf{x}^{init}$} \Comment{initial guess for the states specified by the user}
 	\State{$\mathbf{u}_0\gets\mathbf{u}^{init}$} \Comment{initial guess for the controls specified by the user}
 	\State{$k\gets 0$}
 	\While{a certain stopping cirterion is not met}\\
-		\qquad \quad Compute $r_{i,k}, h_{x,i,k}, h-{u,i,k}$ and the sensitivities $A_{i,k}, B_{i,k}, C_{i,k}, D_{i,k}$ using \ref{eq:SQP-sensitivities}
-		\State{$(\Delta\mathbf{x}_i, \Delta\mathbf{u}_i)\gets \mathrm{QP}(x, \mathbf{x}_i, \mathbf{u}_i)$} \Comment{Find descent direction using \ref{eq:SQP-QP}}
+		\qquad \quad Compute $r_{i,k}, h_{x,i,k}, h_{u,i,k}$ and the sensitivities $A_{i,k}, B_{i,k}, C_{i,k}, D_{i,k}$ as above
+		\State{$(\Delta\mathbf{x}_i, \Delta\mathbf{u}_i)\gets \mathrm{QP}(x, \mathbf{x}_i, \mathbf{u}_i)$} \Comment{Find descent direction as above}
 		\State{$\mathbf{x}_{i+1}\gets\mathbf{x}_i+\Delta\mathbf{x}_i$}
 		\State{$k\gets k+1$}
 	\EndWhile
 	\EndProcedure
 	\end{algorithmic}
 \end{algorithm}
+
+\subsubsection{SQP for RRLB MPC}
+
+Using the same notations as above, the only things that change are how the sensitivities are computed :
+
+\begin{align*}
+	&H_{i,k}=2\begin{pmatrix}Q&0\\0&R\end{pmatrix}+\epsilon\begin{pmatrix}\nabla^2B_x(x_{i,k})&0\\0&\nabla^2B_u(u_{i,k})\end{pmatrix},\quad H_{i,N}=P+\epsilon\nabla B_x(x_{i,N})\\
+	&J_{i,k}=2\begin{pmatrix}Q&0\\0&R\end{pmatrix}\begin{pmatrix} x_{i,k}\\ u_{i,k}\end{pmatrix}+\epsilon\begin{pmatrix}\nabla B_x(x_{i,k})\\\nabla B_u(u_{i,k})\end{pmatrix},\quad J_{i,N}=2P x_{i,N}+\epsilon\nabla B_x(x_{i,N})
+\end{align*}
+
+\subsubsection{Remarks on SQP}
+
 We can note that in \cite{mpc-rti} the presented SQP procedure includes a line-search step that computes a step size $\alpha\in(0,1]$ such that enough progress is made at each iteration.
 In the case of general SQP, this is particularly important to ensure convergence.
 However, if the initial guesses $\mathbf{x}^{init},~\mathbf{u}^{init}$ are well chosen, we can take full steps at each iteration and therefore attain faster convergence.
 
-The most natural way to construct this initial guess would be to \textit{shift} the solution found at the previous control update (or equivalently, at the previous call to the solver of algorithm \ref{algo:general-SQP}).
+The most natural way to construct this initial guess would be to \textit{shift} the solution found at the previous control update (or equivalently, at the previous call to the solver of algorithm \ref{algo:SQP-reg}).
 More precisely, if at time $k$ we found $\mathbf{x}=(x_0,\dots,x_N),\mathbf{u}=(u_0,\dots,u_{N-1})$ then our initial guess at time $k+1$ will be $\mathbf{x}^{init}=(x_1,\dots,x_N,f(x_N,u_{new})),\mathbf{u}^{init}=(u_1,\dots,u_{N-1},u_{new})$ where $u_new$ might be chosen using different strategies :
 \begin{itemize}[label=\textbullet]
 	\item using a \textit{locally stabilizing control law} \footnote{This could roughly be defined as a law that leaves the state inside the feasible set, and that does not move the state further from the reference state.} $\kappa:\cal{X}\to\cal{U}$ (whenever one is available) and setting $u_{new}=\kappa(x_N)$\,.
@@ -505,18 +538,29 @@ More precisely, if at time $k$ we found $\mathbf{x}=(x_0,\dots,x_N),\mathbf{u}=(
 \end{itemize}
 
 This shifting heuristic is based on the fact that the dynamics $f$ should either exactly equal or at least close to the actual dynamics of the system so that this initial guess is very close to the actual solution.
-When it is the case, and if the solution found at time $k$ is feasible, then so will be the initial guess for time $k+1$, and the very first iteration of algorithm \ref{algo:general-SQP} provides a very accurate estimate of the solution at time $k+1$.
+When it is the case, and if the solution found at time $k$ is feasible, then so will be the initial guess for time $k+1$, and the very first iteration of algorithm \ref{algo:SQP-reg} provides a very accurate estimate of the solution at time $k+1$.
 Numerical illustrations of these statements can be found in \cite{mpc-rti}.
 This method supposes that the very first prediction of a closed-loop experiment has to be computed exactly, but this can be done offline (i.e. before starting the simulation) with an arbitrary accuracy.
 
-The RTI scheme relies on these remarks to find an accurate solution to the MPC problem and combines them with another important idea trying to solve the \textit{real-time dilemma} which can be summarized in the following way :
+\subsubsection{The RTI scheme}
 
-Upon obtaining a new state estimation $x$, a new SQP procedure can be started to find the solution of the MPC.
-During the execution, the systems continues to evolve and by the time it finishes, the current state of the system won't be the one fed to the algorithm, making the prediction obsolete.
+RTI relies on previsous remarks to find an accurate solution to the MPC problem and combines them with another important idea trying to solve the \textit{real-time dilemma} which can be summarized in the following way :
 
-To overcome this issue, RTI separates the SQP procedure into a \textit{preparation phase} during which the computation of the sensitivites (i.e. all the terms in \ref{eq:SQP-sensitivities}) and the condensation (i.e. the creation of the sparse matrices defining the QP problem by concatenating the terms of each stage) of the problem are performed (which only depends on the previous call to the solver, and can therefore be started right after it, before the next state estimation is available), and a \textit{feedback phase} that solves the QP using the last available state estimation as initial state.
+\begin{quote}
+	Upon obtaining a new state estimation $x$, a new SQP procedure can be started to find the solution of the MPC.
+	During the execution, the systems continues to evolve and by the time it finishes, the current state of the system won't be the one fed to the algorithm, making the prediction obsolete.
+\end{quote}
 
-Instead of presenting RTI with pseudocode as in algorithm \ref{algo:general-SQP}, we will rather draw up a timeline resuming how the different steps of the algorithm are used in real situation :
+To overcome this issue, RTI separates the SQP procedure into :
+\begin{itemize}[label=\textbullet]
+	\item a \color{red}{\textit{preparation phase}}\color{black}~comprising the computation of the sensitivities and the condensation (i.e. the creation of the sparse matrices defining the QP problem by concatenating the terms of each stage) and
+
+	\item a \color{blue}\textit{feedback phase}\color{black}~that solves the QP using the last available state estimation as initial state.
+\end{itemize}
+
+This makes sense, since the preparation phase only actually needs information from the previous call to the solver, and can therefore be started right after it, before the next state estimation is even available.
+
+Instead of presenting RTI with pseudocode as in algorithm \ref{algo:SQP-reg}, we will rather draw up a timeline resuming how the different steps of the algorithm are used in real situation :
 
 \vskip 1cm
 
@@ -539,10 +583,11 @@ Instead of presenting RTI with pseudocode as in algorithm \ref{algo:general-SQP}
 	\label{fig:RTI-timeline}
 \end{figure}
 
-Several important points should be highlighted :
+\noindent Several important points should be highlighted :
+
 \begin{itemize}[label=\textbullet]
-	\item Before the start of the experiment, we solve the problem at an arbitrary precision offline, when there is no limit on the running time of the solver.
-	This supposes that we know in advance the initial state of the system, which is a common assumption.
+	\item Before the start of the experiment, we solve the problem with an arbitrary precision \textbf{offline}, when there is no limit on the running time of the solver.
+	This supposes that we know in advance the initial state of the system, but this is a common and realistic assumption.
 	In this phase, we could use the general SQP with as many steps as necessary for full convergence (remember that we can't properly use RTI yet since we don't have a good initial guess), or any other algorithm to solver constrainted NLPs.
 
 	\item The "\color{green}m\color{black}" labels indicate the state measurements of the system.
@@ -554,6 +599,7 @@ Several important points should be highlighted :
 \end{itemize}
 
 More practical details on RTI will be given in subsection \ref{sec:RRLB-numerical-experiments} where we apply this scheme to the simulation of a real system.
+In particular, we will give explicit details on the form of the matrices to condense.
 
 \subsection{Asymptotic stability of RTI scheme}\label{sec:RRLB-real-time-stability}
 
@@ -568,11 +614,11 @@ This is the scope of next subsection, in which we will not worry about this dist
 
 \subsection{Numerical experiments}\label{sec:RRLB-numerical-experiments}
 
-In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used as benchmark for comparing different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR) system.
+In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used to benchmark different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR) system.
 
 
-This system has 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\theta$ the temperature in the reactor and $\theta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
-We can find the ODE describing the model, the constraints as well as the MPC costs in \cite{diehl-dissertation} and \cite{cstr-ref}.
+This system desribing an exothermic chemical reaction has 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\theta$ the temperature in the reactor and $\theta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
+We don't mention here the ODE describing the model, the constraints as well as the MPC costs for brevity purposes, but they can be found in detail in \cite{diehl-dissertation} and \cite{cstr-ref}.
 By a simple steady state analysis procedure, we determined 3 viable reference points for states and controls that can be found (at $10^{-3}$ precision and in SI units) in table \ref{tab:CSTR-ref-points}
 
 \begin{table}[H]
@@ -592,7 +638,7 @@ By a simple steady state analysis procedure, we determined 3 viable reference po
 	\label{tab:CSTR-ref-points}
 \end{table}
 
-We used as suggested in \cite{diehl-dissertation} we chose a horizon size of 1000 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
+As suggested in \cite{diehl-dissertation}, we chose a horizon size of 100 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
 In all our experiments we set the maximum runtime to $5000.0s$ (simulated seconds, since the sampling time is very long, we skipped the parts where nothing happened) and ran the simulation in closed loop (i.e. applying to the system the control computed by the MPC) until the state converged to the reference state within a $10^{-3}$ tolerance in norm.
 
 Some general remarks on the implementation :
@@ -600,13 +646,77 @@ Some general remarks on the implementation :
 	\item The initial prediction (as described in \ref{sec:RTI-scheme}) is computed using the interior point method solver IPOPT (see \cite{ipopt}) through the algorithmic differentiation package CasADi (see \cite{casadi}).
 
 	\item RTI was implemented from scratch using OSQP (see \cite{osqp}) to solve the quadratic subproblems.
+	This library solves problem of the general form
+	\begin{align*}
+		\underset{z\in\R^n}{\min}&\quad\frac{1}{2}z^TPz+q^Tz\\
+		\text{s.t.}&\quad l\leq Az\leq u
+	\end{align*}
+	We therefore have to translate the QPs found in section \ref{sec:RTI-scheme} for regular MPC and RRLB MPC into this form, which corresponds to the condensation part of the preparation phase.
+	If we consider the optimization variable to be $z=(\Delta x_0,\dots,\Delta x_N,\Delta u_0, \dots,\Delta u_{N-1})$, and we recall that we have an initial guess $(x_0^{init},\dots,x_{N}^{init},u_0^{init},\dots,u_{N-1}^{init})$ and a current state $x$, then the matrices and vectors in the OSQP formulation will be:\newline
+	\scriptsize
+	\begin{align*}
+		\begin{split}
+			q_{OSQP}&=2\begin{pmatrix}
+				Q&&&&&&\\
+				&\ddots&&&&&\\
+				&&Q&&&&\\
+				&&&P&&&\\
+				&&&&R&&\\
+				&&&&&\ddots&\\
+				&&&&&&R
+			\end{pmatrix}\begin{pmatrix}
+				x_0^{init}\\\vdots\\x_N^{init}\\u_0^{init}\\\vdots\\u_{N-1}^{init}
+			\end{pmatrix}+\color{blue}\epsilon\begin{pmatrix}
+				\nabla B_x(x_0^{init})\\\vdots\\\nabla 0\\\nabla B_u(u_0^{init})\\\vdots\\\nabla B_u(u_{N-1}^{init})
+			\end{pmatrix}\color{black}\\
+			P_{OSQP}&=4\begin{pmatrix}
+				Q&&&&&&\\
+				&\ddots&&&&&\\
+				&&Q&&&&\\
+				&&&P&&&\\
+				&&&&R&&\\
+				&&&&&\ddots&\\
+				&&&&&&R
+			\end{pmatrix}+\color{blue}2\epsilon\begin{pmatrix}
+				\nabla^2B_x(x_0^{init})&&&&&\\
+				&\ddots&&&&\\
+				&&0&&&\\
+				&&&\nabla^2B_u(u_0^{init})&&\\
+				&&&&\ddots&\\
+				&&&&&\nabla^2B_u(u_{N-1}^{init})
+			\end{pmatrix}\color{black}\\
+			A_{OSQP}&=\begin{pmatrix}
+				I_{n_x}&&&&&0&&&&\\
+				A_{0}^{init}&-I_{n_x}&&&&B_{0}^{init}&\ddots&&\\
+				&A_{1}^{init}&-I_{n_x}&&&&\ddots&&\\
+				&&\ddots&\ddots&&&&&\\
+				&&&A_{N-1}^{init}&-I_{n_x}&&&B_{N-1}^{init}&0\\
+				\color{red}C_x&&&&&&&&\\
+				&\color{red}C_x&&&&&&&\\
+				&&\color{red}\ddots&&&&&&\\
+				&&&\color{red}C_x&&&&&\\
+				&&&&\color{red}C_x&&&&\\
+				&&&&&\color{red}C_u&&&\\
+				&&&&&&\color{red}\ddots&&\\
+				&&&&&&&\color{red}\ddots&\\
+				&&&&&&&&\color{red}C_u
+			\end{pmatrix}\\
+			l_{OSQP}&=\begin{pmatrix}
+				x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}-\infty\\\color{red}\vdots\\\color{red}-\infty
+			\end{pmatrix}\qquad u_{OSQP}=\begin{pmatrix}
+				x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}d_x-C_xx_0^{init}\\\color{red}\vdots\\\color{red}d_x-C_xx_N^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{0}^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{N-1}^{init}
+			\end{pmatrix}
+		\end{split}
+	\end{align*}
+	\normalsize
+	In the above, all the red terms only appear for regular MPC, and the blue terms only for RRLB MPC.
 
 	\item The whole implementation for this project was done in Python and can be found in the folder \verb|cstr| attached to the project report.
 	To test the code, we recommend creating a virtual environment using the \verb|requirements.txt| file provided.
 	The code is heavily documented and general indications on the structure of the code are given in the \verb|README.md| file.
 \end{itemize}
 
-\subsubsection*{Experimental procedure}
+\subsubsection{Experimental procedure}
 
 We designed the following experiments to evaluate the behavior of a given MPC scheme :
 \begin{enumerate}[label=Exp\arabic*]
@@ -619,7 +729,7 @@ We designed the following experiments to evaluate the behavior of a given MPC sc
 \end{enumerate}
 These experiments were performed with both regular MPC and RRLB MPC to see the advantages of our new formulation.
 
-\subsubsection*{Results}
+\subsubsection{Results}
 
 The results of experiments Exp1, Exp2 and Exp3 predented above are presented in tables \ref{tab:iterations-to-convergence}, \ref{tab:performance-measure} and \ref{tab:RTI-runtimes}.
 
@@ -673,7 +783,7 @@ The measures of all the quantities described above are presented in the followin
 	\label{tab:RTI-runtimes}
 \end{table}
 
-\subsubsection*{Discussion}
+\subsubsection{Discussion}
 
 From the previous tables, we can notice two things :
 \begin{itemize}[label=\textbullet]
