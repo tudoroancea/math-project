@@ -40,7 +40,7 @@ def run_closed_loop_simulation(
         2 * max_nbr_feedbacks + 1
     )  # time elapsed between two time points : times[i] = t_i-t_{i-1} and times[0]=0.0
 
-    sensitivites_computation_times = np.zeros(max_nbr_feedbacks)
+    sensitivities_computation_times = np.zeros(max_nbr_feedbacks)
     condensation_times = np.zeros(max_nbr_feedbacks)
     solve_times = np.zeros(max_nbr_feedbacks)
 
@@ -63,7 +63,7 @@ def run_closed_loop_simulation(
         A,
         l,
         u,
-        sensitivites_computation_times[0],
+        sensitivities_computation_times[0],
         condensation_times[0],
     ) = cstr.preparation_phase(prediction)
 
@@ -122,7 +122,7 @@ def run_closed_loop_simulation(
             A,
             l,
             u,
-            sensitivites_computation_times[i],
+            sensitivities_computation_times[i],
             condensation_times[i],
         ) = cstr.preparation_phase(prediction)
 
@@ -195,9 +195,9 @@ def run_closed_loop_simulation(
     data = np.delete(data, list(range(2 * i + 1, data.shape[1])), axis=1)
     times = np.delete(times, list(range(2 * i + 1, times.shape[0])), axis=0)
     solve_times = np.delete(solve_times, list(range(i, solve_times.shape[0])), axis=0)
-    sensitivites_computation_times = np.delete(
-        sensitivites_computation_times,
-        list(range(i, sensitivites_computation_times.shape[0])),
+    sensitivities_computation_times = np.delete(
+        sensitivities_computation_times,
+        list(range(i, sensitivities_computation_times.shape[0])),
         axis=0,
     )
     condensation_times = np.delete(
@@ -234,7 +234,7 @@ def run_closed_loop_simulation(
         float(total_cost),
         i,
         constraints_violated,
-        sensitivites_computation_times,
+        sensitivities_computation_times,
         condensation_times,
         solve_times,
     )

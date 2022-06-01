@@ -29,7 +29,7 @@
 
 \title{Study of Relaxed Recentered Log-Barrier function based Nonlinear Model Predictive Control}
 \author{Tudor Oancea}
-\date{March 2022}
+\date{June 2022}
 
 \begin{document}
 \maketitle
@@ -38,58 +38,62 @@
 	In this project, we investigate the use of relaxed logarithmic barrier functions in the context of nonlinear model predictive control.
 	We base our work on the one of C. Feller and C. Ebenbauer in \cite{RRLB-linear-MPC} and use one of their globally stabilizing schemes with terminal costs and without terminal sets.
 	We partially extend the results on the nominal asymptotic stability of the corresponding closed-loop system and the constraint satisfaction guarantees to the case of nonlinear dynamics and show that they are satisfied only in a neighborhood of the target state.
-	The theoretical results are complemented by numerical illustrations based on RTI and SQP algorithms.
+	The theoretical results are complemented by numerical illustrations based on Real Time Iteration.
 \end{abstract}
 
 \section{Introduction}
-\textit{Control theory} can simply be defined as the study of a generally dynamical system whose state evolution that we can influence by the means of external parameters called \textit{controls}, or \textit{inputs}.
+\textit{Control theory} can simply be defined as the study of a dynamical system whose state evolution can be influenced by the means of external parameters called \textit{controls}, or \textit{inputs}.
 This theory is a very important one in numerous fields of engineering such as robotics, mechanical or chemical engineering where problems such as stabilizing a chemical reaction at a certain temperature or making an autonomous car follow the road are common.
 
 An important subfield of control theory is \textit{optimal control} (OC), which aims at finding a \textit{control law}, i.e. a way to control a system in order to attain a certain goal, by formulating and solving an optimization problem.
 For example, if one wants to stabilize the state around a certain target, or reference point that is constant in time, one will want to choose a control law that will minimize the distance between the future state (that depends on the current state and the chosen control) and the target state.
 This problem of \textit{stabilization} will be the one we will consider in this paper, but it is interesting to know there are other problems for which OC is applicable, such as path tracking or optimal trajectory generation.
 
-One of the most important (family of) algorithm(s) of OC is \textit{Model Predictive Control}, or MPC.
-This procedure uses the knowledge of the system \textit{dynamic model} (the equation governing its evolution) to compute a control law that also takes the future into account.
-More precisely, the control law is computed for a certain interval in time called the \textit{horizon}, and the cost along this whole horizon is minized.
+One of the most important algorithm of OC is \textit{Model Predictive Control}, or MPC.
+This procedure uses the knowledge of the system's \textit{model} (the equation governing its evolution) to compute a control law that also takes the future into account.
+More precisely, the control law is computed for a certain interval in time called the \textit{horizon}, and the cost along this whole horizon is minimized.
 In some sense, the controller tries not to take decisions it will regret afterwards.
-MPC has many advantages over other classical control strategies, such as the ability to handle several control parameters and to take into consideration constraints on the states and the controls (by solving a \textit{constrained} optimization problem). These are very important in practice because any real-life system has physical limitations (e.g. the maximum speed of a car, the maximum torque of a motor, etc.).
+MPC has many advantages over other classical control strategies, such as the ability to handle several control parameters and to take into consideration constraints on the states and the controls (by solving a \textit{constrained} optimization problem).
+These are very important in practice because any real-life system has physical limitations (e.g. the maximum speed of a car, the maximum torque of a motor, etc.).
 We will properly introduce the mathematical formulation of MPC and the theoretical tools used to study it in section \ref{sec:background-material}.
 
-In section \ref{sec:RRLB-MPC} we will introduce a different formulation in which (most of) the state and control constraints are replaced with a penalty added to the cost function.
-Such penalties are common in Interior Point methods and are usually log-barrier functions.
+In section \ref{sec:RRLB-MPC} we will introduce a different formulation in which (most of) the state and control constraints are replaced with a penalty added to the cost function in the form of a log-barrier function, which are common in Interior Point methods.
 These functions have several drawbacks, such as the fact that they are only defined in the interior of the feasible set.
 In this paper we will introduce a relaxed version of these functions called \textit{Relaxed Recentered Log-Barrier functions}, or \textit{RRLB functions}.
-They extend regular log-barrier functions to the whole space and yield a convex optimization problem that is in general much easier to solve than the original one.
+They extend regular log-barrier functions to the whole space and yield an equality-only-constrained optimization problem, which should in general be easier to solve.
 More details on the upsides of RRLB functions can be found in the Introduction of \cite{RRLB-linear-MPC}.
 
 In the theoretical study of this new formulation that we will call \textit{RRLB MPC}, we will prove two major results :
+
 \begin{enumerate}
-	\item When using the control law computed by the RRLB MPC, the corresponding closed-loop system asymptotically stabilizes at the target state. (see subsection \ref{sec:RRLB-nominal-stability}) This property will be called \textit{nominal stabilty}, to be differentiated of \textit{real-time stability} (see subsection \ref{sec:RRLB-real-time-stability}).
-	\item In this formulation, the optimal solution of the optimization problem might yield states or controls that are not feasible in the original problem. However, if we start sufficiently close to the target state, this will never happen. (see subsection \ref{sec:constraints-satisfaction-guarantees})
+	\item When using the control law computed by the RRLB MPC, the corresponding closed-loop system asymptotically stabilizes at the target state (see subsection \ref{sec:RRLB-nominal-stability}).
+	This property will be called \textit{nominal stability}, to be differentiated of \textit{real-time stability} (see subsection \ref{sec:RRLB-real-time-stability}).
+	\item In this formulation, the optimal solution of the optimization problem might yield states or controls that are not feasible in the original problem, since the constraints are not strictly enforced.
+	However, if we start sufficiently close to the target state, this will never happen (see subsection \ref{sec:constraints-satisfaction-guarantees}).
 \end{enumerate}
 
-Finally, in section \ref{sec:RRLB-numerical-aspects} we examine numercial aspects of the RRLB MPC.
-In practice, the optimization problem is not solved exactly, and we can't necessarily guarantee the satisfaction of the previous results in practice.
-However, we will discuss how using \textit{Real Time Iteration} methods (or RTI, a variant of Sequential Quadratic Programming with only one iteration), can meet the gap between computational efficiency and the accuracy of the results.
-All our results will in the end be illustrated with a classical benchmark problem for MPC schemes : the Continuously Stirred Tank Reactor (CSTR) system.
+Finally, in section \ref{sec:RRLB-numerical-aspects} we examine numerical aspects of the RRLB MPC.
+We will introduce a common strategy to solve NMPC problems called \textit{Real Time Iteration} (or RTI) and discuss its advantages and drawbacks as for the tradeoff between computational efficiency and accuracy.
+A simple Python implementation of this method will be used to verify our theoretical results and to compare the performance of RRLB MPC and regular MPC (eg in terms of runtime and in terms of convergence speed).
+The system of choice will be a popular benchmark problem called \textit{Continuously Stirred Tank Reactor} (or CSTR).
 
 \section{Background material}\label{sec:background-material}
 
 \subsection{What is MPC ?}\label{sec:what-is-MPC}
 
-We are given a discrete-time controlled nonlinear dynamical system of the form $x(k+1)=f(x(k), u(k))$ (which we will usually denote $x^+=f(x,u)$) with state and control constraints $x(k)\in\cal{X}\subseteq\R^{n_x},~u(k)\in\cal{U}\subseteq\R^{n_u}$.
+We consider a discrete-time controlled nonlinear dynamical system of the form $x(k+1)=f(x(k), u(k))$ (which we will usually write as $x^+=f(x,u)$) with state and control constraints $x(k)\in\cal{X}\subseteq\R^{n_x},~u(k)\in\cal{U}\subseteq\R^{n_u}$.
 
 In practice, the systems of interest are almost always continuous. We therefore assume that we will only change the control variables at instants evenly spaced in time, and we discretize the dynamics using ODE integrators such as RK4. The time between each two consecutive control updates is called the \textit{sampling time}.
 
 Our goal is to stabilize the system around a target state $x^*$ and a target control $u^*$, which have to be a fixed point of the system : $x^*=f(x^*, u^*)$\,.
 To do that we will try to construct a \textit{state-feedback control law}, i.e. a function $\mu:\cal{X}\to\cal{U}$ such that $x^*$ is \textit{asymptotically stable} for the dynamical system $x^+=f(x,\mu(x))$ (which only depends on the state).
-The exact definition of asymptotica stability and how to prove it is discussed in subsection \ref{sec:Lyapunov-stability-theory}.
+The exact definition of asymptotical stability and how to prove it is discussed in subsection \ref{sec:Lyapunov-stability-theory}.
 
 An important simplification that is often made (and that we will use in this paper) is that we consider $x^*=0$ and $u^*=0$\,.
 It is easy to verify that when this is not the case, we can just define new translated states $\hat{x}=x-x^*$ and new control $\hat{u}=u-u^*$ and consequently new dynamics, new constraints, etc.
 
-To construct this control law $\mu$, we will solve the following opitmization problem :
+\noindent To construct this control law $\mu$, we will solve the following optimization problem :
+
 \begin{align}
 	\begin{split}
 		\label{eq:NMPC}
@@ -99,26 +103,26 @@ To construct this control law $\mu$, we will solve the following opitmization pr
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
 	\end{split}
 \end{align}
+
 A bit of vocabulary : $N$ is called the \textit{horizon length}, the function $l$ is the \textit{stage cost}, the function $F$ is the \textit{terminal cost} (its role will become clearer in next section) and the function $J_N(\bf{x},\bf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$ is called the \textit{cost function}.
 
-These costs have to be defined byt the user as a measure of the deviations from the target state and control (we recall they are 0).
-Their fine tuning is of capital importance for the feasibility, robustness and performance of the MPC scheme, and it is a whole area of interest of control theory (which is out of the scope of this paper).
-Then, during the experiment, we observe at a time $k$ the state $x(k)$.
-We solve the MPC \ref{eq:NMPC} and find the optimal sequences of states and controls $$\bf{x}^*(x(k))=\left\{ x_0^*(x(k))=x(k),\dots,x_N^*(x(k))\right\},\quad \bf{u}^*(x(k))=\left\{ u_0^*(x(k)),\dots,u_{N-1}^*(x(k))\right\}$$
+These costs have to be defined by the user as a measure of the deviations from the target state and control (we will always assume that $l(x^*,u^*)=l(0,0)=0$).
+Their fine tuning is of capital importance for the feasibility, robustness and performance of the MPC scheme, and it is a whole area of interest of control theory (which is unfortunately out of the scope of this paper).
+Then, during the experiment, we observe at a time $k$ the state $x(k)$, we solve the MPC \ref{eq:NMPC} and find the optimal sequences of states and controls $$\bf{x}^*(x(k))=\left\{ x_0^*(x(k))=x(k),\dots,x_N^*(x(k))\right\},\quad \bf{u}^*(x(k))=\left\{ u_0^*(x(k)),\dots,u_{N-1}^*(x(k))\right\}$$
 They represent the controls to apply at time $k,k+1,\dots,k+N-1$ and the states the system will be in after these controls are applied.
 In a sense, we 'over-solve' the problem since we are actually only interested in $u_0^*(x(k))$ that will define our control law :
 $$\mu_{MPC}(x(k)):=u_0^*(x(k))$$
-Since at time $k+1$ the horizon will have shifted, we say we solve the control problem in a \textit{receeding horizon} fashion.
+Since at time $k+1$ the horizon will have shifted, we say we solve the control problem in a \textit{receding horizon} fashion.
 
 \vspace{12pt}
 
-This general form of the MPC is the one we will use, but other variants exist in which different state constraint, called \textit{terminal constraints}, are enforces on $x_N$\,.
-We are also going to consider very specific form of costs and constraints : the costs will always be quadratic ($l(x,u)=x^TQx+u^TRu$ and $F(x)=x^TPx$ for some positive definite matrices $Q,R$ and $P$) and the (inequality) constraints will always be polytopic ($\cal{X}=\left\{x\in\R^{n_x}~|~C_xx\leq d_x\right\},~\cal{U}=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\right\}$ for matrices $C_x,C_u$ and vectors $d_x,d_u$ of appropriate dimension).
+This general form of the MPC is the one we will use, but other variants exist in which different state constraint, called \textit{terminal constraints}, are enforced on $x_N$\,.
+We are also going to consider very specific forms of costs and constraints : the costs will always be quadratic ($l(x,u)=x^TQx+u^TRu$ and $F(x)=x^TPx$ for some positive definite matrices $Q,R$ and $P$) and the (inequality) constraints will always be polytopic ($\cal{X}=\left\{x\in\R^{n_x}~|~C_xx\leq d_x\right\},~\cal{U}=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\right\}$ for matrices $C_x,C_u$ and vectors $d_x,d_u$ of appropriate dimension).
 These are very common in real-world applications.
 
 \vspace{12pt}
 
-Other variants of MPC are:
+\noindent Other variants of MPC are:
 \begin{itemize}[label=\textbullet]
 	\item \underline{the \textit{infinite horizon MPC}}:
 	\begin{align*}
@@ -127,9 +131,9 @@ Other variants of MPC are:
 		&\quad x_k\in\cal{X},~k=0,\dots,N\\
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
 	\end{align*}
-	In real life applications, we virtually consider that the duration of the experiment is infinite, so this variant may seem more natural.
-	However this opitmization problem is infinite-dimensional so not easily solvable in practice.
-	The terminal costs in regular MPC can actually be interpreted as a proxy for the part of the inifinite horizon that is not considered, and they are usually chosen this way.
+	In real life applications, we consider that the duration of the experiment is virtually infinite, so this variant may seem more natural.
+	However this optimization problem becomes infinite-dimensional so not easily solvable in practice.
+	The terminal costs in regular MPC can actually be interpreted as a proxy for the part of the infinite horizon that is not considered, and they are usually constructed this way.
 
 	\item\underline{the \textit{(infinite-horizon) Linear Quadratic Regulator}, or \textit{LQR}}:\newline
 	it is basically an MPC with linear dynamics ($x^+=Ax+Bu$) and without state and control constraints.
@@ -139,10 +143,10 @@ Other variants of MPC are:
 		P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA
 	\end{equation}
 	The unique positive definite solution of this equation actually verifies $V_\infty(x)=x^TPx$ so it can be used to define the terminal costs of the finite horizon LQR problem.
-	This equation also provides the stabilizing state-feedback control law of the infinite horizon LQR : $\mu(x)=Kx$ where $K=-(R+B^TPB)^{-1}B^TPA$\,.
-	It is intersting to notice that in this case, the solution $P$ to the DARE also verifies the follwing equation called \textit{Lyapunov equation} :
+	This equation also provides the stabilizing state-feedback control law of the infinite horizon LQR : $\mu_{LQR}(x)=Kx$ where $K=-(R+B^TPB)^{-1}B^TPA$\,.
+	It is interesting to notice that in this case, the solution $P$ to the DARE also verifies the following equation called \textit{Lyapunov equation} :
 	$$P=A_K^TPA_K+Q_K$$
-	where $A_K:=A+BK$ corresponds the evolution of the controlled system ($x^+=Ax+B\mu(x)=(A+BK)x$) and $Q_K:=Q+K^TRK$ corresponds to cost of a stage $(x,Kx)$ ($l(x,Kx)=x^TQ+(Kx)^TR(Kx)=x^TQ_Kx$).
+	where $A_K:=A+BK$ corresponds the evolution of the controlled system since $x^+=Ax+B\mu(x)=(A+BK)x$, and $Q_K:=Q+K^TRK$ corresponds to cost of a stage $(x,Kx)$ since $l(x,Kx)=x^TQ+(Kx)^TR(Kx)=x^TQ_Kx$\,.
 
 	More details on the properties of the DARE can be found in the appendix \ref{sec:DARE}.
 \end{itemize}
@@ -150,18 +154,18 @@ Other variants of MPC are:
 
 \subsection{Lyapunov stability theory}\label{sec:Lyapunov-stability-theory}
 In this subsection we present the necessary background in dynamical systems theory and in particular give more precise definitions of the stability properties we want to prove.
-We will consider a general nonlinear dynamical system $x^+=g(x)$, whithout any control, since we remember that our goal is to construct the control as only depending on the state.
+We will consider a general nonlinear dynamical system $x^+=g(x)$, without any control, since we remember that our goal is to construct the control as only depending on the state.
 
-A state $x^*$ is said to be :
+\noindent A state $x^*$ is said to be :
 \begin{itemize}[label=\textbullet]
-	\item \textit{locally stable} if $\forall\epsilon>0,\exists \delta>0$ s.t. $\|x(0)-x^*\|\leq\delta\implies\|x(k)-x^*\|\leq\epsilon,~\forall k\geq 0$\,.
-	\item \textit{locally attractive} if $\|x(k)-x^*\|\underset{k\to\infty}{\longrightarrow}0$ for all $x(0)$ in a certain neighborhood of $x^*$\,.
-	\item \textit{globally attractive} if $\|x(k)-x^*\|\underset{k\to\infty}{\longrightarrow}0$ for all $x(0)$ in $\cal{X}$\,.
+	\item \textit{locally stable} if $\forall\epsilon>0,\exists \delta>0$ s.t. $\|x(0)-x^*\|\leq\delta\implies\|x(k)-x^*\|\leq\epsilon,~\forall k\geq 0$\, or in other words if when the system starts close to $x^*$, it always stays close to it.
+	\item \textit{locally attractive} if $\|x(k)-x^*\|\underset{k\to\infty}{\longrightarrow}0$ for all $x(0)$ in a certain neighborhood of $x^*$\, or in other words if when the system starts close to $x^*$, it will converge to it.
+	\item \textit{globally attractive} if $\|x(k)-x^*\|\underset{k\to\infty}{\longrightarrow}0$ for all $x(0)\in\cal{X}$\, or in other words that the system will converge to it no matter the initial state.
 	\item \textit{locally asymptotically stable}, or \textit{LAS}, if it is both locally stable and locally attractive.
 	\item \textit{globally asymptotically stable}, or \textit{GAS}, if it is both stable and globally attractive.
 \end{itemize}
 
-It can be showed that a state $x^*$ is GAS (or a LAS), if we can find a function $V:\cal{X}\to\R$ such that $\forall x\in\cal{X}$ (respectively in a neighborhood of $x^*$):
+It can be showed that a state $x^*$ is GAS (respectively LAS), if we can find a function $V:\cal{X}\to\R$ and constants $c_1,c_2,c_3>0$ such that $\forall x\in\cal{X}$ (respectively in a neighborhood of $x^*$):
 \begin{align*}
 	V(x)&\leq c_1\|x-x^*\|^2\\
 	V(x)&\geq c_2\|x-x^*\|^2\\
@@ -182,11 +186,11 @@ As mentioned in the last section, we will suppose that $x^*=0\in\cal{X}^\circ$ a
 \vspace{12pt}
 
 First let's take a step back and recall what regular log-barrier functions are.
-We will first give the definitions only for the states $x$, since they only depend on the constraint set and not on the actual quantity represented.
+We will only give the definitions for the states $x\in\R^{n_x}$, since they only depend on the constraint set and not on the actual quantity represented.
 
 For a simple constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
 Such a function is defined on the interior of feasible set of the constraint and becomes infinity near its boundary.
-For a set of polytopic constraints, we can define the log-barrier as the sum of the log-barriers for each constraint :
+For a set of polytopic constraints $\left\{ x~|~C_xx\leq d_x \right\}$, we can define the log-barrier as the sum of the log-barriers for each constraint :
 $$B_x(x)=\sum_{i=1}^{q_x}-\log(d_{x,i}-\rm{row}_i(C_x)x)$$
 where $q_x$ is the number of constraints, or equivalently the numbers of rows in $C_x$\,.
 
@@ -196,7 +200,7 @@ $$B_x(x)=\sum_{i=1}^{q_x}(1+w_{x,i})\left[\log(d_{x,i})-\log(d_{x,i}-\rm{row}_i(
 where the weights $w_{x,i}$ are defined as chosen such that $B_x(0)=0$ and $\nabla B_x(0)=0$.
 It is shown in \cite{RLB} that such weights always exist and that this wight-recentered log-barrier function is also positive definite and upper-bounded by a quadratic.
 
-The second important property we have to add is the existence on the whole space.
+The second important property we have to add is the definiteness on the whole space.
 For a given \textit{relaxation parameter} $\delta>0$, we can define the \textit{relaxed recentered log-barrier function}, or \textit{RRLB} function as follows :
 \begin{align}
 	\begin{split}
@@ -212,10 +216,18 @@ where $\beta$ is a twice continuously function that extends the log-barrier to a
 The simplest example of such a function is
 $$\beta(z;\delta)=\frac{1}{2}\left[ \left( \frac{z-2\delta}{\delta} \right)^2-1 \right]-\log(\delta)$$
 To ensure that this function still verifies $B_x(0)=0$ and $\nabla B_x(0)=0$, we need to choose $0<\delta\leq\min\left\{d_{x,1},\dots,d_{x,q_x},d_{u,1},\dots,d_{u,q_u}\right\}$\,, which is always possible if $0\in\cal{X}$ and $0\in\cal{U}$\,.
+An illustration of this relaxation procedure can be found in figure \ref{fig:RRLB-functions} found in \cite{rti-diehl}.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/rrlb-functions.png}
+	\caption{\textit{(Left)} : Principle of relaxed log barrier function based on quadratic relaxation. (\textit{Right}) : Regular weight recentered log barrier function (solid line) and RRLB function for $\delta\in\left\{ 0.01,0.1,0.5,1 \right\}$ for the constraint $z\in\R,~-1\leq z\leq 2$}
+	\label{fig:RRLB-functions}
+\end{figure}
 
 \vspace{24pt}
 
-With all these definitions we can finally define the \textit{RRLB MPC} :
+\noindent With all these definitions we can finally define the \textit{RRLB MPC} :
 \begin{align}
 	\begin{split}\label{eq:RRLB-NMPC}
 		\tilde{V}_N(x)=\underset{\bf{x},\bf{u}}{\min} &\quad \tilde{J}_N(\bf{x},\bf{u})\\
@@ -228,11 +240,11 @@ However, we will here consider it as fixed for simplicity.
 
 \vspace{12pt}
 
-When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics $x^+=Ax+Bu$, we know the two following theorems.
+\noindent When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics $x^+=Ax+Bu$, we know the two following theorems.
 
 \begin{theorem}
 	\label{nominal-stability-linear-case}
-	Suppose that the pair $(A,B)$ is stabilizable\footnote{We did not discuss the notion of controllability and stabilizability in \ref{sec:what-is-MPC} because they do not play a direct role in our proofs. They are however very important in standard control theory and they are needed in the proofs of existence of DAREs. More on them in the appendix \ref{sec:controllability-stabilizability}}
+	Suppose that the pair $(A,B)$ is stabilizable \footnote{We did not discuss the notion of controllability and stabilizability in \ref{sec:what-is-MPC} because they do not play a direct role in our proofs. They are however very important in standard control theory and they are needed in the proofs of existence of DAREs. More on them in the appendix \ref{sec:controllability-stabilizability}}
 	and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE :
 	$$P=A^TPA-A^TPB(R+\epsilon M_u+B^TPB)^{-1}B^TPA+Q+\epsilon M_x$$
 	where $M_x=\nabla^2 B_x(0)$ and $M_u=\nabla^2 B_u(0)$\, are the hessian of the RRLB functions at the origin.
@@ -243,15 +255,15 @@ When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics 
 
 \begin{theorem}
 	\label{constraint-satisfaction-guarantee-linear-case}
-	In the same conditions as previous theorem, there is a neighborhood $\cal{X}_N(\delta)$ of the origin such that for any initial state $x(0)\in\cal{X}_N(\delta)$, all the constraint will be satisfied along the closed-loop trajectories.
+	In the same conditions as in the previous theorem, there is a neighborhood $\cal{X}_N(\delta)$ of the origin such that for any initial state $x(0)\in\cal{X}_N(\delta)$, all the constraint will be satisfied along the closed-loop trajectories.
 	Furthermore, the set $\cal{X}_N(\delta)$ is given explicitly by :
 	$$\cal{X}_N(\delta)=\left\{x\in\cal{X}~|~\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)\leq\min\{\beta_x(\delta),\beta_u(\delta)\}\right\}$$
 	where $P_{LQR}$ is the solution to the classical DARE \ref{eq:DARE-LQR} and
 	$$\beta_x(\delta)=\underset{i,x}{\min}\left\{ B_x(x)~|~\rm{row}_i(C_xx)=d_{x,i} \right\},\quad \beta_u(\delta)=\underset{i,u}{\min}\left\{ B_u(u)~|~\rm{row}_i(C_uu)=d_{u,i} \right\}$$
 \end{theorem}
 
-Additional results were proven in the linear case, such as the existence of a procedure to find $\delta$ such that the maximum constraint violation along the closed-loop trajectories is bounded by a pre-defined tolerance.
-In our nonlinear case however we will not be able to prove these more powerful results because of the lack of knowledge on the error terms that appear in the dynamics (see subsection \ref{sec:constraints-satisfaction-guarantees})
+\noindent Additional results were proven in the linear case, such as the existence of a procedure to find $\delta$ such that the maximum constraint violation along the closed-loop trajectories is bounded by a pre-defined tolerance.
+In the nonlinear case, however, we will not be able to prove such powerful results because of the lack of knowledge on the error terms that appear in the dynamics (see subsection \ref{sec:constraints-satisfaction-guarantees}).
 
 \section{Theoretical properties of RRLB Nonlinear MPC}\label{sec:RRLB-theoretical-properties}
 
@@ -267,26 +279,26 @@ When no confusion is possible we will drop the "$(x)$".
 	\label{thm:Lipchitzianity}
 	Consider the RRLB MPC \ref{eq:RRLB-NMPC} and re-write it in a simpler way as
 	$$\tilde{V}_N(x)=\underset{\bf{u}}{\min} \quad J(x,\bf{u})$$
-	where $J(x,\bf{u})=\tilde{l}(x_0,u_0)+\tilde{l}(f(x_0,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
-	If for a certain initial state $x$ we suppose that $D_\bf{u}J(x,\tilde{\bf{u}})=0$ and $\nabla_{\bf{u}\bf{u}}^2J(x, \tilde{\bf{u}})\succ 0$ (the matrix is positive definite) then in a neighborhood of $x$ we have:
+	where $J(x,\bf{u})=\tilde{l}(x,u_0)+\tilde{l}(f(x,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
+	If for a certain initial state $\bar{x}$ we suppose that $D_\bf{u}J(\bar{x},\tilde{\bf{u}})=0$ and $\nabla_{\bf{u}\bf{u}}^2J(\bar{x}, \tilde{\bf{u}})\succ 0$ (the matrix is positive definite) then in a neighborhood of $\bar{x}$ we have:
 	\begin{itemize}[label=\textbullet]
 		\item $\forall k=0,\dots,N-1,\quad \|\tilde{u}_k(x)\|=O(\|x\|)$
 		\item $\forall k=1,\dots,N,\quad \|\tilde{x}_k(x)\|=f(f(\dots,u_{k-2}),u_{k-1})=O(\|x\|)$
 	\end{itemize}
 \end{lemma}
 \begin{proof}
-	We can use the proof of the Theorem 4.2 in \cite{lectures-parametric-optimization} to argue that each $\tilde{x}_k(x)$ and $\tilde{u}_k$ is continuously differentiable on a neighborhood of the origin.
+	We can use the proof of the Theorem 4.2 in \cite{lectures-parametric-optimization} to argue that each $\tilde{x}_k$ and $\tilde{u}_k$ is continuously differentiable in a closed neighborhood of the origin.
 	Therefore, by continuity their gradient is bounded on this neighborhood and they are Lipchitz.
 \end{proof}
 
-Now our main result :
+\noindent Now our main result :
 
 \begin{theorem}\label{thm:nominal-stability}
 	Let's consider the problem \ref{eq:RRLB-NMPC} and assume the following :
 	\begin{enumerate}
 		\item If we denote the objective function as $J(x,\bf{u})$ as in Lemma \ref{thm:Lipchitzianity}, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$
 
-		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),~B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
+		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),$ $B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
 
 		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following Lyapunov equation :
@@ -295,7 +307,7 @@ Now our main result :
 		\end{equation*}
 		where $\mu>1$ and $Q_K=Q+\epsilon M_x+K^T(R+\epsilon M_u)K$\,.
 	\end{enumerate}
-	Then for all initial state in a certain neighborhood of the origin, the control law given by the RRLB MPC yields an asymptotically stable system, i.e. the origin is locally asymptotically stable for the dynamical system $x^+=f(x,\tilde{u}_0(x))$\,.
+	Then the dynamical system $x^+=f(x,\tilde{u}_0(x))$ is LAS, i.e. for all initial state in a certain neighborhood of the origin, the control law given by the RRLB MPC yields an asymptotically stable system.
 \end{theorem}
 
 \begin{remark}~
@@ -322,7 +334,6 @@ Now our main result :
 
 \begin{proof}~
 	To prove the result we will show that $\tilde{V}_N$ is a Lyapunov function in a certain neighborhood of the origin.
-
 	First, by writing the Taylor expansion of the stage costs $\tilde{l}$ we can see that
 	\begin{align*}
 		\tilde{l}(x,u)&=x^T[\nabla_{xx}^2\tilde{l}(0,0)] x+u^T[\nabla_{uu}^2\tilde{l}(0,0)]u+O(\|x\|^3+\|u\|^3)\\
@@ -331,29 +342,24 @@ Now our main result :
 	so $\tilde{l}(x,Kx)=x^TQ_Kx+O(\|x\|^3)$\,.
 	By the second assumption, we also have $\forall x\in\R^{n_x}$:
 	$$\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0$$
-	We can use the same reasoning as in the paragraph 2.5.5 of \cite[MPC Theory, Computation and Design]{MPC-book} to show that $\tilde{F}$ is a local Lyapunov funnction, i.e. there exists a neighborhood of the origin such that $\forall x$ in it :
-	\begin{align*}
-		\tilde{F}(f(x,Kx))+x^T Q_K x-\tilde{F}(x)&\leq 0\\
-		\Longleftrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)&= O(\|x\|^3)
-	\end{align*}
+	We can use the same reasoning as in the paragraph 2.5.5 of \cite[MPC Theory, Computation and Design]{MPC-book} to show that $\tilde{F}$ is a local Lyapunov function, i.e. there exists a neighborhood of the origin such that $\forall x$ in it :
+	$$\tilde{F}(f(x,Kx))+x^T Q_K x-\tilde{F}(x)\leq 0\Longrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)=O(\|x\|^3)$$
 
-	What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
+	\noindent What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
 
-	Now using the optimal sequence of states and controls of the RRLB MPC starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as \newline
+	\noindent Now using the optimal sequence of states and controls of the RRLB MPC starting at $x$, we can construct new feasible sequences for the problem starting at $\tilde{x}_1(x)$ as \newline
 	$\bf{x}'=(\tilde{x}_1,\dots,\tilde{x}_N,f(\tilde{x}_N,K\tilde{x}_N))$ and $\bf{u}'=(\tilde{u}_1,\dots,\tilde{u}_{N-1},K\tilde{x}_N)$\,.
 	Then we have :
 	$$\tilde{V}_N(\tilde{x}_1)\leq\tilde{J}_N(\bf{x}',\bf{u}')=\underbrace{\tilde{J}_N(\tilde{\bf{x}},\tilde{\bf{u}})}_{=\tilde{V}_N(x)}~\underbrace{\underbrace{-\tilde{l}(x,\tilde{u}_0)}_{=O(\|x\|^2)}+\underbrace{\tilde{F}(f(\tilde{x}_N,K\tilde{x}_N))-\tilde{F}(\tilde{x}_N)+\tilde{l}(\tilde{x}_N,K\tilde{x}_N) }_{=O(\|\tilde{x}_N\|^3)=O(\|x\|^3)} }_{\leq-c\|x\|^2\text{ in a smaller nbh }}\checkmark$$
 	We have therefore shown the descent property of our candidate Lyapunov function $\tilde{V}_N$\,.
-
-	Finally, it is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (see appendix), so that $\tilde{V}_N$ is indeed a Lyapunov function in a small neighborhood around the origin.
+	Finally, it is easy to show that $\tilde{V}_N$ is lower and upper bounded by coercive quadratic functions (since $Q,R$ are positive definite and $B_x,B_u$ are positive definite and upper bounded by quadratics), so that $\tilde{V}_N$ is indeed a Lyapunov function in a small neighborhood around the origin.
 \end{proof}
 
 \subsection{Constraints satisfaction guarantees}\label{sec:constraints-satisfaction-guarantees}
 This section follows closely the section IV.D of \cite{RRLB-linear-MPC} but gives more loose results that cannot take us as far.
-In particular, will show that we can ensure the existence of a neighborhood around the origin such that if we start in it, the states and controls along the closed-loop simulation will never violate the constraints.
+In particular, will show that we can ensure the existence of a neighborhood around the origin such that if we start in it, the states and controls along the closed-loop trajectories will never violate the constraints.
 However, this neighborhood cannot be easily computed because of the generality of the considered dynamics, and will therefore not be verified experimentally in section \ref{sec:RRLB-numerical-experiments}.
-
-In the whole section, we the assumptions of Theorem \ref{thm:nominal-stability} to be true.
+In the whole section, we assume Theorem \ref{thm:nominal-stability} to hold.
 
 \begin{lemma}
 	\label{thm:RRLB-bounds-guarantees}
@@ -364,7 +370,7 @@ In the whole section, we the assumptions of Theorem \ref{thm:nominal-stability} 
 		B_x(x(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\right)\\
 		B_u(u(k))&\leq\frac{1}{\epsilon}\left(\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\right)
 	\end{align*}
-	where $P_{LQR}$ is the solution to the DARE associated \ref{eq:inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
+	where $P_{LQR}$ is the solution to the DARE associated to \ref{eq:inf-LQR} and $\eta(x)=\tilde{l}(\tilde{x}_N(x),K\tilde{x}_N(x))+\tilde{F}(\tilde{x}_N(x))-\tilde{F}(f(\tilde{x}_N(x), K\tilde{x}_N(x)))$.
 \end{lemma}
 
 \begin{proof}
@@ -375,7 +381,7 @@ In the whole section, we the assumptions of Theorem \ref{thm:nominal-stability} 
 	\end{multline*}
 	so by summing everything we get a telescopic sum that we can compute using the fact that the system is asymptotically stable so $\lim_{k\to\infty}\tilde{V}_N(x(k))=0$, we get :
 	\begin{align*}
-		\tilde{V}_N(x(0))&\geq\sum_{k=0}^\infty\tilde{l}(x(k),u(k))-\underbrace{\tilde{l}(\tilde{x}_N(x(k)), K\tilde{x}_N(x(k)))+\tilde{F}(\tilde{x}_N(x(k)))-\tilde{F}(f(\tilde{x}_N(x(k)),\tilde{x}_N(x(k))))}_{\eta(x(k))=O(\|x(0)\|^3)}\\
+		\tilde{V}_N(x(0))&\geq\sum_{k=0}^\infty\tilde{l}(x(k),u(k))-\tilde{l}(\tilde{x}_N(x(k)), K\tilde{x}_N(x(k)))+\tilde{F}(\tilde{x}_N(x(k)))-\tilde{F}(f(\tilde{x}_N(x(k)),\tilde{x}_N(x(k))))\\
 		&=\sum_{k=0}^\infty l(x(k), u(k))+\epsilon B_x(x(k))+\epsilon B_u(u(k))+\eta(x(k))\\
 		&\geq x(0)^TP_{LQR}x(0)+\sum_{k=0}^\infty\eta(x(k))+\epsilon\sum_{k=0}^\infty B_x(x(k))+\epsilon\sum_{k=0}^\infty B_u(u(k))\\
 	\end{align*}
@@ -384,27 +390,18 @@ In the whole section, we the assumptions of Theorem \ref{thm:nominal-stability} 
 \end{proof}
 
 We define for ease of notation the following quantities
-\begin{align}
-	\begin{split}
-		\alpha(x(0))=\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))
-	\end{split}\\
-	\begin{split}
-		\beta_x=\underset{i,x}{\min}\{B_x(x)~|~\rm{row}_i(C_x)x=d_{x,i}\}
-	\end{split}\\
-	\begin{split}
-		\beta_u=\underset{i,u}{\min}\{B_u(u)~|~\rm{row}_i(C_u)u=d_{u,i}\}
-	\end{split}
-\end{align}
+\begin{align*}
+	\alpha(x(0))&=\tilde{V}_N(x(0))-x(0)^TP_{LQR}x(0)-\sum_{k=0}^\infty\eta(x(k))\\
+	\beta_x&=\underset{i,x}{\min}\{B_x(x)~|~\rm{row}_i(C_x)x=d_{x,i}\}\\
+	\beta_u&=\underset{i,u}{\min}\{B_u(u)~|~\rm{row}_i(C_u)u=d_{u,i}\}
+\end{align*}
 
 Note that the bounds $\beta_x,\beta_u$ depend on the relaxation parameter $\delta$\,.
 
 \begin{lemma}
 	\label{thm:constraint-set-def-with-RRLB}
 	For all relaxation parameter $\delta$:
-	\begin{align*}
-		\left\{x\in\R^{n_x}~|~B_x(x)\leq\beta_x\right\}\subseteq\cal{X}
-		\left\{u\in\R^{n_u}~|~B_u(u)\leq\beta_u\right\}\subseteq\cal{U}
-	\end{align*}
+	$$\left\{x\in\R^{n_x}~|~B_x(x)\leq\beta_x\right\}\subseteq\cal{X},\quad\left\{u\in\R^{n_u}~|~B_u(u)\leq\beta_u\right\}\subseteq\cal{U}$$
 \end{lemma}
 
 \begin{proof}
@@ -432,7 +429,7 @@ This issue is deeply aggravated on embedded platforms where the computational po
 This is why, historically, the first successful implementations of MPC in industrial applications were found in chemical engineering, where the sampling time (duration between two state measurement, and therefore time available to compute a new control) are usually long enough to find an accurate solutions.
 For instance, in the chemical system studied in subsection \ref{sec:RRLB-numerical-experiments}, the sampling time is of $200.0s$, while in robotics or autonomous driving the sampling time is rather in the order of the $10.0ms$.
 
-A great deal of effort has been put in the past decaded to design algorithms that make best use of scarce computational power to deliver usable results on embedded systems that necessitate very fast response times.
+A great deal of effort has been put in the past decade to design algorithms that make best use of scarce computational power to deliver usable results on embedded systems that necessitate very fast response times.
 One that rapidly gained interest is a variant of \textit{Sequential Quadratic Programming} (or SQP) called \textit{Real Time Iteration} (or RTI).
 Invented by Moritz Diehl and published in \cite{rti-diehl}, it can roughly be defined as SQP with a fixed number of iterations, usually only one, that makes use of the solutions found at the previous MPC prediction to warm-start the solver and to ensure both computational efficiency and accuracy.
 
@@ -441,7 +438,7 @@ In subsection \ref{sec:RTI-scheme} we formally introduce the RTI scheme for gene
 \subsection{The RTI scheme}\label{sec:RTI-scheme}
 
 We assume in this section familiarity with the SQP framework for general NLPs, as described for example in \cite{nocedal-wright}, and describe it in the context of MPC.
-We don't explicitely deal with the assumptions necessary for SQP to converge.
+We don't explicitly deal with the assumptions necessary for SQP to converge.
 % TODO : do we really ignore them ?
 
 \subsubsection{SQP for regular MPC}
@@ -530,7 +527,7 @@ The most natural way to construct this initial guess would be to \textit{shift} 
 More precisely, if at time $k$ we found $\mathbf{x}=(x_0,\dots,x_N),\mathbf{u}=(u_0,\dots,u_{N-1})$ then our initial guess at time $k+1$ will be $\mathbf{x}^{init}=(x_1,\dots,x_N,f(x_N,u_{new})),\mathbf{u}^{init}=(u_1,\dots,u_{N-1},u_{new})$ where $u_new$ might be chosen using different strategies :
 \begin{itemize}[label=\textbullet]
 	\item using a \textit{locally stabilizing control law} \footnote{This could roughly be defined as a law that leaves the state inside the feasible set, and that does not move the state further from the reference state.} $\kappa:\cal{X}\to\cal{U}$ (whenever one is available) and setting $u_{new}=\kappa(x_N)$\,.
-	An example of such locally stablizing control law can be the control law of the infinite horizon LQR mentionned in subsection \ref{sec:what-is-MPC}.
+	An example of such locally stabilizing control law can be the control law of the infinite horizon LQR mentioned in subsection \ref{sec:what-is-MPC}.
 
 	\item using the reference control $u^*$ (which again we consider as $0$ for simplicity).
 
@@ -544,7 +541,7 @@ This method supposes that the very first prediction of a closed-loop experiment 
 
 \subsubsection{The RTI scheme}
 
-RTI relies on previsous remarks to find an accurate solution to the MPC problem and combines them with another important idea trying to solve the \textit{real-time dilemma} which can be summarized in the following way :
+RTI relies on previous remarks to find an accurate solution to the MPC problem and combines them with another important idea trying to solve the \textit{real-time dilemma} which can be summarized in the following way :
 
 \begin{quote}
 	Upon obtaining a new state estimation $x$, a new SQP procedure can be started to find the solution of the MPC.
@@ -562,7 +559,7 @@ This makes sense, since the preparation phase only actually needs information fr
 
 Instead of presenting RTI with pseudocode as in algorithm \ref{algo:SQP-reg}, we will rather draw up a timeline resuming how the different steps of the algorithm are used in real situation :
 
-\vskip 1cm
+\vspace{12pt}
 
 \begin{figure}[H]
 	\startchronology[startyear=-3,stopyear=5,startdate=false,dates=false,color=black,width=\textwidth, arrow=true]
@@ -588,14 +585,14 @@ Instead of presenting RTI with pseudocode as in algorithm \ref{algo:SQP-reg}, we
 \begin{itemize}[label=\textbullet]
 	\item Before the start of the experiment, we solve the problem with an arbitrary precision \textbf{offline}, when there is no limit on the running time of the solver.
 	This supposes that we know in advance the initial state of the system, but this is a common and realistic assumption.
-	In this phase, we could use the general SQP with as many steps as necessary for full convergence (remember that we can't properly use RTI yet since we don't have a good initial guess), or any other algorithm to solver constrainted NLPs.
+	In this phase, we could use the general SQP with as many steps as necessary for full convergence (remember that we can't properly use RTI yet since we don't have a good initial guess), or any other algorithm to solver constrained NLPs.
 
 	\item The "\color{green}m\color{black}" labels indicate the state measurements of the system.
 	In practice, we suppose they are done at a constant rate given by the sampling time $dt$, and we can thus say that $\rm{t}1-\rm{t}0=dt$ and $\rm{t}(2k+3)-\rm{t}(2k+1)=dt,~\forall k\geq 0$\,.
 
 	\item The phases denoted by "\color{red}P\color{black}" and "\color{blue}F\color{black}" are the preparation and feedback phases of the RTI scheme as described above.
 
-	\item During the experiment, the state evolves continuously, but the control paramenters are kept constant on all intervals of the form $[\rm{t}(2k),\rm{t}(2k+2))$ because we update the control only when a new one is computed.
+	\item During the experiment, the state evolves continuously, but the control parameters are kept constant on all intervals of the form $[\rm{t}(2k),\rm{t}(2k+2))$ because we update the control only when a new one is computed.
 \end{itemize}
 
 More practical details on RTI will be given in subsection \ref{sec:RRLB-numerical-experiments} where we apply this scheme to the simulation of a real system.
@@ -606,7 +603,7 @@ In particular, we will give explicit details on the form of the matrices to cond
 Section \ref{sec:RRLB-theoretical-properties} proved several important theoretical properties of RRLB MPC, and the next subsection presents some experimental verifications of these theorems.
 However, it should be noted that all the solution to problem \ref{eq:RRLB-NMPC} found in these experiments are by essence inexact, and we can therefore not easily claim that the asymptotic stability and the constraint satisfaction still hold in practice. That's why we make the distinction between \textit{nominal stability} and \textit{real-time stability}.
 
-The determination of assumptions and results guaranteeing these properties in the real-time framework have been studied for example by Mortiz Diehl or Andrea Zanelli, although in slightly different contexts than ours.
+The determination of assumptions and results guaranteeing these properties in the real-time framework have been studied for example by Moritz Diehl or Andrea Zanelli, although in slightly different contexts than ours.
 The managed to derive powerful theorems but their assumptions are hard or even impossible to verify in practice and they are not really verified in practice.
 Instead, the desired properties are verified experimentally by means of a simple simulation of the system at hand.
 This is the scope of next subsection, in which we will not worry about this distinction between nominal and real-time stability.
@@ -616,10 +613,11 @@ This is the scope of next subsection, in which we will not worry about this dist
 
 In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used to benchmark different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR) system.
 
+\subsubsection{Experimental setup}
 
-This system desribing an exothermic chemical reaction has 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\theta$ the temperature in the reactor and $\theta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
+The CSTR system describes an exothermic chemical reaction has 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\theta$ the temperature in the reactor and $\theta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
 We don't mention here the ODE describing the model, the constraints as well as the MPC costs for brevity purposes, but they can be found in detail in \cite{diehl-dissertation} and \cite{cstr-ref}.
-By a simple steady state analysis procedure, we determined 3 viable reference points for states and controls that can be found (at $10^{-3}$ precision and in SI units) in table \ref{tab:CSTR-ref-points}
+By a simple steady state analysis procedure \footnote{This procedure was applied to the discrete-time dynamics obtained via discretization with RK4.}, we determined 3 viable reference points for states and controls that can be found (at $10^{-3}$ precision and in SI units) in table \ref{tab:CSTR-ref-points}
 
 \begin{table}[H]
 	\centering
@@ -638,11 +636,16 @@ By a simple steady state analysis procedure, we determined 3 viable reference po
 	\label{tab:CSTR-ref-points}
 \end{table}
 
-As suggested in \cite{diehl-dissertation}, we chose a horizon size of 100 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
-In all our experiments we set the maximum runtime to $5000.0s$ (simulated seconds, since the sampling time is very long, we skipped the parts where nothing happened) and ran the simulation in closed loop (i.e. applying to the system the control computed by the MPC) until the state converged to the reference state within a $10^{-3}$ tolerance in norm.
-
-Some general remarks on the implementation :
+\noindent Some general remarks on the implementation :
 \begin{itemize}[label=\textbullet]
+	\item The discrete-time dynamics have been obtained from the model's ODE by using a 6-step RK4 scheme.
+
+	\item As suggested in \cite{diehl-dissertation}, we chose a horizon size of 100 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
+	In all our experiments we set the maximum runtime to $5000.0s$ (simulated seconds, since the sampling time is very long, we skipped the parts where nothing happened) and ran the simulation in closed loop (i.e. applying to the system the control computed by the MPC) until the state converged to the reference state within a $10^{-3}$ tolerance in norm.
+
+	\item For RRLB MPC, we determined the terminal cost by solving the modified DARE with $\mu=1$ as mentioned in \ref{sec:RRLB-nominal-stability}.
+	We will see in the results that this does not impact convergence.
+
 	\item The initial prediction (as described in \ref{sec:RTI-scheme}) is computed using the interior point method solver IPOPT (see \cite{ipopt}) through the algorithmic differentiation package CasADi (see \cite{casadi}).
 
 	\item RTI was implemented from scratch using OSQP (see \cite{osqp}) to solve the quadratic subproblems.
@@ -652,64 +655,7 @@ Some general remarks on the implementation :
 		\text{s.t.}&\quad l\leq Az\leq u
 	\end{align*}
 	We therefore have to translate the QPs found in section \ref{sec:RTI-scheme} for regular MPC and RRLB MPC into this form, which corresponds to the condensation part of the preparation phase.
-	If we consider the optimization variable to be $z=(\Delta x_0,\dots,\Delta x_N,\Delta u_0, \dots,\Delta u_{N-1})$, and we recall that we have an initial guess $(x_0^{init},\dots,x_{N}^{init},u_0^{init},\dots,u_{N-1}^{init})$ and a current state $x$, then the matrices and vectors in the OSQP formulation will be:\newline
-	\scriptsize
-	\begin{align*}
-		\begin{split}
-			q_{OSQP}&=2\begin{pmatrix}
-				Q&&&&&&\\
-				&\ddots&&&&&\\
-				&&Q&&&&\\
-				&&&P&&&\\
-				&&&&R&&\\
-				&&&&&\ddots&\\
-				&&&&&&R
-			\end{pmatrix}\begin{pmatrix}
-				x_0^{init}\\\vdots\\x_N^{init}\\u_0^{init}\\\vdots\\u_{N-1}^{init}
-			\end{pmatrix}+\color{blue}\epsilon\begin{pmatrix}
-				\nabla B_x(x_0^{init})\\\vdots\\\nabla 0\\\nabla B_u(u_0^{init})\\\vdots\\\nabla B_u(u_{N-1}^{init})
-			\end{pmatrix}\color{black}\\
-			P_{OSQP}&=4\begin{pmatrix}
-				Q&&&&&&\\
-				&\ddots&&&&&\\
-				&&Q&&&&\\
-				&&&P&&&\\
-				&&&&R&&\\
-				&&&&&\ddots&\\
-				&&&&&&R
-			\end{pmatrix}+\color{blue}2\epsilon\begin{pmatrix}
-				\nabla^2B_x(x_0^{init})&&&&&\\
-				&\ddots&&&&\\
-				&&0&&&\\
-				&&&\nabla^2B_u(u_0^{init})&&\\
-				&&&&\ddots&\\
-				&&&&&\nabla^2B_u(u_{N-1}^{init})
-			\end{pmatrix}\color{black}\\
-			A_{OSQP}&=\begin{pmatrix}
-				I_{n_x}&&&&&0&&&&\\
-				A_{0}^{init}&-I_{n_x}&&&&B_{0}^{init}&\ddots&&\\
-				&A_{1}^{init}&-I_{n_x}&&&&\ddots&&\\
-				&&\ddots&\ddots&&&&&\\
-				&&&A_{N-1}^{init}&-I_{n_x}&&&B_{N-1}^{init}&0\\
-				\color{red}C_x&&&&&&&&\\
-				&\color{red}C_x&&&&&&&\\
-				&&\color{red}\ddots&&&&&&\\
-				&&&\color{red}C_x&&&&&\\
-				&&&&\color{red}C_x&&&&\\
-				&&&&&\color{red}C_u&&&\\
-				&&&&&&\color{red}\ddots&&\\
-				&&&&&&&\color{red}\ddots&\\
-				&&&&&&&&\color{red}C_u
-			\end{pmatrix}\\
-			l_{OSQP}&=\begin{pmatrix}
-				x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}-\infty\\\color{red}\vdots\\\color{red}-\infty
-			\end{pmatrix}\qquad u_{OSQP}=\begin{pmatrix}
-				x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}d_x-C_xx_0^{init}\\\color{red}\vdots\\\color{red}d_x-C_xx_N^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{0}^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{N-1}^{init}
-			\end{pmatrix}
-		\end{split}
-	\end{align*}
-	\normalsize
-	In the above, all the red terms only appear for regular MPC, and the blue terms only for RRLB MPC.
+	The exact form of the matrices and vectors involved in this formulation can be found in \ref{sec:osqp-condensation}.
 
 	\item The whole implementation for this project was done in Python and can be found in the folder \verb|cstr| attached to the project report.
 	To test the code, we recommend creating a virtual environment using the \verb|requirements.txt| file provided.
@@ -718,75 +664,103 @@ Some general remarks on the implementation :
 
 \subsubsection{Experimental procedure}
 
-We designed the following experiments to evaluate the behavior of a given MPC scheme :
-\begin{enumerate}[label=Exp\arabic*]
-	\item \underline{Number of iterations to convergence} : we see how quickly a scheme makes the state converge to the reference (within a tolerance of $10^{-3}$).
+\noindent We designed the following experiments to evaluate the behavior of a given MPC scheme :
 
-	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC} : i.e. the sum of all the stage costs evaluated at every time step of the simulation.
-	For the RTI scheme, this corresponds to the time steps when a measurement is available (see \ref{fig:RTI-timeline}), and for the infinite horizon MPC (approximated by a 5 times bigger horizon).
+\begin{enumerate}[label=Exp\arabic*]
+	\item \underline{Verify the theoretical results} :
+
+	We see if the system is indeed LAS when controlled by RRLB MPC and if the constraints are violated.
+
+	\item \underline{Number of iterations to convergence} :
+
+	We see how quickly a scheme makes the state converge to the reference (within a tolerance of $10^{-3}$).
+
+	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC} :
+
+	Given by the sum of all the stage costs evaluated at every time step of the simulation.
+	For the RTI scheme, this corresponds to the time steps when a measurement is available (see figure \ref{fig:RTI-timeline}), and for the infinite horizon MPC (approximated by a 5 times bigger horizon).
 
 	\item \underline{Compute the runtime of each step of RTI} : i.e. sensitivities computation, condensation
 \end{enumerate}
-These experiments were performed with both regular MPC and RRLB MPC to see the advantages of our new formulation.
 
-\subsubsection{Results}
+\noindent These experiments were performed with both regular MPC and RRLB MPC to see the advantages of each formulation.
 
-The results of experiments Exp1, Exp2 and Exp3 predented above are presented in tables \ref{tab:iterations-to-convergence}, \ref{tab:performance-measure} and \ref{tab:RTI-runtimes}.
+\subsubsection{Results and discussion}
 
-The measures of all the quantities described above are presented in the following table (all the times are in milliseconds) :
+\begin{enumerate}[label=Exp\arabic*]
+	\item \underline{Verify the theoretical results}
 
-\begin{table}[H]
-	\centering
-	\csvreader[
-		tabular				= |c|c|c|,
-		table head			= \hline Ref & Scheme & Iterations to convergence \\\hline,
-		late after line 	= \\\hline,
-		table foot			=  \hline,
-		filter not strcmp	= {\scheme}{infhorz}
-	]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,NbrIterationsToConvergence=\iter}{
-		\refpoint & \scheme & \iter
-	}
+	We can see in the figures \ref{fig:closed-loop-traj-rrlb-1}, \ref{fig:closed-loop-traj-rrlb-2} and \ref{fig:closed-loop-traj-rrlb-3} in the annex that the system is indeed LAS for every reference point we have chosen.
+	The initial point was the same in the 3 experiments
 
-	\caption{Number of iterations needed for convergence (within $10^{-3}$ tolerance) of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-	\label{tab:iterations-to-convergence}
-\end{table}
+	\item \underline{Number of iterations to convergence}
 
-\begin{table}[H]
-	\centering
-	\csvreader[
-		tabular			= |c|c|c|,
-		table head		= \hline Ref & Scheme & Perf \\\hline,
-		late after line = \\\hline,
-		table foot		=  \hline
-	]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,PerformanceMeasure=\perf}{
-		\refpoint & \scheme & \perf
-	}
+	The exact closed-loop trajectories are qualitatively similar between regular MPC and RRLB MPC and can be found in the annex section \ref{sec:closed-loop-traj}.
 
-	\caption{Performance Measure of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-	\label{tab:performance-measure}
-\end{table}
+	\begin{table}[H]
+		\centering
+		\csvreader[
+			tabular				= |c|c|c|,
+			table head			= \hline Ref & Scheme & Iterations to convergence \\\hline,
+			late after line 	= \\\hline,
+			table foot			=  \hline,
+			filter not strcmp	= {\scheme}{infhorz}
+		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,NbrIterationsToConvergence=\iter}{
+			\refpoint & \scheme & \iter
+		}
 
-\begin{table}[H]
-	\centering
-	\csvreader[
-		tabular			= |c|c|c|c|c|c|c|c|,
-		table head		= \hline Ref & Scheme & ASCT & SESCT & ACT & SECT & AST & SEST \\\hline,
-		late after line = \\\hline,
-		table foot		=  \hline,
-		filter not strcmp	= {\scheme}{infhorz}
-	]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,AverageSensitivitiesComputationTime=\asct,StdErrSensitivitiesComputationTime=\sesct,AverageCondensationTime=\act,StdErrCondensationTime=\sect,AverageSolvingTime=\ast,StdErrSolvingTime=\sest}{
-		\refpoint & \scheme & \asct & \sesct & \act & \sect & \ast & \sest
-	}
+		\caption{Number of iterations needed for convergence (within $10^{-3}$ tolerance) of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+		\label{tab:iterations-to-convergence}
+	\end{table}
 
-	\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-	\subcaption*{where ASCT : Average Sensitivity Computation Time, SESCT : Standard Error of Sensitivity Computation Time, ACT : Average Condensation Time, SECT : Standard Error of Condensation Time, AST : Average Solving Time, SEST : Standard Error of Solving Time}
-	\label{tab:RTI-runtimes}
-\end{table}
+	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC}
+
+	\begin{table}[H]
+		\centering
+		\csvreader[
+			tabular			= |c|c|c|,
+			table head		= \hline Ref & Scheme & Perf \\\hline,
+			late after line = \\\hline,
+			table foot		=  \hline
+		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,PerformanceMeasure=\perf}{
+			\refpoint & \scheme & \perf
+		}
+
+		\caption{Performance Measure of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+		\label{tab:performance-measure}
+	\end{table}
+
+	\item \underline{Compute the runtime of each step of RTI}
+
+	\begin{table}[H]
+		\centering
+		\csvreader[
+			tabular			= |c|c|c|c|c|c|c|c|,
+			table head		= \hline Ref & Scheme & ASCT & SESCT & ACT & SECT & AST & SEST \\\hline,
+			late after line = \\\hline,
+			table foot		=  \hline,
+			filter not strcmp	= {\scheme}{infhorz}
+		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,AverageSensitivitiesComputationTime=\asct,StdErrSensitivitiesComputationTime=\sesct,AverageCondensationTime=\act,StdErrCondensationTime=\sect,AverageSolvingTime=\ast,StdErrSolvingTime=\sest}{
+			\refpoint & \scheme & \asct & \sesct & \act & \sect & \ast & \sest
+		}
+
+		\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+		\subcaption*{where ASCT : Average Sensitivity Computation Time, SESCT : Standard Error of Sensitivity Computation Time, ACT : Average Condensation Time, SECT : Standard Error of Condensation Time, AST : Average Solving Time, SEST : Standard Error of Solving Time}
+		\label{tab:RTI-runtimes}
+	\end{table}
+
+\end{enumerate}
 
 \subsubsection{Discussion}
 
-From the previous tables, we can notice two things :
+From the previous tables, we can notice several things :
 \begin{itemize}[label=\textbullet]
+	\item First of all, the system stabilizes around the reference state, as hoped after the proof of theorem \ref{thm:nominal-stability}.
+	We did not try to estimate the neighborhood of the reference state starting form which this should be true because it is theoretically nearly impossible, and computationally a real burden since the only reliable method would be a naive grid
+	search.
+
+	\item We see there is indeed a violation of constraints
+
 	\item Contrary to our initial hypothesis, the solve times are not shorter for RRLB MPC, which would indicate that the optimization problem is not necessarily easier to solve than for Regular MPC.
 
 	\item The convergence to the objective is always taking fewer iterations with RRLB than with Regular MPC. In particular, for reference points n°2 and 3, there is no convergence for Regular MPC at the end of the $5000s$ of simulation.
@@ -804,18 +778,107 @@ From the previous tables, we can notice two things :
 
 \subsection*{More on the DARE}\label{sec:DARE}
 
-\begin{lemma}[Existence an Unicity of solution to the Lyapunov equation]
+\subsection*{Closed-loop trajectories}\label{sec:closed-loop-traj}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=16cm]{images/cstr_reg_1.png}
+	\caption{Closed-loop trajectories for the regular MPC with reference point n°1}
+	\label{fig:closed-loop-traj-reg-1}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=16cm]{images/cstr_rrlb_1.png}
+	\caption{Closed-loop trajectories for the RRLB MPC with reference point n°1}
+	\label{fig:closed-loop-traj-rrlb-1}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=16cm]{images/cstr_reg_2.png}
+	\caption{Closed-loop trajectories for the regular MPC with reference point n°2}
+	\label{fig:closed-loop-traj-reg-2}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=16cm]{images/cstr_rrlb_2.png}
+	\caption{Closed-loop trajectories for the RRLB MPC with reference point n°2}
+	\label{fig:closed-loop-traj-rrlb-2}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=16cm]{images/cstr_reg_3.png}
+	\caption{Closed-loop trajectories for the regular MPC with reference point n°3}
+	\label{fig:closed-loop-traj-reg-3}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=16cm]{images/cstr_rrlb_3.png}
+	\caption{Closed-loop trajectories for the RRLB MPC with reference point n°3}
+	\label{fig:closed-loop-traj-rrlb-3}
+\end{figure}
 
-\end{lemma}
+\subsection*{OSQP condensation}\label{sec:osqp-condensation}
 
-\begin{proof}
-
-\end{proof}
+If we consider the optimization variable of the QP subproblem (as described in \ref{sec:RTI-scheme}) to be $z=(\Delta x_0,\dots,\Delta x_N,\Delta u_0, \dots,\Delta u_{N-1})$, and we write $x$ for the system's current state and  $(x_0^{init},\dots,x_{N}^{init},u_0^{init},\dots,u_{N-1}^{init})$ for the initial guess (obtained by shift), then the matrices and vectors in the OSQP formulation will be:
+\scriptsize
+\begin{align*}
+	\begin{split}
+		q_{OSQP}&=2\begin{pmatrix}
+			Q&&&&&&\\
+			&\ddots&&&&&\\
+			&&Q&&&&\\
+			&&&P&&&\\
+			&&&&R&&\\
+			&&&&&\ddots&\\
+			&&&&&&R
+		\end{pmatrix}\begin{pmatrix}
+			x_0^{init}\\\vdots\\x_N^{init}\\u_0^{init}\\\vdots\\u_{N-1}^{init}
+		\end{pmatrix}+\color{blue}\epsilon\begin{pmatrix}
+			\nabla B_x(x_0^{init})\\\vdots\\\nabla 0\\\nabla B_u(u_0^{init})\\\vdots\\\nabla B_u(u_{N-1}^{init})
+		\end{pmatrix}\color{black}\\
+		P_{OSQP}&=4\begin{pmatrix}
+			Q&&&&&&\\
+			&\ddots&&&&&\\
+			&&Q&&&&\\
+			&&&P&&&\\
+			&&&&R&&\\
+			&&&&&\ddots&\\
+			&&&&&&R
+		\end{pmatrix}+\color{blue}2\epsilon\begin{pmatrix}
+			\nabla^2B_x(x_0^{init})&&&&&\\
+			&\ddots&&&&\\
+			&&0&&&\\
+			&&&\nabla^2B_u(u_0^{init})&&\\
+			&&&&\ddots&\\
+			&&&&&\nabla^2B_u(u_{N-1}^{init})
+		\end{pmatrix}\color{black}\\
+		A_{OSQP}&=\begin{pmatrix}
+			I_{n_x}&&&&&0&&&&\\
+			A_{0}^{init}&-I_{n_x}&&&&B_{0}^{init}&\ddots&&\\
+			&A_{1}^{init}&-I_{n_x}&&&&\ddots&&\\
+			&&\ddots&\ddots&&&&&\\
+			&&&A_{N-1}^{init}&-I_{n_x}&&&B_{N-1}^{init}&0\\
+			\color{red}C_x&&&&&&&&\\
+			&\color{red}C_x&&&&&&&\\
+			&&\color{red}\ddots&&&&&&\\
+			&&&\color{red}C_x&&&&&\\
+			&&&&\color{red}C_x&&&&\\
+			&&&&&\color{red}C_u&&&\\
+			&&&&&&\color{red}\ddots&&\\
+			&&&&&&&\color{red}\ddots&\\
+			&&&&&&&&\color{red}C_u
+		\end{pmatrix}\\
+		l_{OSQP}&=\begin{pmatrix}
+			x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}-\infty\\\color{red}\vdots\\\color{red}-\infty
+		\end{pmatrix}\qquad u_{OSQP}=\begin{pmatrix}
+			x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}d_x-C_xx_0^{init}\\\color{red}\vdots\\\color{red}d_x-C_xx_N^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{0}^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{N-1}^{init}
+		\end{pmatrix}
+	\end{split}
+\end{align*}
+\normalsize
+In the above, all the red terms only appear for regular MPC, and the blue terms only for RRLB MPC.
 
 \subsection*{Misc}
 
-\begin{proof}[Proof of lemma \ref{thm:Lipchitzianity}]
 
-\end{proof}
 
 \end{document}

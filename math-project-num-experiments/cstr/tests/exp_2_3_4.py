@@ -18,6 +18,7 @@ df = pd.DataFrame(
     columns=[
         "RefPoint",
         "Scheme",
+        "ConstraintsViolated",
         "NbrIterationsToConvergence",
         "PerformanceMeasure",
         "AverageSensitivitiesComputationTime",
@@ -66,6 +67,7 @@ for i in range(3):
                     prediction[inf_cstr.get_state_idx(k)],
                     prediction[inf_cstr.get_control_idx(k)],
                 )
+
             df = pd.concat(
                 (
                     df,
@@ -73,6 +75,7 @@ for i in range(3):
                         {
                             "RefPoint": [i + 1],
                             "Scheme": [scheme_str],
+                            "ConstraintsViolated": [None],
                             "NbrIterationsToConvergence": [None],
                             "PerformanceMeasure": [round(float(total_cost_inf), 3)],
                             "AverageSensitivitiesComputationTime": [None],
@@ -92,7 +95,7 @@ for i in range(3):
                 total_cost,
                 nbr_iterations_to_convergence,
                 constraints_violated,
-                sensitivites_computation_times,
+                sensitivities_computation_times,
                 condensation_times,
                 solve_times,
             ) = run_closed_loop_simulation(
@@ -120,15 +123,16 @@ for i in range(3):
                         {
                             "RefPoint": [i + 1],
                             "Scheme": [scheme_str],
+                            "ConstraintsViolated": [constraints_violated],
                             "NbrIterationsToConvergence": [
                                 nbr_iterations_to_convergence
                             ],
                             "PerformanceMeasure": [round(total_cost, 3)],
                             "AverageSensitivitiesComputationTime": [
-                                round(np.mean(sensitivites_computation_times), 2)
+                                round(np.mean(sensitivities_computation_times), 2)
                             ],
                             "StdErrSensitivitiesComputationTime": [
-                                round(np.std(sensitivites_computation_times), 2)
+                                round(np.std(sensitivities_computation_times), 2)
                             ],
                             "AverageCondensationTime": [
                                 round(np.mean(condensation_times), 2)

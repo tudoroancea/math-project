@@ -16,6 +16,7 @@ class Scheme(Enum):
     INFINITE_HORIZON = 3
 
 
+# Reference points computed via a steady state analysis
 xr1 = np.array(
     [
         2.1402105301746182e00,
@@ -44,7 +45,7 @@ class CSTR:
     controls_idx = list(
         range(nx, nx + nu)
     )  # indices of controls in a stage vector (x_k, u_k)
-    nz: int  # dimension of the vector with all states and control variables concatenaed
+    nz: int  # dimension of the vector with all states and control variables concatenated
     T: float  # time horizon
     N: int  # number of control intervals
     M = 6  # RK4 integration steps
@@ -75,14 +76,15 @@ class CSTR:
     delta = 10.0  # relaxation parameter
 
     # dynamics (see paper for notations)
-    f: ca.Function
-    f_cont: ca.Function
+    f: ca.Function  # discrete dynamics (for the fixed sampling time)
+    f_cont: ca.Function  # continuous dynamics
+    f_special: ca.Function  # discrete dynamics (for an arbitrary sampling time)
     jac_f_x: ca.Function
     jac_f_u: ca.Function
     A: np.ndarray
     B: np.ndarray
 
-    # costs
+    # costs (see paper for notations)
     Q = sparse.diags([[0.2, 1.0, 0.5, 0.2]], [0])
     R = sparse.diags([[0.5, 5.0e-7]], [0])
     P: np.ndarray
@@ -99,7 +101,7 @@ class CSTR:
         delta: float = 10.0,
         scheme: Scheme = Scheme.RRLB,
     ) -> None:
-        # Setting up the MPC ===================================================
+        # Choosing the MPC scheme ===================================================
         if scheme == Scheme.RRLB or scheme == Scheme.REGULAR:
             self.T = 2000.0
             self.N = 100
@@ -567,14 +569,21 @@ class CSTR:
 
         start = time()
 
-        q = sparse.block_diag(
-            [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
-        ) @ (
-            prediction
-            - np.concatenate((np.tile(self.xr, self.N + 1), np.tile(self.ur, self.N)))
-        ) + (
-            self.epsilon * np.concatenate(tpr) if self.is_RRLB else 0.0
+        q = (
+            2
+            * sparse.block_diag(
+                [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
+            )
+            @ (
+                prediction
+                - np.concatenate(
+                    (np.tile(self.xr, self.N + 1), np.tile(self.ur, self.N))
+                )
+            )
         )
+        if self.is_RRLB:
+            q += self.epsilon * np.concatenate(tpr)
+
         stop = time()
         condensing_time += 1000.0 * (stop - start)
 
@@ -590,7 +599,7 @@ class CSTR:
             sensitivity_computation_time += 1000.0 * (stop - start)
 
         start = time()
-        P = 2 * sparse.block_diag(
+        P = 4 * sparse.block_diag(
             [self.Q] * self.N + [self.P] + [self.R] * self.N, format="csc"
         )
         if self.is_RRLB:

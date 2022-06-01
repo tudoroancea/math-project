@@ -41,7 +41,7 @@ class CSTRAnimation:
             control) and each column to one reference point
         """
         # transform the initial prediction (in the form of a long vector with all the states and
-        # contorls concatenated) into a matrix
+        # controls concatenated) into a matrix
         initial_prediction = np.concatenate(
             (
                 np.reshape(
