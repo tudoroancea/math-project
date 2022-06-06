@@ -18,7 +18,7 @@ ur = ur1
 # generate random initial states within the following bounds :
 # 0.0 <= c_A, c_B <= 50.0 ; 98.0 <= theta <= 500.0 ; 92.0 <= theta_K <= 500.0
 np.random.seed(16032001)
-nbr_initial_states = 20
+nbr_initial_states = 2
 initial_states = np.zeros((4, nbr_initial_states))
 initial_states[0, :] = np.random.random_sample(nbr_initial_states) * 10.0
 initial_states[1, :] = np.random.random_sample(nbr_initial_states) * 10.0
@@ -28,7 +28,7 @@ initial_states[2, :] = (
 initial_states[3, :] = (
     np.random.random_sample(nbr_initial_states) * (150.0 - 92.0) + 92.0
 )
-numpy.savetxt("exp1_initial_states.csv", initial_states, delimiter=",")
+numpy.savetxt("oldexp2_initial_states.csv", initial_states, delimiter=",")
 
 # run closed loop simulations for each initial state with every MPC scheme and save data
 # in a csv file
@@ -108,4 +108,4 @@ for i in range(initial_states.shape[1]):
 
         print("\tDone")
 
-df.to_csv("exp1_results.csv", index=False)
+df.to_csv("oldexp2_results.csv", index=False)

@@ -12,7 +12,6 @@ from cstr_package import *
 # generate random initial states within the following bounds :
 # 0.0 <= c_A, c_B <= 10.0 ; 98.0 <= theta <= 150.0 ; 92.0 <= theta_K <= 150.0
 np.random.seed(16032001)
-# nbr_initial_states = 2
 nbr_initial_states = 10
 initial_states = np.zeros((4, nbr_initial_states))
 initial_states[0, :] = np.random.random_sample(nbr_initial_states) * 10.0
@@ -26,7 +25,6 @@ initial_states[3, :] = (
 np.savetxt("exp_all_initial_states.csv", initial_states, delimiter=",")
 
 # setting the reference points we are going to use
-# ref_points = [(xr1, ur1)]
 ref_points = [(xr1, ur1), (xr2, ur2), (xr3, ur3)]
 
 input_values = []
@@ -51,41 +49,6 @@ schemes = [
     "rrlb",
     "reg",
 ]
-
-# data frame to store the results for each individual simulation
-# for i in range(initial_states.shape[1]):
-#     for j in range(3):
-#         df = pd.concat(
-#             (
-#                 df,
-#                 pd.DataFrame.from_dict(
-#                     {
-#                         "InitialState": [i],
-#                         "RefPoint": [j],
-#                         "Scheme": [None],
-#                         "HorizonSize": [None],
-#                         "ConstraintsViolated": [None],
-#                         "NbrIterationsToConvergence": [None],
-#                         "PerformanceMeasure": [None],
-#                         "AverageSensitivitiesComputationTime": [None],
-#                         "StdErrSensitivitiesComputationTime": [None],
-#                         "AverageCondensationTime": [None],
-#                         "StdErrCondensationTime": [None],
-#                         "AverageSolvingTime": [None],
-#                         "StdErrSolvingTime": [None],
-#                     }
-#                 ),
-#             ),
-#             axis=0,
-#         )
-
-# runtimes aggregated over all the simulations, separated by horizon size
-# all_rrlb_sensitivities_computation_times = {}
-# all_reg_sensitivities_computation_times = {}
-# all_rrlb_condensation_times = {}
-# all_reg_condensation_times = {}
-# all_rrlb_solving_times = {}
-# all_reg_solving_times = {}
 
 # declare big function that does stuff
 def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
@@ -193,8 +156,12 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    # simulation time
+    # simulation time =========================================================
+    start_time = time()
+
     df_results = []
+
+    # parallel version
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
         results = [
             executor.submit(do_stuff, partial_input_values=partial_input_values)
@@ -205,39 +172,15 @@ if __name__ == "__main__":
                 df_results.append(result.result())
             except Exception as ex:
                 print(str(ex))
-                pass
 
+    # sequential version
+    # for partial_input_values in splitted_input_values:
+    #     df_results.append(do_stuff(partial_input_values))
+
+    stop = time()
+    print("Simulation time: {}".format(stop - start_time))
+
+    # save results
     df = pd.concat(df_results)
     df.sort_values(["InitialState", "RefPoint"], axis=0, ascending=True, inplace=True)
     df.to_csv("exp_all_results.csv", index=False)
-
-    # df_rrlb_times = pd.DataFrame.from_dict(
-    #     {
-    #         "AverageSensitivitiesComputationTime": [
-    #             np.round(np.mean(all_rrlb_sensitivities_computation_times), 2)
-    #         ],
-    #         "StdErrSensitivitiesComputationTime": [
-    #             np.round(np.std(all_rrlb_sensitivities_computation_times), 2)
-    #         ],
-    #         "AverageCondensationTime": [np.round(np.mean(all_rrlb_condensation_times), 2)],
-    #         "StdErrCondensationTime": [np.round(np.std(all_rrlb_condensation_times), 2)],
-    #         "AverageSolvingTime": [np.round(np.mean(all_rrlb_solving_times), 2)],
-    #         "StdErrSolvingTime": [np.round(np.std(all_rrlb_solving_times), 2)],
-    #     }
-    # )
-    # df_rrlb_times.to_csv("exp_all_rrlb_times.csv", index=False)
-    # df_reg_times = pd.DataFrame.from_dict(
-    #     {
-    #         "AverageSensitivitiesComputationTime": [
-    #             np.round(np.mean(all_reg_sensitivities_computation_times), 2)
-    #         ],
-    #         "StdErrSensitivitiesComputationTime": [
-    #             np.round(np.std(all_reg_sensitivities_computation_times), 2)
-    #         ],
-    #         "AverageCondensationTime": [np.round(np.mean(all_reg_condensation_times), 2)],
-    #         "StdErrCondensationTime": [np.round(np.std(all_reg_condensation_times), 2)],
-    #         "AverageSolvingTime": [np.round(np.mean(all_reg_solving_times), 2)],
-    #         "StdErrSolvingTime": [np.round(np.std(all_reg_solving_times), 2)],
-    #     }
-    # )
-    # df_reg_times.to_csv("exp_all_reg_times.csv", index=False)

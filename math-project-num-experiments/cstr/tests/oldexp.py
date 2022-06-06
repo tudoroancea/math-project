@@ -3,7 +3,6 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from cstr_package import *
 
