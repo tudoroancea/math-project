@@ -39,12 +39,7 @@ for i in range(3):
                 i + 1, scheme_str
             )
         )
-        if scheme_str == "rrlb":
-            scheme = Scheme.RRLB
-        elif scheme_str == "reg":
-            scheme = Scheme.REGULAR
-        elif scheme_str == "infhorz":
-            scheme = Scheme.INFINITE_HORIZON
+        scheme = Scheme.from_str(scheme_str)
 
         plt.clf()
 
@@ -129,19 +124,19 @@ for i in range(3):
                             ],
                             "PerformanceMeasure": [round(total_cost, 3)],
                             "AverageSensitivitiesComputationTime": [
-                                round(np.mean(sensitivities_computation_times), 2)
+                                np.round(np.mean(sensitivities_computation_times), 2)
                             ],
                             "StdErrSensitivitiesComputationTime": [
-                                round(np.std(sensitivities_computation_times), 2)
+                                np.round(np.std(sensitivities_computation_times), 2)
                             ],
                             "AverageCondensationTime": [
-                                round(np.mean(condensation_times), 2)
+                                np.round(np.mean(condensation_times), 2)
                             ],
                             "StdErrCondensationTime": [
-                                round(np.std(condensation_times), 2)
+                                np.round(np.std(condensation_times), 2)
                             ],
-                            "AverageSolvingTime": [round(np.mean(solve_times), 2)],
-                            "StdErrSolvingTime": [round(np.std(solve_times), 2)],
+                            "AverageSolvingTime": [np.round(np.mean(solve_times), 2)],
+                            "StdErrSolvingTime": [np.round(np.std(solve_times), 2)],
                         }
                     ),
                 ),

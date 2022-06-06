@@ -1,4 +1,3 @@
-# %% imports and global parameters
 import os
 from enum import Enum
 from time import time
@@ -15,6 +14,19 @@ class Scheme(Enum):
     REGULAR = 2
     INFINITE_HORIZON = 3
 
+    @staticmethod
+    def from_str(scheme_str: str):
+        if scheme_str == "rrlb":
+            return Scheme.RRLB
+        elif scheme_str == "reg":
+            return Scheme.REGULAR
+        elif scheme_str == "infhorz":
+            return Scheme.INFINITE_HORIZON
+        else:
+            raise ValueError("Unknown scheme: {}".format(scheme_str))
+
+
+INF_HORIZON_SIZE = 5000
 
 # Reference points computed via a steady state analysis
 xr1 = np.array(
@@ -100,14 +112,15 @@ class CSTR:
         epsilon: float = 0.1,
         delta: float = 10.0,
         scheme: Scheme = Scheme.RRLB,
+        N: int = 100,
     ) -> None:
         # Choosing the MPC scheme ===================================================
         if scheme == Scheme.RRLB or scheme == Scheme.REGULAR:
-            self.T = 2000.0
-            self.N = 100
+            self.N = N
+            self.T = N * 20.0
         else:
-            self.T = 5 * 2000.0
-            self.N = 5 * 100
+            self.N = INF_HORIZON_SIZE
+            self.T = INF_HORIZON_SIZE * 20.0
         self.nz = self.nx * (self.N + 1) + self.nu * self.N
         self.epsilon = epsilon
         self.delta = delta
@@ -321,7 +334,7 @@ class CSTR:
         # ====================================================================================================
         # Check controllability/stabilizability
         # ====================================================================================================
-        def check_controllability(my_A, my_B):
+        def check_controllability(my_A, my_B) -> Tuple[bool, str]:
             controllability_matrix = np.tile(my_B, (1, self.N))
             for i in range(1, self.N):
                 controllability_matrix[:, i * self.nu : (i + 1) * self.nu] = (
@@ -329,12 +342,13 @@ class CSTR:
                 )
             rank = np.linalg.matrix_rank(controllability_matrix)
             if rank != self.nx:
-                err = True
-                err_msg += "\tERROR : (A,B) is not controllable, rank = {}\n".format(
+                return True, "\tERROR : (A,B) is not controllable, rank = {}\n".format(
                     rank
                 )
+            else:
+                return False, ""
 
-        def check_stabilizability(my_A, my_B, my_K):
+        def check_stabilizability(my_A, my_B, my_K) -> Tuple[bool, str]:
             discrete_eig = np.linalg.eig(my_A + my_B @ my_K)[0]
             not_in_unit_disk = []
             for val in discrete_eig:
@@ -342,17 +356,25 @@ class CSTR:
                     not_in_unit_disk.append(np.linalg.norm(val))
 
             if len(not_in_unit_disk) != 0:
-                err = True
-                err_msg += (
+                return (
+                    True,
                     "\tERROR : (A,B) is not stabilizable, eigenvalues = {}\n".format(
                         not_in_unit_disk
-                    )
+                    ),
                 )
+            else:
+                return False, ""
 
         # Discrete time
         err_msg += "Discrete time stabilizability / controllability:\n"
-        check_controllability(self.A, self.B)
-        check_stabilizability(self.A, self.B, self.K)
+        err_tpr, err_msg_tpr = check_controllability(self.A, self.B)
+        if err_tpr:
+            err = True
+            err_msg += err_msg_tpr
+        err_tpr, err_msg_tpr = check_stabilizability(self.A, self.B, self.K)
+        if err_tpr:
+            err = True
+            err_msg += err_msg_tpr
 
         # Continuous time
         err_msg += "Continuous time stabilizability / controllability:\n"
@@ -366,7 +388,11 @@ class CSTR:
         )
         A_cont = np.array(A_cont_func(self.xr, self.ur))
         B_cont = np.array(B_cont_func(self.xr, self.ur))
-        check_controllability(A_cont, B_cont)
+
+        err_tpr, err_msg_tpr = check_controllability(A_cont, B_cont)
+        if err_tpr:
+            err = True
+            err_msg += err_msg_tpr
 
         P_cont = la.solve_continuous_are(
             A_cont,
@@ -375,7 +401,11 @@ class CSTR:
             self.R + self.epsilon * self.M_u,
         )
         K_cont = -la.inv(self.R + self.epsilon * self.M_u) @ B_cont.T @ P_cont
-        check_stabilizability(A_cont, B_cont, K_cont)
+
+        err_tpr, err_msg_tpr = check_stabilizability(A_cont, B_cont, K_cont)
+        if err_tpr:
+            err = True
+            err_msg += err_msg_tpr
 
         # ====================================================================================================
         # Check the positive definiteness of the hessian of the objective at the target state/control
@@ -511,7 +541,9 @@ class CSTR:
         sol = nlp_solver(x0=w_start, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
 
         result = sol["x"].full().ravel()
-        assert not np.isnan(result).any(), "NaNs found in initial prediction"
+        if np.isnan(result).any():
+            raise ValueError("NaN in the initial prediction")
+
         return result
 
     def shift_prediction(self, prediction: np.ndarray) -> np.ndarray:
@@ -553,6 +585,7 @@ class CSTR:
         Note : x_0 in l and u is to be updated at the beginning of the feedback phase
         """
         sensitivity_computation_time, condensing_time = 0.0, 0.0
+        tpr = []
 
         # compute q =============================================================
         if self.is_RRLB:
@@ -724,13 +757,13 @@ class CSTR:
 
         return P, q, A, l, u, sensitivity_computation_time, condensing_time
 
-    def get_control_idx(self, k: int) -> np.ndarray:
+    def get_control_idx(self, k: int) -> range:
         return range(
             self.nx * (self.N + 1) + self.nu * k,
             self.nx * (self.N + 1) + self.nu * (k + 1),
         )
 
-    def get_state_idx(self, k: int) -> np.ndarray:
+    def get_state_idx(self, k: int) -> range:
         return range(self.nx * k, self.nx * (k + 1))
 
     def gencode(self):
