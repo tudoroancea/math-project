@@ -124,6 +124,12 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
                 }
             )
         )
+        print(
+            "Finished initial state n°{}, ref point n°{} with inf horz".format(
+                initial_state_id + 1, ref_point_id + 1
+            )
+        )
+        sys.stdout.flush()
 
         # now treat the RRLB and regular MPC schemes (closed-loop simulation)
         for scheme_str in schemes:
@@ -176,6 +182,12 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
                         }
                     ),
                 )
+                print(
+                    "Finished initial state n°{}, ref point n°{}, horizon size {} with {} scheme".format(
+                        initial_state_id + 1, ref_point_id + 1, n, scheme_str
+                    )
+                )
+                sys.stdout.flush()
 
     return pd.concat(all_dfs)
 

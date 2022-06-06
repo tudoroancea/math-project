@@ -301,8 +301,8 @@ def run_closed_loop_simulation(
     total_cost = cstr.l(data[cstr.states_idx, 0], data[cstr.controls_idx, 0])
     k = 1
     while (
-        np.max(np.abs((data[cstr.states_idx, k] - xr) / xr)) >= stop_tol
-        and k < data.shape[1]
+        k < data.shape[1]
+        and np.max(np.abs((data[cstr.states_idx, k] - xr) / xr)) >= stop_tol
     ):
         total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
         if not constraints_violated and not (
