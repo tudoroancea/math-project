@@ -65,11 +65,15 @@ class CSTR:
     is_RRLB: bool  # whether to compute the RRLB functions or not
 
     # constraints (see the paper for notations)
-    C_x = sparse.hstack([sparse.csc_matrix((2, 2)), -sparse.eye(2)])
+    # C_x = sparse.hstack([sparse.csc_matrix((2, 2)), -sparse.eye(2)])
+    C_x = sparse.kron(sparse.eye(nx), sparse.csc_matrix([[1.0], [-1.0]]))
+    q_x: int = 8
     C_u = sparse.csr_matrix(
         np.array([[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
     )
-    d_x = np.array([-98.0, -92.0])
+    q_u: int = 4
+    # d_x = np.array([-98.0, -92.0])
+    d_x = np.array([10.0, 0.0, 10.0, 0.0, 150.0, -98.0, 150.0, -92.0])
     d_u = np.array([35.0, -3.0, 0.0, 9000.0])
 
     # reference points
@@ -207,69 +211,119 @@ class CSTR:
             [z],
             [0.5 * (((z - 2 * self.delta) / self.delta) ** 2 - 1) - ca.log(self.delta)],
         )
-        B_x_1 = ca.if_else(
-            x[2] - 98.0 > self.delta,
-            ca.log(self.xr[2] - 98.0) - ca.log(x[2] - 98.0),
-            beta(x[2] - 98.0),
-        )
-        B_x_2 = ca.if_else(
-            x[3] - 92.0 > self.delta,
-            ca.log(self.xr[3] - 92.0) - ca.log(x[3] - 92.0),
-            beta(x[3] - 92.0),
-        )
-        grad_B_x_1 = ca.Function("grad_B_x_1", [x], [ca.jacobian(B_x_1, x)])
-        grad_B_x_2 = ca.Function("grad_B_x_2", [x], [ca.jacobian(B_x_2, x)])
-        w_x_1 = -1.0
-        w_x_2 = -1.0
-        self.B_x = ca.Function(
-            "B_x",
-            [x],
-            [(1.0 + w_x_1) * B_x_1 + (1.0 + w_x_2) * B_x_2],
-        )
+        # B_x_1 = ca.if_else(
+        #     x[2] - 98.0 > self.delta,
+        #     ca.log(self.xr[2] - 98.0) - ca.log(x[2] - 98.0),
+        #     beta(x[2] - 98.0),
+        # )
+        # B_x_2 = ca.if_else(
+        #     x[3] - 92.0 > self.delta,
+        #     ca.log(self.xr[3] - 92.0) - ca.log(x[3] - 92.0),
+        #     beta(x[3] - 92.0),
+        # )
+        # grad_B_x_1 = ca.Function("grad_B_x_1", [x], [ca.jacobian(B_x_1, x)])
+        # grad_B_x_2 = ca.Function("grad_B_x_2", [x], [ca.jacobian(B_x_2, x)])
+        # w_x_1 = -1.0
+        # w_x_2 = -1.0
+        # self.B_x = ca.Function(
+        #     "B_x",
+        #     [x],
+        #     [(1.0 + w_x_1) * B_x_1 + (1.0 + w_x_2) * B_x_2],
+        # )
+
+        # new method for creating B_x =====
+        # first compute the translated d_x, i.e. d_x_tilde
+        d_x_tilde = self.d_x - self.C_x @ self.xr
+        delta_x = np.min(np.abs(d_x_tilde))
+        # then compute the individual functions B_x_i
+        tpr = []
+        full_C_x = self.C_x.toarray()
+        for i in range(self.q_x):
+            z_i = d_x_tilde[i] - ca.dot(full_C_x[i, :], x)
+            tpr.append(
+                ca.if_else(
+                    z_i > self.delta, ca.log(d_x_tilde[i]) - ca.log(z_i), beta(z_i)
+                )
+            )
+        tpr2 = d_x_tilde[1::2]
+        tpr3 = d_x_tilde[0::2]
+        # compute the weight vector w_x
+        w_x = np.zeros(self.q_x)
+        w_x[0::2] = 1.0
+        w_x[1::2] = tpr2 / tpr3
+        # assemble the RRLB function B_x
+        self.B_x = ca.Function("B_x", [x], [ca.dot(w_x, ca.vertcat(*tpr))])
+
         self.grad_B_x = ca.Function("grad_B_x", [x], [ca.jacobian(self.B_x(x), x)])
         self.hess_B_x = ca.Function("hess_B_x", [x], [ca.hessian(self.B_x(x), x)[0]])
         self.M_x = self.hess_B_x(self.xr).full()
 
-        B_u_1 = ca.if_else(
-            35.0 - u[0] > self.delta,
-            ca.log(35.0 - self.ur[0]) - ca.log(35.0 - u[0]),
-            beta(35.0 - u[0]),
-        )
-        B_u_2 = ca.if_else(
-            u[0] - 3.0 > self.delta,
-            ca.log(self.ur[0] - 3.0) - ca.log(u[0] - 3.0),
-            beta(u[0] - 3.0),
-        )
-        B_u_3 = ca.if_else(
-            -u[1] > self.delta, ca.log(-self.ur[1]) - ca.log(-u[1]), beta(-u[1])
-        )
-        B_u_4 = ca.if_else(
-            9000.0 + u[1] > self.delta,
-            ca.log(9000.0 + self.ur[1]) - ca.log(9000.0 + u[1]),
-            beta(9000.0 + u[1]),
-        )
-        grad_B_u_1 = ca.Function("grad_B_u_1", [u], [ca.jacobian(B_u_1, u)])
-        grad_B_u_2 = ca.Function("grad_B_u_2", [u], [ca.jacobian(B_u_2, u)])
-        grad_B_u_3 = ca.Function("grad_B_u_3", [u], [ca.jacobian(B_u_3, u)])
-        grad_B_u_4 = ca.Function("grad_B_u_4", [u], [ca.jacobian(B_u_4, u)])
-        w_u_1 = 0.0
-        w_u_2 = -grad_B_u_1(self.ur)[0] / grad_B_u_2(self.ur)[0] - 1.0
-        w_u_3 = 0.0
-        w_u_4 = -grad_B_u_3(self.ur)[1] / grad_B_u_4(self.ur)[1] - 1.0
+        # B_u_1 = ca.if_else(
+        #     35.0 - u[0] > self.delta,
+        #     ca.log(35.0 - self.ur[0]) - ca.log(35.0 - u[0]),
+        #     beta(35.0 - u[0]),
+        # )
+        # B_u_2 = ca.if_else(
+        #     u[0] - 3.0 > self.delta,
+        #     ca.log(self.ur[0] - 3.0) - ca.log(u[0] - 3.0),
+        #     beta(u[0] - 3.0),
+        # )
+        # B_u_3 = ca.if_else(
+        #     -u[1] > self.delta, ca.log(-self.ur[1]) - ca.log(-u[1]), beta(-u[1])
+        # )
+        # B_u_4 = ca.if_else(
+        #     9000.0 + u[1] > self.delta,
+        #     ca.log(9000.0 + self.ur[1]) - ca.log(9000.0 + u[1]),
+        #     beta(9000.0 + u[1]),
+        # )
+        # grad_B_u_1 = ca.Function("grad_B_u_1", [u], [ca.jacobian(B_u_1, u)])
+        # grad_B_u_2 = ca.Function("grad_B_u_2", [u], [ca.jacobian(B_u_2, u)])
+        # grad_B_u_3 = ca.Function("grad_B_u_3", [u], [ca.jacobian(B_u_3, u)])
+        # grad_B_u_4 = ca.Function("grad_B_u_4", [u], [ca.jacobian(B_u_4, u)])
+        # w_u_1 = 0.0
+        # w_u_2 = -grad_B_u_1(self.ur)[0] / grad_B_u_2(self.ur)[0] - 1.0
+        # w_u_3 = 0.0
+        # w_u_4 = -grad_B_u_3(self.ur)[1] / grad_B_u_4(self.ur)[1] - 1.0
+        #
+        # self.B_u = ca.Function(
+        #     "B_u",
+        #     [u],
+        #     [
+        #         (1.0 + w_u_1) * B_u_1
+        #         + (1.0 + w_u_2) * B_u_2
+        #         + (1.0 + w_u_3) * B_u_3
+        #         + (1.0 + w_u_4) * B_u_4
+        #     ],
+        # )
+        # new method for creating B_u =====
+        # first compute the translated d_u, i.e. d_u_tilde
+        d_u_tilde = self.d_u - self.C_u @ self.ur
+        delta_u = np.min(np.abs(d_u_tilde))
+        # then compute the individual functions B_u_i
+        tpr = []
+        full_C_u = self.C_u.toarray()
+        for i in range(self.q_u):
+            z_i = d_u_tilde[i] - ca.dot(full_C_u[i, :], u)
+            tpr.append(
+                ca.if_else(
+                    z_i > self.delta, ca.log(d_u_tilde[i]) - ca.log(z_i), beta(z_i)
+                )
+            )
+        tpr2 = d_u_tilde[1::2]
+        tpr3 = d_u_tilde[0::2]
+        # compute the weight vector w_u
+        w_u = np.zeros(self.q_u)
+        w_u[0::2] = 1.0
+        w_u[1::2] = tpr2 / tpr3
+        # assemble the RRLB function B_u
+        self.B_u = ca.Function("B_u", [u], [ca.dot(w_u, ca.vertcat(*tpr))])
 
-        self.B_u = ca.Function(
-            "B_u",
-            [u],
-            [
-                (1.0 + w_u_1) * B_u_1
-                + (1.0 + w_u_2) * B_u_2
-                + (1.0 + w_u_3) * B_u_3
-                + (1.0 + w_u_4) * B_u_4
-            ],
-        )
         self.grad_B_u = ca.Function("grad_B_u", [u], [ca.jacobian(self.B_u(u), u)])
         self.hess_B_u = ca.Function("hess_B_u", [u], [ca.hessian(self.B_u(u), u)[0]])
         self.M_u = self.hess_B_u(self.ur).full()
+
+        # choose delta
+        self.delta = np.min([delta_u, delta_x])
 
         # Defining costs functions ==========================================================
         self.A = np.array(self.jac_f_x(self.xr, self.ur))
@@ -310,12 +364,21 @@ class CSTR:
         self.F = ca.Function("F", [x], [ca.bilin(self.P, (x - self.xr), (x - self.xr))])
 
         # Verify all assumptions ============================================================
-        # assumptions_verified, err_msg = self.check_stability_assumptions()
-        # assert assumptions_verified, err_msg
+        assumptions_verified, err_msg = self.check_stability_assumptions()
+        assert assumptions_verified, err_msg
 
     def check_stability_assumptions(self):
         err = (False,)
         err_msg = ""
+        # ====================================================================================================
+        # Check that the given reference is indeed a steady state
+        # ====================================================================================================
+        if np.linalg.norm(self.xr - self.f(self.xr, self.ur)) > 1e-8:
+            err = True
+            err_msg += "ERROR : The given reference xr={},ur={} is not a steady state.\n".format(
+                self.xr, self.ur
+            )
+
         # ====================================================================================================
         # Check that gradients of barrier functions are 0 at target state/control
         # ====================================================================================================
@@ -530,7 +593,6 @@ class CSTR:
                 "print_time": 0,
                 "ipopt": {
                     "sb": "yes",
-                    # "max_iter": 1 if self.is_RRLB else 1000,
                     "print_level": 1,
                     "warm_start_init_point": "yes",
                 },
@@ -540,6 +602,7 @@ class CSTR:
         # Solve the NLP
         sol = nlp_solver(x0=w_start, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
 
+        # retrieve the solution
         result = sol["x"].full().ravel()
         if np.isnan(result).any():
             raise ValueError("NaN in the initial prediction")
@@ -793,3 +856,7 @@ class CSTR:
         self.hess_B_x = ca.external("hess_B_x", "./gen.so")
         self.hess_B_u = ca.external("hess_B_u", "./gen.so")
         print("C-code generated.")
+
+    def constraints_violated(self, x: np.ndarray, u: np.ndarray):
+        assert x.shape == (self.nx,) and u.shape == (self.nu,)
+        return np.any(self.C_x @ x > self.d_x) or np.any(self.C_u @ u > self.d_u)

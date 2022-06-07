@@ -10,17 +10,17 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from cstr_package import *
 
 # generate random initial states within the following bounds :
-# 0.0 <= c_A, c_B <= 10.0 ; 98.0 <= theta <= 150.0 ; 92.0 <= theta_K <= 150.0
+# 0.0 <= c_A, c_B <= 5.0 ; 98.0 <= theta <= 110.0 ; 92.0 <= theta_K <= 110.0
 np.random.seed(16032001)
-nbr_initial_states = 10
+nbr_initial_states = 5
 initial_states = np.zeros((4, nbr_initial_states))
-initial_states[0, :] = np.random.random_sample(nbr_initial_states) * 10.0
-initial_states[1, :] = np.random.random_sample(nbr_initial_states) * 10.0
+initial_states[0, :] = np.random.random_sample(nbr_initial_states) * 5.0
+initial_states[1, :] = np.random.random_sample(nbr_initial_states) * 5.0
 initial_states[2, :] = (
-    np.random.random_sample(nbr_initial_states) * (150.0 - 98.0) + 98.0
+    np.random.random_sample(nbr_initial_states) * (110.0 - 98.0) + 98.0
 )
 initial_states[3, :] = (
-    np.random.random_sample(nbr_initial_states) * (150.0 - 92.0) + 92.0
+    np.random.random_sample(nbr_initial_states) * (110.0 - 92.0) + 92.0
 )
 np.savetxt("exp_all_initial_states.csv", initial_states, delimiter=",")
 
@@ -41,18 +41,14 @@ num_processes = psutil.cpu_count(logical=False)
 splitted_input_values = np.array_split(input_values, num_processes)
 
 # define the horizon sizes we want to test
-N = [10, 50, 100, 250]
-# N = [100]
+N = [25, 50, 100, 250]
 
-# define all the schemes we want to test
-schemes = [
-    "rrlb",
-    "reg",
-]
 
 # declare big function that does stuff
 def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
+    """TODO : rename it"""
     all_dfs = []
+
     for k in range(partial_input_values.shape[0]):
         initial_state_id: int = partial_input_values[k]["InitialState"]
         ref_point_id: int = partial_input_values[k]["RefPoint"]
@@ -63,6 +59,7 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
             nbr_iterations_to_convergence,
             constraints_violated,
         ) = run_open_loop_simulation(
+            custom_x_init=initial_states[:, initial_state_id],
             xr=ref_points[ref_point_id][0],
             ur=ref_points[ref_point_id][1],
             scheme=Scheme.INFINITE_HORIZON,
@@ -88,14 +85,14 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
             )
         )
         print(
-            "Finished initial state n°{}, ref point n°{} with inf horz".format(
-                initial_state_id + 1, ref_point_id + 1
+            "Finished initial state n°{}, ref point n°{} with inf horz from process {}".format(
+                initial_state_id + 1, ref_point_id + 1, os.getpid()
             )
         )
         sys.stdout.flush()
 
         # now treat the RRLB and regular MPC schemes (closed-loop simulation)
-        for scheme_str in schemes:
+        for scheme_str in ["rrlb", "reg"]:
             scheme = Scheme.from_str(scheme_str)
             for n in N:
                 (
@@ -146,8 +143,12 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
                     ),
                 )
                 print(
-                    "Finished initial state n°{}, ref point n°{}, horizon size {} with {} scheme".format(
-                        initial_state_id + 1, ref_point_id + 1, n, scheme_str
+                    "Finished initial state n°{}, ref point n°{}, horizon size {} with {} scheme from process {}".format(
+                        initial_state_id + 1,
+                        ref_point_id + 1,
+                        n,
+                        scheme_str,
+                        os.getpid(),
                     )
                 )
                 sys.stdout.flush()

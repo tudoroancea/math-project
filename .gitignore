@@ -31,3 +31,6 @@ venv
 *.c
 *.so
 math-project-report/predefs.aux
+
+submission
+submission.zip

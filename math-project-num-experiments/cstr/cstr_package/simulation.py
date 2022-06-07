@@ -70,11 +70,8 @@ def run_open_loop_simulation(
         total_cost += cstr.l(
             prediction[cstr.states_idx, k], prediction[cstr.controls_idx, k]
         )
-        if not constraints_violated and not (
-            3.0 <= prediction[4 + 0, k] <= 35.0
-            and -9000.0 <= prediction[4 + 1, k] <= 0.0
-            and 98.0 <= prediction[2, k]
-            and 92.0 <= prediction[3, k]
+        if not constraints_violated and not cstr.constraints_violated(
+            prediction[cstr.states_idx], prediction[cstr.nu]
         ):
             constraints_violated = True
         k += 1
@@ -94,6 +91,8 @@ def run_closed_loop_simulation(
     verbose: bool = False,
 ):
     """
+    Runs a closed-loop simulation of CSTR by applying the RTI method to solve the MPC.
+
     Returns the total cost of the run until convergence, the number of iterations taken
     to reach convergence, if there was any constraint violation, and the runtimes of
     each step of RTI : sensitivity computation, condensation, and QP solving.
@@ -305,11 +304,8 @@ def run_closed_loop_simulation(
         and np.max(np.abs((data[cstr.states_idx, k] - xr) / xr)) >= stop_tol
     ):
         total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
-        if not constraints_violated and not (
-            3.0 <= data[4 + 0, k] <= 35.0
-            and -9000.0 <= data[4 + 1, k] <= 0.0
-            and 98.0 <= data[2, k]
-            and 92.0 <= data[3, k]
+        if not constraints_violated and not cstr.constraints_violated(
+            prediction[cstr.states_idx], prediction[cstr.controls_idx]
         ):
             constraints_violated = True
 
