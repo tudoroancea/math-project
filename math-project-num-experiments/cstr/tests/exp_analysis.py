@@ -36,103 +36,160 @@ for i in range(nbr_initial_states):
                 break
 
 # analyse the times : compute the averages by scheme and horizon size
-df_avg = (
-    df[df["Scheme"] != "infhorz"]
-    .drop(
-        columns=[
-            "InitialState",
-            "RefPoint",
-            "NbrIterationsToConvergence",
-            "ConstraintsViolated",
-            "PerformanceMeasure",
-        ]
-    )
-    .groupby(["Scheme", "HorizonSize"])
-    .mean()
-)
-df_avg.to_csv("exp_all_results_times_avg.csv")
+# df_avg = (
+#     df[df["Scheme"] != "infhorz"]
+#     .drop(
+#         columns=[
+#             "InitialState",
+#             "RefPoint",
+#             "NbrIterationsToConvergence",
+#             "ConstraintsViolated",
+#             "PerformanceMeasure",
+#         ]
+#     )
+#     .groupby(["Scheme", "HorizonSize"])
+#     .mean()
+# )
+# df_avg.to_csv("exp_all_results_times_avg.csv")
 
 
 # Boxplots for as described in the project report
 vectorized_log = np.vectorize(np.log10)
 
 
-def boxplot_across_exps(val: str, title: str, scheme: str):
+def boxplot_across_exps(val: str, title: str, scheme: str, id: str):
     index = pd.MultiIndex.from_tuples(
-        [t for t in itertools.product(range(1, 6), range(1, 4), [25, 50, 100, 250])],
+        [
+            t
+            for t in itertools.product(
+                range(1, 6), range(1, 4), ["rrlb", "reg"], [25, 50, 100, 250]
+            )
+        ],
         names=[
             "InitialState",
             "RefPoint",
+            "Scheme",
             "HorizonSize",
         ],
     )
     df_plot = pd.DataFrame(
-        vectorized_log(df[df["Scheme"] == scheme][val].to_numpy(dtype=float)),
+        vectorized_log(df[df["Scheme"] != "infhorz"][val].to_numpy(dtype=float)),
+        # vectorized_log(df[df["Scheme"] == scheme][val].to_numpy(dtype=float)),
         index=index,
     )
-    group = df_plot.groupby(["HorizonSize"])
-    plt.figure(figsize=(7, 5))
+    group = df_plot.groupby(["Scheme", "HorizonSize"])
+    plt.figure(figsize=(10, 5))
     group.boxplot(subplots=False)
+    # if val == "PerformanceMeasure" or val == "NbrIterationsToConvergence":
+    #     mean = vectorized_log(
+    #         df[df["Scheme"] == "infhorz"][val].to_numpy(dtype=float)
+    #     ).mean()
+    #     plt.plot([0.7, 8.5], [mean, mean], color="red", linestyle="--")
+
     plt.suptitle(title)
-    id = title[: title.find(":")].strip().replace(" ", "_").replace(".", "_").lower()
-    plt.savefig("exp_all_{}.png".format(id), dpi=300)
+    # id = title[: title.find(":")].strip().replace(" ", "_").replace(".", "_").lower()
+    # plt.savefig("exp_all_{}.png".format(id), dpi=300)
 
 
 # plot 1 : N on x axis, iterations to convergence on y axis, boxplots with the nbr of iterations across the experiments
-boxplot_across_exps(
-    val="NbrIterationsToConvergence",
-    title="Plot 1 : Nbr iterations to convergence in function of horizon size",
-    scheme="rrlb",
-)
-boxplot_across_exps(
-    val="NbrIterationsToConvergence",
-    title="Plot 1.2 : Nbr iterations to convergence in function of horizon size for reg",
-    scheme="reg",
-)
+# boxplot_across_exps(
+#     val="NbrIterationsToConvergence",
+#     title="Nbr iterations to convergence as a function of horizon size for RRLB MPC",
+#     scheme="rrlb",
+#     id="plot_1_1",
+# )
+# boxplot_across_exps(
+#     val="NbrIterationsToConvergence",
+#     title="Nbr iterations to convergence as a function of horizon size for Regular MPC",
+#     scheme="reg",
+#     id="plot_1_2",
+# )
+for i in range(nbr_initial_states):
+    for j in range(3):
+        df_tpr = df[(df["InitialState"] == (i + 1)) & (df["RefPoint"] == (j + 1))]
+        df_tpr_rrlb = df_tpr[df_tpr["Scheme"] == "rrlb"]
+        df_tpr_reg = df_tpr[df_tpr["Scheme"] == "reg"]
+
+        assert len(df_tpr_rrlb) == len(df_tpr_reg)
+        for k in range(len(df_tpr_rrlb)):
+            if (
+                df_tpr_rrlb["NbrIterationsToConvergence"].iloc[k] != 350
+                and df_tpr_reg["NbrIterationsToConvergence"].iloc[k] != 350
+                and df_tpr_rrlb["NbrIterationsToConvergence"].iloc[k]
+                > df_tpr_reg["NbrIterationsToConvergence"].iloc[k]
+            ):
+                print(
+                    "reg better nbr of iterations than rrlb for initial state {} and ref point {} at {}".format(
+                        i + 1, j + 1, k
+                    )
+                )
+                break
+        for k in range(len(df_tpr_rrlb)):
+            if (
+                df_tpr_rrlb["NbrIterationsToConvergence"].iloc[k] != 350
+                and df_tpr_reg["NbrIterationsToConvergence"].iloc[k] != 350
+                and df_tpr_rrlb["PerformanceMeasure"].iloc[k]
+                > df_tpr_reg["PerformanceMeasure"].iloc[k]
+            ):
+                print(
+                    "reg better perf measure than rrlb for initial state {} and ref point {} at {}".format(
+                        i + 1, j + 1, k
+                    )
+                )
+                break
+
 
 # plot 2 : N on x axis, performance measure on y axis
-boxplot_across_exps(
-    val="PerformanceMeasure",
-    title="Plot 2.1 : Performance measure in function of horizon size for RRLB",
-    scheme="rrlb",
-)
-boxplot_across_exps(
-    val="PerformanceMeasure",
-    title="Plot 2.2 : Performance measure in function of horizon size for Reg",
-    scheme="reg",
-)
+# boxplot_across_exps(
+#     val="PerformanceMeasure",
+#     title="Performance measure as a function of horizon size for RRLB",
+#     scheme="rrlb",
+#     id="plot_2_1",
+# )
+# boxplot_across_exps(
+#     val="PerformanceMeasure",
+#     title="Performance measure as a function of horizon size for Reg",
+#     scheme="reg",
+#     id="plot_2_2",
+# )
 
 # plot 3 : N on x axis, runtime on y axis
 boxplot_across_exps(
     val="AverageSolvingTime",
-    title="Plot 3.1.1 : Solving Time in function of horizon size for RRLB",
+    title="Solving Time as a function of horizon size for RRLB",
     scheme="rrlb",
+    id="plot_3_1_1",
 )
-boxplot_across_exps(
-    val="AverageSolvingTime",
-    title="Plot 3.1.2 : Solving Time in function of horizon size for Reg",
-    scheme="reg",
-)
+# boxplot_across_exps(
+#     val="AverageSolvingTime",
+#     title="Solving Time as a function of horizon size for Reg",
+#     scheme="reg",
+#     id="plot_3_1_2",
+# )
 boxplot_across_exps(
     val="AverageCondensationTime",
-    title="Plot 3.2.1 : Condensation Time in function of horizon size for RRLB",
+    title="Condensation Time as a function of horizon size for RRLB",
     scheme="rrlb",
+    id="plot_3_2_1",
 )
-boxplot_across_exps(
-    val="AverageCondensationTime",
-    title="Plot 3.2.2 : Condensation Time in function of horizon size for Reg",
-    scheme="reg",
-)
+# boxplot_across_exps(
+#     val="AverageCondensationTime",
+#     title="Condensation Time as a function of horizon size for Reg",
+#     scheme="reg",
+#     id="plot_3_2_2",
+# )
 boxplot_across_exps(
     val="AverageSensitivitiesComputationTime",
-    title="Plot 3.3.1 : Sensitivity Computation Time in function of horizon size for RRLB",
+    title="Sensitivity Computation Time as a function of horizon size for RRLB",
     scheme="rrlb",
+    id="plot_3_3_1",
 )
-boxplot_across_exps(
-    val="AverageSensitivitiesComputationTime",
-    title="Plot 3.3.2 : Sensitivity Computation Time in function of horizon size for Reg",
-    scheme="reg",
-)
+# boxplot_across_exps(
+#     val="AverageSensitivitiesComputationTime",
+#     title="Sensitivity Computation Time as a function of horizon size for Reg",
+#     scheme="reg",
+#     id="plot_3_3_2",
+# )
 
-plt.close("all")
+# plt.close("all")
 plt.show()

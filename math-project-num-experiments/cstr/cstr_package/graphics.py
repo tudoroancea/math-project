@@ -42,6 +42,7 @@ class CSTRAnimation:
         """
         # transform the initial prediction (in the form of a long vector with all the states and
         # controls concatenated) into a matrix
+        self.model = model
         initial_prediction = np.concatenate(
             (
                 np.reshape(
@@ -78,20 +79,18 @@ class CSTRAnimation:
             plt.grid("both")
             plt.xlim([0.0, np.sum(times) + model.T])
 
-            # if len(reference_points.shape) == 1 or reference_points.shape[1] == 1:
-            plt.plot([0.0, 3000.0], [reference_points[i], reference_points[i]], "r-")
-            # else:
-            #     for j in range(reference_points.shape[1]):
-            #         plt.plot(
-            #             [3000.0 * j, 3000.0 * (j + 1)],
-            #             [reference_points[i, j], reference_points[i, j]],
-            #             "r-",
-            #         )
+            plt.plot([0.0, 7000.0], [reference_points[i], reference_points[i]], "r-")
 
-            if i == 2:
+            if i == 0 or i == 1:
+                plt.ylim([0.0, 6.0])
+            elif i == 2:
                 plt.plot([0.0, np.sum(times) + model.T], [98.0, 98.0], "r:")
+                plt.plot([0.0, np.sum(times) + model.T], [150.0, 150.0], "r:")
+                plt.ylim([95.0, 155.0])
             elif i == 3:
                 plt.plot([0.0, np.sum(times) + model.T], [92.0, 92.0], "r:")
+                plt.plot([0.0, np.sum(times) + model.T], [150.0, 150.0], "r:")
+                plt.ylim([95.0, 155.0])
             elif i == 4:
                 plt.plot([0.0, np.sum(times) + model.T], [3.0, 3.0], "r:")
                 plt.plot([0.0, np.sum(times) + model.T], [35.0, 35.0], "r:")

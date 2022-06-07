@@ -105,8 +105,8 @@ def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
                 ) = run_closed_loop_simulation(
                     scheme=scheme,
                     custom_x_init=initial_states[:, initial_state_id],
-                    xr=xr1,
-                    ur=ur1,
+                    xr=ref_points[ref_point_id][0],
+                    ur=ref_points[ref_point_id][1],
                     max_nbr_feedbacks=350,
                     stop_tol=1.0e-3,
                     graphics=False,

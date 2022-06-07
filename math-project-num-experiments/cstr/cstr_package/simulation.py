@@ -70,8 +70,8 @@ def run_open_loop_simulation(
         total_cost += cstr.l(
             prediction[cstr.states_idx, k], prediction[cstr.controls_idx, k]
         )
-        if not constraints_violated and not cstr.constraints_violated(
-            prediction[cstr.states_idx], prediction[cstr.nu]
+        if not constraints_violated and cstr.constraints_violated(
+            prediction[cstr.states_idx, k], prediction[cstr.controls_idx, k]
         ):
             constraints_violated = True
         k += 1
@@ -304,8 +304,8 @@ def run_closed_loop_simulation(
         and np.max(np.abs((data[cstr.states_idx, k] - xr) / xr)) >= stop_tol
     ):
         total_cost += cstr.l(data[cstr.states_idx, k], data[cstr.controls_idx, k])
-        if not constraints_violated and not cstr.constraints_violated(
-            prediction[cstr.states_idx], prediction[cstr.controls_idx]
+        if not constraints_violated and cstr.constraints_violated(
+            data[cstr.states_idx, k], data[cstr.controls_idx, k]
         ):
             constraints_violated = True
 
