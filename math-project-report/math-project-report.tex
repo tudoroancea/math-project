@@ -35,10 +35,11 @@
 \maketitle
 
 \begin{abstract}
-	In this project, we investigate the use of relaxed logarithmic barrier functions in the context of nonlinear model predictive control.
-	We base our work on the one of C. Feller and C. Ebenbauer in \cite{RRLB-linear-MPC} and use one of their globally stabilizing schemes with terminal costs and without terminal sets.
-	We partially extend the results on the nominal asymptotic stability of the corresponding closed-loop system and the constraint satisfaction guarantees to the case of nonlinear dynamics and show that they are satisfied only in a neighborhood of the target state.
-	The theoretical results are complemented by numerical illustrations based on Real Time Iteration.
+	In this project, we investigate the use of relaxed recentered logarithmic barrier functions in the context of nonlinear Model Predictive Control (MPC).
+	These functions are a variation on regular log-barrier functions that are introduced in the objective function of the optimization problem as a penalty of the deviation from the constraints set.
+	The resulting new MPC scheme has been studied in the case of linear dynamics, and several interesting results on the global nominal asymptotic stability of the corresponding closed-loop system and the constraint satisfaction guarantees have been obtained.
+	Extending them to the case of nonlinear dynamics is a non trivial task and we show in this project that these properties can still hold, but only locally.
+	The theoretical results are complemented by numerical illustrations based on the Real Time Iteration method.
 \end{abstract}
 
 \section{Introduction}
@@ -104,7 +105,9 @@ It is easy to verify that when this is not the case, we can just define new tran
 	\end{split}
 \end{align}
 
-A bit of vocabulary : $N$ is called the \textit{horizon length}, the function $l$ is the \textit{stage cost}, the function $F$ is the \textit{terminal cost} (its role will become clearer in next section) and the function $J_N(\bf{x},\bf{u})=\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$ is called the \textit{cost function}.
+\noindent where $N\in\N$ is called the \textit{horizon length}, the function $l:\cal{X}\times\cal{U}\to\R$ is the \textit{stage cost}, the function $F:\cal{X}\to\R$ is the \textit{terminal cost} (its role will become clearer in next section) and the function $J_N:\cal{X}^{N+1}\times\cal{U}^N\to\R, (\bf{x},\bf{u})\mapsto\sum_{k=0}^{N-1}l(x_k,u_k)~+~F(x_N)$ is called the \textit{cost function}.
+
+\vspace{12pt}
 
 These costs have to be defined by the user as a measure of the deviations from the target state and control (we will always assume that $l(x^*,u^*)=l(0,0)=0$).
 Their fine tuning is of capital importance for the feasibility, robustness and performance of the MPC scheme, and it is a whole area of interest of control theory (which is unfortunately out of the scope of this paper).
@@ -117,7 +120,7 @@ Since at time $k+1$ the horizon will have shifted, we say we solve the control p
 \vspace{12pt}
 
 This general form of the MPC is the one we will use, but other variants exist in which different state constraint, called \textit{terminal constraints}, are enforced on $x_N$\,.
-We are also going to consider very specific forms of costs and constraints : the costs will always be quadratic ($l(x,u)=x^TQx+u^TRu$ and $F(x)=x^TPx$ for some positive definite matrices $Q,R$ and $P$) and the (inequality) constraints will always be polytopic ($\cal{X}=\left\{x\in\R^{n_x}~|~C_xx\leq d_x\right\},~\cal{U}=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\right\}$ for matrices $C_x,C_u$ and vectors $d_x,d_u$ of appropriate dimension).
+We are also going to consider very specific forms of costs and constraints : the costs will always be quadratic ($l(x,u)=x^TQx+u^TRu$ and $F(x)=x^TPx$ for some symmetric and positive definite matrices $Q,R$ and $P$) and the (inequality) constraints will always be polytopic (of the form $\cal{X}=\left\{x\in\R^{n_x}~|~C_xx\leq d_x\right\},~\cal{U}=\left\{u\in\R^{n_u}~|~C_uu\leq d_u\right\}$ for matrices $C_x,C_u$ and vectors $d_x,d_u$ of appropriate dimension such that the sets are bounded).
 These are very common in real-world applications.
 
 \vspace{12pt}
@@ -132,7 +135,7 @@ These are very common in real-world applications.
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
 	\end{align*}
 	In real life applications, we consider that the duration of the experiment is virtually infinite, so this variant may seem more natural.
-	However this optimization problem becomes infinite-dimensional so not easily solvable in practice.
+	However this optimization problem becomes infinite-dimensional, which is in general computationally intractable.
 	The terminal costs in regular MPC can actually be interpreted as a proxy for the part of the infinite horizon that is not considered, and they are usually constructed this way.
 
 	\item\underline{the \textit{(infinite-horizon) Linear Quadratic Regulator}, or \textit{LQR}}:\newline
@@ -198,7 +201,7 @@ A first interesting property we would like to add to our log-barrier function is
 To this end we introduce the notion of \textit{weight recentered log-barrier function} as defined in \cite{RLB} :
 $$B_x(x)=\sum_{i=1}^{q_x}(1+w_{x,i})\left[\log(d_{x,i})-\log(d_{x,i}-\rm{row}_i(C_x)x)\right]$$
 where the weights $w_{x,i}$ are defined as chosen such that $B_x(0)=0$ and $\nabla B_x(0)=0$.
-It is shown in \cite{RLB} that such weights always exist and that this wight-recentered log-barrier function is also positive definite and upper-bounded by a quadratic.
+It is shown in \cite{RLB} that such weights always exist when the constraint set is polytopic (i.e. polyhedral and bounded) and that this wight-recentered log-barrier function is also positive definite and upper-bounded by a quadratic.
 
 The second important property we have to add is the definiteness on the whole space.
 For a given \textit{relaxation parameter} $\delta>0$, we can define the \textit{relaxed recentered log-barrier function}, or \textit{RRLB} function as follows :
@@ -242,7 +245,7 @@ However, we will here consider it as fixed for simplicity.
 
 \noindent When we consider the RRLB MPC \ref{eq:RRLB-NMPC} in the case of linear dynamics $x^+=Ax+Bu$, we know the two following theorems.
 
-\begin{theorem}
+\begin{theorem}[Theorem 5 in \cite{RRLB-linear-MPC}]
 	\label{nominal-stability-linear-case}
 	Suppose that the pair $(A,B)$ is stabilizable \footnote{We did not discuss the notion of controllability and stabilizability in \ref{sec:what-is-MPC} because they do not play a direct role in our proofs. They are however very important in standard control theory and they are needed in the proofs of existence of DAREs. More on them in the appendix \ref{sec:controllability-stabilizability}}
 	and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE :
@@ -253,7 +256,7 @@ However, we will here consider it as fixed for simplicity.
 	% TODO : add definition of stabilizable
 \end{theorem}
 
-\begin{theorem}
+\begin{theorem}[Lemma 5 in \cite{RRLB-linear-MPC}]
 	\label{constraint-satisfaction-guarantee-linear-case}
 	In the same conditions as in the previous theorem, there is a neighborhood $\cal{X}_N(\delta)$ of the origin such that for any initial state $x(0)\in\cal{X}_N(\delta)$, all the constraint will be satisfied along the closed-loop trajectories.
 	Furthermore, the set $\cal{X}_N(\delta)$ is given explicitly by :
@@ -342,7 +345,7 @@ When no confusion is possible we will drop the "$(x)$".
 	so $\tilde{l}(x,Kx)=x^TQ_Kx+O(\|x\|^3)$\,.
 	By the second assumption, we also have $\forall x\in\R^{n_x}$:
 	$$\tilde{F}(A_Kx)+\mu x^T Q_K x-\tilde{F}(x)=0$$
-	We can use the same reasoning as in the paragraph 2.5.5 of \cite[MPC Theory, Computation and Design]{MPC-book} to show that $\tilde{F}$ is a local Lyapunov function, i.e. there exists a neighborhood of the origin such that $\forall x$ in it :
+	We can use the same reasoning as in the paragraph 2.5.5 of \cite{MPC-book} to show that $\tilde{F}$ is a local Lyapunov function, i.e. there exists a neighborhood of the origin such that $\forall x$ in it :
 	$$\tilde{F}(f(x,Kx))+x^T Q_K x-\tilde{F}(x)\leq 0\Longrightarrow\tilde{F}(f(x,Kx))-\tilde{F}(x)+\tilde{l}(x,Kx)=O(\|x\|^3)$$
 
 	\noindent What's more, by previous lemma, the predicted states are all Lipschitz with respect to the initial state, so we can choose an even smaller neighborhood such that $\tilde{x}_N(x)$ is also in it.
@@ -611,15 +614,16 @@ This is the scope of next subsection, in which we will not worry about this dist
 
 \subsection{Numerical experiments}\label{sec:RRLB-numerical-experiments}
 
-In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used to benchmark different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR) system.
+In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used to benchmark different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR).
 
 \subsubsection{Experimental setup}
 
-The CSTR system describes an exothermic chemical reaction has 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\theta$ the temperature in the reactor and $\theta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
-We don't mention here the ODE describing the model, the constraints as well as the MPC costs for brevity purposes, but they can be found in detail in \cite{diehl-dissertation} and \cite{cstr-ref}.
-By a simple steady state analysis procedure \footnote{This procedure was applied to the discrete-time dynamics obtained via discretization with RK4.}, we determined 3 viable reference points for states and controls that can be found (at $10^{-3}$ precision and in SI units) in table \ref{tab:CSTR-ref-points}
+The CSTR system describes an exothermic chemical reaction with 4 states ($c_A$ the concentration of cyclopentadiene (reactant), $c_B$ the concentration of cyclopentenol (product), $\vartheta$ the temperature in the reactor and $\vartheta_K$ the temperature in the cooling jacket of the tank reactor) and 2 controls ($u_1$ the scaled feed inflow rate of cyclopentadiene and $u_2$ the heat removal rate of the external heat exchanger designed to cool down the reactor).
+The system of ODEs describing the model as well as the costs and constraints can be found in the appendix \ref{sec:cstr-model}, and more details about this system can be found in \cite{diehl-dissertation}.
 
-\begin{table}[H]
+By a simple steady state analysis procedure \footnote{This procedure was applied to the discrete-time dynamics obtained via discretization with RK4.}, we determined 3 viable reference points for states and controls that can be found (at $10^{-3}$ precision and in SI units) in table \ref{tab:CSTR-ref-points}.
+
+\begin{table}%[H]
 	\centering
 	\begin{tabular}{|c|c|c|c|c|c|c|}
 		\hline
@@ -638,18 +642,22 @@ By a simple steady state analysis procedure \footnote{This procedure was applied
 
 \noindent Some general remarks on the implementation :
 \begin{itemize}[label=\textbullet]
+	\item None of the reference points in table \ref{tab:CSTR-ref-points} are 0, therefore we had to translate everything as briefly described at the beginning of section \ref{sec:what-is-MPC}.
+
 	\item The discrete-time dynamics have been obtained from the model's ODE by using a 6-step RK4 scheme.
 
-	\item As suggested in \cite{diehl-dissertation}, we chose a horizon size of 100 and a sampling time of $200.0s$, which corresponds to a prediction of $2000.0s$ in the future.
-	In all our experiments we set the maximum runtime to $5000.0s$ (simulated seconds, since the sampling time is very long, we skipped the parts where nothing happened) and ran the simulation in closed loop (i.e. applying to the system the control computed by the MPC) until the state converged to the reference state within a $10^{-3}$ tolerance in norm.
+	\item We chose a sampling time of $20.0s$, and variable horizon lengths between 25 and 250 time steps.
+	In all our experiments we set the maximum number of control feedbacks to 350 and ran the simulation in closed loop (i.e. applying to the system the control computed by the MPC) until the state converged to the reference state within a $10^{-3}$ relative tolerance in norm (i.e. $\|x-x^*\|_\infty/\|x^*\|_\infty<10^{-3}$).
 
 	\item For RRLB MPC, we determined the terminal cost by solving the modified DARE with $\mu=1$ as mentioned in \ref{sec:RRLB-nominal-stability}.
-	We will see in the results that this does not impact convergence.
+	We will see in the results that this does not impact convergence when the horizon size is big enough.
+
+	\item For RRLB MPC, the relaxation parameter $\delta$ was chosen as $\min\left\{ d_{x,1},\dots d_{x,q_x},d_{u,1},\dots,d_{u,q_u} \right\}$ and the barrier parameter $\epsilon$ was chosen as $0.0001$ after a bit of tuning in order to ensure that the MPC would converge.
 
 	\item The initial prediction (as described in \ref{sec:RTI-scheme}) is computed using the interior point method solver IPOPT (see \cite{ipopt}) through the algorithmic differentiation package CasADi (see \cite{casadi}).
 
 	\item RTI was implemented from scratch using OSQP (see \cite{osqp}) to solve the quadratic subproblems.
-	This library solves problem of the general form
+	This library solves general quadratic problems of the form :
 	\begin{align*}
 		\underset{z\in\R^n}{\min}&\quad\frac{1}{2}z^TPz+q^Tz\\
 		\text{s.t.}&\quad l\leq Az\leq u
@@ -664,107 +672,182 @@ By a simple steady state analysis procedure \footnote{This procedure was applied
 
 \subsubsection{Experimental procedure}
 
-\noindent We designed the following experiments to evaluate the behavior of a given MPC scheme :
+We generated a list of 5 random initial states (that can be found in the columns of the file \verb|exp_all_initial_states.csv| in the directory \verb|results|) within the bounds
+$$0.0\leq c_A,c_B\leq 5.0,~98.0\leq\vartheta\leq 110.0,~92.0\leq \vartheta_K\leq 110.0$$
+and with the 3 reference points in table \ref{tab:CSTR-ref-points}, this generated 15 different situations in which we ran the following experiment :
 
-\begin{enumerate}[label=Exp\arabic*]
-	\item \underline{Verify the theoretical results} :
+We first ran an open loop simulation of the infinite horizon MPC (approximated by a regular MPC with horizon length of 5000) to determine an 'optimal' behavior, and then ran closed-loop simulations with RRLB MPC and regular MPC and variable horizon lengths for both of them (in the list $\left\{ 25, 50, 100, 250 \right\}$).
+For all of them we measured :
+\begin{itemize}[label=\textbullet]
+	\item \underline{the \textit{performance measure}} : the sum of the stage costs over all the time steps up until convergence, or the maximum number of time steps, is reached.
 
-	We see if the system is indeed LAS when controlled by RRLB MPC and if the constraints are violated.
+	Note that for the the closed loop simulations, RTI was used and the sum was only done over the time instants where a \textit{measurement is made} (see \ref{fig:RTI-timeline}).
 
-	\item \underline{Number of iterations to convergence} :
+	\item the number of iterations taken to reach the convergence.
 
-	We see how quickly a scheme makes the state converge to the reference (within a tolerance of $10^{-3}$).
+	\item whether the constraints were violated or not
+\end{itemize}
 
-	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC} :
-
-	Given by the sum of all the stage costs evaluated at every time step of the simulation.
-	For the RTI scheme, this corresponds to the time steps when a measurement is available (see figure \ref{fig:RTI-timeline}), and for the infinite horizon MPC (approximated by a 5 times bigger horizon).
-
-	\item \underline{Compute the runtime of each step of RTI} : i.e. sensitivities computation, condensation
-\end{enumerate}
-
-\noindent These experiments were performed with both regular MPC and RRLB MPC to see the advantages of each formulation.
+\noindent Additionally, for the closed-loop simulations where RTI was used, we also measured the times (average and standard error) in milliseconds of the sensitivity computation, the condensation, and the QP solve.
+All these measures can be found in the file \verb|exp_all_results.csv| in the folder \verb|results|.
 
 \subsubsection{Results and discussion}
 
-\begin{enumerate}[label=Exp\arabic*]
-	\item \underline{Verify the theoretical results}
+\noindent From all the measures described above, we can make several observations :
 
-	We can see in the figures \ref{fig:closed-loop-traj-rrlb-1}, \ref{fig:closed-loop-traj-rrlb-2} and \ref{fig:closed-loop-traj-rrlb-3} in the annex that the system is indeed LAS for every reference point we have chosen.
-	The initial point was the same in the 3 experiments
-
-	\item \underline{Number of iterations to convergence}
-
-	The exact closed-loop trajectories are qualitatively similar between regular MPC and RRLB MPC and can be found in the annex section \ref{sec:closed-loop-traj}.
-
-	\begin{table}[H]
-		\centering
-		\csvreader[
-			tabular				= |c|c|c|,
-			table head			= \hline Ref & Scheme & Iterations to convergence \\\hline,
-			late after line 	= \\\hline,
-			table foot			=  \hline,
-			filter not strcmp	= {\scheme}{infhorz}
-		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,NbrIterationsToConvergence=\iter}{
-			\refpoint & \scheme & \iter
-		}
-
-		\caption{Number of iterations needed for convergence (within $10^{-3}$ tolerance) of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-		\label{tab:iterations-to-convergence}
-	\end{table}
-
-	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC}
-
-	\begin{table}[H]
-		\centering
-		\csvreader[
-			tabular			= |c|c|c|,
-			table head		= \hline Ref & Scheme & Perf \\\hline,
-			late after line = \\\hline,
-			table foot		=  \hline
-		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,PerformanceMeasure=\perf}{
-			\refpoint & \scheme & \perf
-		}
-
-		\caption{Performance Measure of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-		\label{tab:performance-measure}
-	\end{table}
-
-	\item \underline{Compute the runtime of each step of RTI}
-
-	\begin{table}[H]
-		\centering
-		\csvreader[
-			tabular			= |c|c|c|c|c|c|c|c|,
-			table head		= \hline Ref & Scheme & ASCT & SESCT & ACT & SECT & AST & SEST \\\hline,
-			late after line = \\\hline,
-			table foot		=  \hline,
-			filter not strcmp	= {\scheme}{infhorz}
-		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,AverageSensitivitiesComputationTime=\asct,StdErrSensitivitiesComputationTime=\sesct,AverageCondensationTime=\act,StdErrCondensationTime=\sect,AverageSolvingTime=\ast,StdErrSolvingTime=\sest}{
-			\refpoint & \scheme & \asct & \sesct & \act & \sect & \ast & \sest
-		}
-
-		\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-		\subcaption*{where ASCT : Average Sensitivity Computation Time, SESCT : Standard Error of Sensitivity Computation Time, ACT : Average Condensation Time, SECT : Standard Error of Condensation Time, AST : Average Solving Time, SEST : Standard Error of Solving Time}
-		\label{tab:RTI-runtimes}
-	\end{table}
-
-\end{enumerate}
-
-\subsubsection{Discussion}
-
-From the previous tables, we can notice several things :
 \begin{itemize}[label=\textbullet]
-	\item First of all, the system stabilizes around the reference state, as hoped after the proof of theorem \ref{thm:nominal-stability}.
-	We did not try to estimate the neighborhood of the reference state starting form which this should be true because it is theoretically nearly impossible, and computationally a real burden since the only reliable method would be a naive grid
-	search.
+	\item There were cases where the RRLB MPC never converged to the desired reference point, and in those cases the, the system actually converges to another steady state.
+	An example of such situation is initial state n°1, reference point n°3.
+	The corresponding closed-loop trajectories can be found in \ref{fig:closedloop_traj_rrlb_1_3} and the steady state and control that are found are given by $x^*=(2.54540087, 1.04663582, 101.74875443, 97.3226122),u^*=(9.14524963, -3836.93417253)$\,.
 
-	\item We see there is indeed a violation of constraints
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=15cm]{images/closedloop_traj_rrlb_1_3.png}
+		\caption{Closed-loop trajectories for the RRLB MPC with initial state n°1 and reference point n°3}
+		\label{fig:closedloop_traj_rrlb_1_3}
+	\end{figure}
 
-	\item Contrary to our initial hypothesis, the solve times are not shorter for RRLB MPC, which would indicate that the optimization problem is not necessarily easier to solve than for Regular MPC.
+    Nonetheless, more tuning on the parameters $\epsilon,\delta$ could maybe help convergence in such cases where the initial state is far away from the desired reference point (on state $c_B$ in this case).
 
-	\item The convergence to the objective is always taking fewer iterations with RRLB than with Regular MPC. In particular, for reference points n°2 and 3, there is no convergence for Regular MPC at the end of the $5000s$ of simulation.
+	\item In most cases it converged, and when it did, it converged in fewer iterations that Regular MPC and with smaller performance measure as we verified by checking each situation individually with our script \verb|exp_analysis.py|.
+	Some close-loop trajectories that were successful can be found in the appendix.
+
+	\item In general, we can see that augmenting the horizon size always improves the number of iterations needed to converge and the performance measure.
+	In the case of RRLB, there was little to no difference between the performance measures attained by the different horizon sizes.
+	In particular, the number of iterations needed to converge for the RRLB MPC was always approximately bigger than the horizon size, and we could suppose that this determines the horizon size needed to converge.
+	Unfortunately, there is no way to know the necessary number of iterations beforehand.
+
+	\item In some cases, as in the case of initial state n°3 and reference point n°1, the maximum number of 350 iterations was reached for RRLB MPC with both 25 and 50 horizon size.
+	Nevertheless, the performance measure in the case of 50 was much closer to the performance measure in the case of 100 (when convergence was achieved).
+	We could suppose that this is due to the fact that the new steady state found by the RRLB MPC is closer to the desired reference state.
+    This can be verified in the figure \ref{fig:closedloop_traj_rrlb_3_1}, where we can see the corresponding closed-loop trajectories.
+
+	\begin{figure}[h]
+		\centering
+		\begin{subfigure}{15cm}
+			\centering
+			\includegraphics[width=1.0\textwidth]{images/closedloop_traj_rrlb_3_1_25.png}
+			\caption{Horizon size of 25 time steps}
+		\end{subfigure}\newline
+		\begin{subfigure}{15cm}
+			\centering
+			\includegraphics[width=1.0\textwidth]{images/closedloop_traj_rrlb_3_1_50.png}
+			\caption{Horizon size of 50 time steps}
+		\end{subfigure}
+		\caption{Closed-loop trajectories for the RRLB MPC with initial state n°3 and reference point n°1}
+		\label{fig:closedloop_traj_rrlb_3_1}
+	\end{figure}
+
+	\item In some cases such as initial state 3, ref point 1, we can observe that the RRLB MPC actually reaches a better performance measure than the infinite horizon, which is theoretically absurd (see \ref{sec:what-is-MPC}).
+	This is due to the case that constraints are violated, and that MPC can in some sense find an illegal shortcut to the reference point.
+
+	\item Computationally, RRLB is a bit more demanding but not by much (see plots 3.1.1 to 3.3.2).
+	The main difference appears to be in the sensitivity computation time, which is normal since the sensitivities of RRLB involve the gradients and hessians of RRLB functions and are more complex than the ones of regular MPC (see appendix \ref{sec:osqp-condensation}).
 \end{itemize}
+
+\begin{figure}
+	\centering
+	\begin{subfigure}{.5\linewidth}
+		\centering
+		\includegraphics[width=1.1\textwidth]{images/exp_all_plot_3_1.png}
+		\caption{Sensitivities computation times (in log scale)}
+		\label{fig:sensitivity-times}
+	\end{subfigure}%
+	\begin{subfigure}{.5\linewidth}
+		\centering
+		\includegraphics[width=1.1\textwidth]{images/exp_all_plot_3_2.png}
+		\caption{Condensation times (in log scale)}
+		\label{fig:condensation-times}
+	\end{subfigure}\newline
+	\begin{subfigure}{.5\linewidth}
+		\centering
+		\includegraphics[width=1.1\textwidth]{images/exp_all_plot_3_3.png}
+		\caption{Solving times (in log scale)}
+		\label{fig:solving-times}
+	\end{subfigure}
+
+	\caption{Boxplots of runtimes for different phases of RTI, averaged by scheme and horizon length}
+\end{figure}
+
+
+
+
+% \begin{enumerate}[label=Exp\arabic*]
+% 	\item \underline{Verify the theoretical results}
+
+% 	We can see in the figures \ref{fig:closed-loop-traj-rrlb-1}, \ref{fig:closed-loop-traj-rrlb-2} and \ref{fig:closed-loop-traj-rrlb-3} in the annex that the system is indeed LAS for every reference point we have chosen.
+% 	The initial point was the same in the 3 experiments
+
+% 	\item \underline{Number of iterations to convergence}
+
+% 	The exact closed-loop trajectories are qualitatively similar between regular MPC and RRLB MPC and can be found in the annex section \ref{sec:closed-loop-traj}.
+
+% 	\begin{table}[H]
+% 		\centering
+% 		\csvreader[
+% 			tabular				= |c|c|c|,
+% 			table head			= \hline Ref & Scheme & Iterations to convergence \\\hline,
+% 			late after line 	= \\\hline,
+% 			table foot			=  \hline,
+% 			filter not strcmp	= {\scheme}{infhorz}
+% 		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,NbrIterationsToConvergence=\iter}{
+% 			\refpoint & \scheme & \iter
+% 		}
+
+% 		\caption{Number of iterations needed for convergence (within $10^{-3}$ tolerance) of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+% 		\label{tab:iterations-to-convergence}
+% 	\end{table}
+
+% 	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC}
+
+% 	\begin{table}[H]
+% 		\centering
+% 		\csvreader[
+% 			tabular			= |c|c|c|,
+% 			table head		= \hline Ref & Scheme & Perf \\\hline,
+% 			late after line = \\\hline,
+% 			table foot		=  \hline
+% 		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,PerformanceMeasure=\perf}{
+% 			\refpoint & \scheme & \perf
+% 		}
+
+% 		\caption{Performance Measure of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+% 		\label{tab:performance-measure}
+% 	\end{table}
+
+% 	\item \underline{Compute the runtime of each step of RTI}
+
+% 	\begin{table}[H]
+% 		\centering
+% 		\csvreader[
+% 			tabular			= |c|c|c|c|c|c|c|c|,
+% 			table head		= \hline Ref & Scheme & ASCT & SESCT & ACT & SECT & AST & SEST \\\hline,
+% 			late after line = \\\hline,
+% 			table foot		=  \hline,
+% 			filter not strcmp	= {\scheme}{infhorz}
+% 		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,AverageSensitivitiesComputationTime=\asct,StdErrSensitivitiesComputationTime=\sesct,AverageCondensationTime=\act,StdErrCondensationTime=\sect,AverageSolvingTime=\ast,StdErrSolvingTime=\sest}{
+% 			\refpoint & \scheme & \asct & \sesct & \act & \sect & \ast & \sest
+% 		}
+
+% 		\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
+% 		\subcaption*{where ASCT : Average Sensitivity Computation Time, SESCT : Standard Error of Sensitivity Computation Time, ACT : Average Condensation Time, SECT : Standard Error of Condensation Time, AST : Average Solving Time, SEST : Standard Error of Solving Time}
+% 		\label{tab:RTI-runtimes}
+% 	\end{table}
+
+% \end{enumerate}
+
+% From the previous tables, we can notice several things :
+% \begin{itemize}[label=\textbullet]
+% 	\item First of all, the system stabilizes around the reference state, as hoped after the proof of theorem \ref{thm:nominal-stability}.
+% 	We did not try to estimate the neighborhood of the reference state starting form which this should be true because it is theoretically nearly impossible, and computationally a real burden since the only reliable method would be a naive grid
+% 	search.
+
+% 	\item We see there is indeed a violation of constraints
+
+% 	\item Contrary to our initial hypothesis, the solve times are not shorter for RRLB MPC, which would indicate that the optimization problem is not necessarily easier to solve than for Regular MPC.
+
+% 	\item The convergence to the objective is always taking fewer iterations with RRLB than with Regular MPC. In particular, for reference points n°2 and 3, there is no convergence for Regular MPC at the end of the $5000s$ of simulation.
+% \end{itemize}
 
 
 \newpage
@@ -777,44 +860,6 @@ From the previous tables, we can notice several things :
 \subsection*{Controllable vs. Stabilizable}\label{sec:controllability-stabilizability}
 
 \subsection*{More on the DARE}\label{sec:DARE}
-
-\subsection*{Closed-loop trajectories}\label{sec:closed-loop-traj}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=16cm]{images/cstr_reg_1.png}
-	\caption{Closed-loop trajectories for the regular MPC with reference point n°1}
-	\label{fig:closed-loop-traj-reg-1}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=16cm]{images/cstr_rrlb_1.png}
-	\caption{Closed-loop trajectories for the RRLB MPC with reference point n°1}
-	\label{fig:closed-loop-traj-rrlb-1}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=16cm]{images/cstr_reg_2.png}
-	\caption{Closed-loop trajectories for the regular MPC with reference point n°2}
-	\label{fig:closed-loop-traj-reg-2}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=16cm]{images/cstr_rrlb_2.png}
-	\caption{Closed-loop trajectories for the RRLB MPC with reference point n°2}
-	\label{fig:closed-loop-traj-rrlb-2}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=16cm]{images/cstr_reg_3.png}
-	\caption{Closed-loop trajectories for the regular MPC with reference point n°3}
-	\label{fig:closed-loop-traj-reg-3}
-\end{figure}
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=16cm]{images/cstr_rrlb_3.png}
-	\caption{Closed-loop trajectories for the RRLB MPC with reference point n°3}
-	\label{fig:closed-loop-traj-rrlb-3}
-\end{figure}
 
 \subsection*{OSQP condensation}\label{sec:osqp-condensation}
 
@@ -876,6 +921,64 @@ If we consider the optimization variable of the QP subproblem (as described in \
 \end{align*}
 \normalsize
 In the above, all the red terms only appear for regular MPC, and the blue terms only for RRLB MPC.
+
+\subsection*{CSTR model, constraints and MPC costs}\label{sec:cstr-model}
+\noindent The evolution of the system is given by the following system of ODEs:
+\begin{align*}
+	\dot{c}_A(t)&=u_1(t)(c_{A0}-c_A(t))-k_1(\vartheta(t))c_A(t)-k_3(\vartheta(t))c_A(t)^2\\
+	\dot{c}_B(t)&=-u_1(t)c_B(t)+k_1(\vartheta(t))c_A(t)-k_2(\vartheta(t))c_B(t)\\
+	\dot{\vartheta}(t)&=u_1(t)(\vartheta_0-\vartheta(t))+\frac{k_wA_R}{\rho C_pV_R}(\vartheta_K(t)-\vartheta(t))\\
+	&\qquad-\frac{1}{\rho C_p}\left[ k_1(\vartheta(t))c_A(t)H_1+k_2(\vartheta(t))c_B(t)H_2 +k_3(\vartheta(t))c_A(t)^2H_3\right]\\
+	\dot{\vartheta}_K(t)&=\frac{1}{m_KC_{PK}}\left[ u_2(t)+k_wA_R(\vartheta(t)-\vartheta_K(t)) \right]
+\end{align*}
+where $k_i(\vartheta)=k_{i,0}\exp\left(\frac{E_i}{\vartheta+273.15}\right)$ for $i=1,2,3$\,.
+All the coefficients appearing in these equations are given in table \ref{tab:cstr-model-coefficients}:
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|c|c||c|c|}
+		\hline
+		Symbol&Value&Symbol&Value\\
+		\hline
+		$k_{10}$ & $1.287e12\,h^{-1}$ & $\rho$ & $0.9342\,\frac{kg}{L}$\\
+		$k_{20}$ & $1.287e12\,h^{-1}$ & $C_p$ & $3.01\,\frac{kJ}{kg\cdot K}$\\
+		$k_{30}$ & $9.043e9\,h^{-1}$ & $k_w$ & $4032\,\frac{kJ}{h\cdot m^2\cdot K}$\\
+		$E_{1}$ & $-9758.3$ & $A_R$ & $0.215\,m^2$\\
+		$E_{2}$ & $-9758.3$ & $V_R$ & $10\,L$\\
+		$E_{3}$ & $-8560$ & $m_K$ & $5\,kg$\\
+		$H_{1}$ & $4.2\,\frac{kJ}{mol}$ & $C_{PK}$ & $2.0\,\frac{kJ}{kg\cdot mol}$\\
+		$H_{2}$ & $-11.0\,\frac{kJ}{mol}$ & $c_{A0}$ & $5.1\,\frac{mol}{L}$\\
+		$H_{3}$ & $-41.85\,\frac{kJ}{mol}$ & $\vartheta_0$ & $104.9\,^\circ C$\\
+		\hline
+	\end{tabular}
+	\caption{CSTR model coefficients}
+	\label{tab:cstr-model-coefficients}
+\end{table}
+
+\noindent The constraints on the controls are given by the following equations:
+\begin{align*}
+	3.0\,h^{-1}\leq &~u_1~ \leq 25.0\,h^{-1}\\
+	-9000.0\,\frac{kJ}{h}\leq &~u_2~ \leq 0.0\,\frac{kJ}{h}\\
+\end{align*}
+There were no constraints originally in \cite{diehl-dissertation}, but some were introduced in \cite{cstr-ref} on $\vartheta,\vartheta_K$.
+We added some more to make sure that the feasible set of the states was polytopic and not just polyhedral (i.e. it is bounded), which ensures that the RRLB function exists.
+\begin{align*}
+	0.0\leq&~c_A~\leq 10.0\\
+	0.0\leq&~c_B~\leq 10.0\\
+	98.0\leq &~\vartheta~\leq 150.0\\
+	92.0\leq &~\vartheta_K~\leq 150.0
+\end{align*}
+
+\noindent The costs are finally given by
+
+$$Q=\begin{pmatrix}
+	0.2\,mol^{-2}L^2 & 0 & 0 & 0\\
+	0 & 1.0\,mol^{-2}L^2 & 0 & 0\\
+	0 & 0 & 0.5^\circ C^{-2} & 0\\
+	0 & 0 & 0 & 0.2^\circ C^{-2}
+\end{pmatrix},\qquad R=\begin{pmatrix}
+	0.5\,h^{2} & 0\\
+	0 & 5.0e-7\,kJ^{-2}h^2
+\end{pmatrix}$$
 
 \subsection*{Misc}
 
