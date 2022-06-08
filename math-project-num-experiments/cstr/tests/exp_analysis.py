@@ -17,6 +17,7 @@ df = pd.read_csv("exp_all_results.csv")
 # First see if there are any aberrant data (situations where the RRLB MPC or the
 # regular MPC reach better performance measures than the infinite horizon MPC, and
 # without any constraint violations)
+# ======================================================================================
 for i in range(nbr_initial_states):
     for j in range(3):
         df_tpr = df[(df["InitialState"] == (i + 1)) & (df["RefPoint"] == (j + 1))]
@@ -37,10 +38,11 @@ for i in range(nbr_initial_states):
 
 
 # Boxplots for as described in the project report
+# ======================================================================================
 vectorized_log = np.vectorize(np.log10)
 
 
-def boxplot_across_exps(val: str, title: str, id: str):
+def boxplot_across_exps(val: str, id: str, title: str = None):
     index = pd.MultiIndex.from_tuples(
         [
             t
@@ -62,11 +64,32 @@ def boxplot_across_exps(val: str, title: str, id: str):
     group = df_plot.groupby(["Scheme", "HorizonSize"])
     plt.figure(figsize=(10, 5))
     group.boxplot(subplots=False)
-    # plt.suptitle(title)
+    if title is not None:
+        plt.suptitle(title)
     plt.savefig("exp_all_{}.png".format(id), dpi=300)
 
 
-# plot 1 : N on x axis, iterations to convergence on y axis, boxplots with the nbr of iterations across the experiments
+# N on x axis, runtime on y axis
+boxplot_across_exps(
+    val="AverageSolvingTime",
+    id="plot_runtimes_1",
+    # title="Solving Time as a function of horizon size",
+)
+boxplot_across_exps(
+    val="AverageCondensationTime",
+    id="plot_runtimes_2",
+    # title="Condensation Time as a function of horizon size",
+)
+
+boxplot_across_exps(
+    val="AverageSensitivitiesComputationTime",
+    id="plot_runtimes_3",
+    # title="Sensitivity Computation Time as a function of horizon size",
+)
+
+# see if RRLB is indeed always better in nbr of iterations to convergece ad performance
+# measure (when it does converge)
+# ======================================================================================
 for i in range(nbr_initial_states):
     for j in range(3):
         df_tpr = df[(df["InitialState"] == (i + 1)) & (df["RefPoint"] == (j + 1))]
@@ -101,24 +124,97 @@ for i in range(nbr_initial_states):
                 )
                 break
 
-
-# plot 3 : N on x axis, runtime on y axis
-boxplot_across_exps(
-    val="AverageSolvingTime",
-    title="Solving Time as a function of horizon size",
-    id="plot_3_1",
+# compute the percentage of amelioration for horizon sizes 100 and 250
+# ignore the situations (1,1), (1,3), (2,1), (2,3), (3,1), (4,1), (5,1)
+tuples = [
+    t
+    for t in itertools.product(range(1, 6), range(1, 4), [100, 250])
+    if t[0:2] not in [(1, 1), (1, 3), (2, 1), (2, 3), (3, 1), (4, 1), (5, 1)]
+]
+index = pd.MultiIndex.from_tuples(
+    tuples,
+    names=[
+        "InitialState",
+        "RefPoint",
+        "HorizonSize",
+    ],
 )
-boxplot_across_exps(
-    val="AverageCondensationTime",
-    title="Condensation Time as a function of horizon size",
-    id="plot_3_2",
+tpr_reg = (
+    df[
+        (df["Scheme"] == "reg")
+        & ((df["HorizonSize"] == 100) | (df["HorizonSize"] == 250))
+        & ~(
+            (df["InitialState"] == 1) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 1) & (df["RefPoint"] == 3)
+            | (df["InitialState"] == 2) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 2) & (df["RefPoint"] == 3)
+            | (df["InitialState"] == 3) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 4) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 5) & (df["RefPoint"] == 1)
+        )
+    ]
+    .drop(
+        columns=[
+            "InitialState",
+            "RefPoint",
+            "Scheme",
+            "HorizonSize",
+            "ConstraintsViolated",
+            "AverageCondensationTime",
+            "StdErrCondensationTime",
+            "AverageSensitivitiesComputationTime",
+            "StdErrSensitivitiesComputationTime",
+            "AverageSolvingTime",
+            "StdErrSolvingTime",
+        ]
+    )
+    .to_numpy()
 )
-
-boxplot_across_exps(
-    val="AverageSensitivitiesComputationTime",
-    title="Sensitivity Computation Time as a function of horizon size",
-    id="plot_3_3",
+tpr_rrlb = (
+    df[
+        (df["Scheme"] == "rrlb")
+        & ((df["HorizonSize"] == 100) | (df["HorizonSize"] == 250))
+        & ~(
+            (df["InitialState"] == 1) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 1) & (df["RefPoint"] == 3)
+            | (df["InitialState"] == 2) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 2) & (df["RefPoint"] == 3)
+            | (df["InitialState"] == 3) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 4) & (df["RefPoint"] == 1)
+            | (df["InitialState"] == 5) & (df["RefPoint"] == 1)
+        )
+    ]
+    .drop(
+        columns=[
+            "InitialState",
+            "RefPoint",
+            "Scheme",
+            "HorizonSize",
+            "ConstraintsViolated",
+            "AverageCondensationTime",
+            "StdErrCondensationTime",
+            "AverageSensitivitiesComputationTime",
+            "StdErrSensitivitiesComputationTime",
+            "AverageSolvingTime",
+            "StdErrSolvingTime",
+        ]
+    )
+    .to_numpy()
 )
+improvement_percentages = pd.DataFrame(
+    100.0 * (tpr_reg - tpr_rrlb) / tpr_reg,
+    index=index,
+    columns=["NbrIterationsToConvergence", "PerformanceMeasure"],
+)
+grouped_improvement_percentages = improvement_percentages.groupby(
+    ["HorizonSize"]
+).mean()
+print(grouped_improvement_percentages)
+grouped_improvement_percentages.to_csv("exp_all_improvement_percentages.csv")
+grouped_improvement_percentages.plot(kind="bar")
+plt.ylim([0.0, 45.0])
+plt.grid(True)
+plt.savefig("exp_all_improvement_percentages.png", dpi=300)
 
-# plt.close("all")
+
 plt.show()

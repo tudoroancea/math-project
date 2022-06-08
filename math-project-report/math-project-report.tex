@@ -22,6 +22,7 @@
 \usepackage{chronosys}
 \usepackage{csvsimple}
 \usepackage{longtable}
+\usepackage{caption}
 % \usepackage[dvipsnames]{xcolor}
 \addbibresource{refs.bib}
 
@@ -652,7 +653,7 @@ By a simple steady state analysis procedure \footnote{This procedure was applied
 	\item For RRLB MPC, we determined the terminal cost by solving the modified DARE with $\mu=1$ as mentioned in \ref{sec:RRLB-nominal-stability}.
 	We will see in the results that this does not impact convergence when the horizon size is big enough.
 
-	\item For RRLB MPC, the relaxation parameter $\delta$ was chosen as $\min\left\{ d_{x,1},\dots d_{x,q_x},d_{u,1},\dots,d_{u,q_u} \right\}$ and the barrier parameter $\epsilon$ was chosen as $0.0001$ after a bit of tuning in order to ensure that the MPC would converge.
+	\item For RRLB MPC, the relaxation parameter $\delta$ was chosen as $\frac{1}{2}\min\left\{ d_{x,1},\dots d_{x,q_x},d_{u,1},\dots,d_{u,q_u} \right\}$ and the barrier parameter $\epsilon$ was chosen as $1.0e-3$ after a bit of tuning in order to ensure that the MPC would converge.
 
 	\item The initial prediction (as described in \ref{sec:RTI-scheme}) is computed using the interior point method solver IPOPT (see \cite{ipopt}) through the algorithmic differentiation package CasADi (see \cite{casadi}).
 
@@ -672,20 +673,20 @@ By a simple steady state analysis procedure \footnote{This procedure was applied
 
 \subsubsection{Experimental procedure}
 
-We generated a list of 5 random initial states (that can be found in the columns of the file \verb|exp_all_initial_states.csv| in the directory \verb|results|) within the bounds
+We generated a list of 5 random initial states (that can be found in the columns of the file \verb|exp_all_initial_states.csv| in the directory \verb|results|) using a uniform distribution between the following bounds:
 $$0.0\leq c_A,c_B\leq 5.0,~98.0\leq\vartheta\leq 110.0,~92.0\leq \vartheta_K\leq 110.0$$
 and with the 3 reference points in table \ref{tab:CSTR-ref-points}, this generated 15 different situations in which we ran the following experiment :
 
 We first ran an open loop simulation of the infinite horizon MPC (approximated by a regular MPC with horizon length of 5000) to determine an 'optimal' behavior, and then ran closed-loop simulations with RRLB MPC and regular MPC and variable horizon lengths for both of them (in the list $\left\{ 25, 50, 100, 250 \right\}$).
 For all of them we measured :
 \begin{itemize}[label=\textbullet]
-	\item \underline{the \textit{performance measure}} : the sum of the stage costs over all the time steps up until convergence, or the maximum number of time steps, is reached.
+	\item the \textit{performance measure}, i.e. the sum of the stage costs over all the time steps up until convergence, or the maximum number of time feedbacks, is reached.
 
 	Note that for the the closed loop simulations, RTI was used and the sum was only done over the time instants where a \textit{measurement is made} (see \ref{fig:RTI-timeline}).
 
 	\item the number of iterations taken to reach the convergence.
 
-	\item whether the constraints were violated or not
+	\item whether the constraints were violated or not.
 \end{itemize}
 
 \noindent Additionally, for the closed-loop simulations where RTI was used, we also measured the times (average and standard error) in milliseconds of the sensitivity computation, the condensation, and the QP solve.
@@ -696,158 +697,94 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 \noindent From all the measures described above, we can make several observations :
 
 \begin{itemize}[label=\textbullet]
-	\item There were cases where the RRLB MPC never converged to the desired reference point, and in those cases the, the system actually converges to another steady state.
-	An example of such situation is initial state n°1, reference point n°3.
-	The corresponding closed-loop trajectories can be found in \ref{fig:closedloop_traj_rrlb_1_3} and the steady state and control that are found are given by $x^*=(2.54540087, 1.04663582, 101.74875443, 97.3226122),u^*=(9.14524963, -3836.93417253)$\,.
+	\item In every situation, when the horizon size is 25, the RRLB MPC does not manage to converge to the desired reference point and instead converges to another steady state.
+	For instance, for initial state n°1 and reference point n°1, it converges to (values are given at $10^{-4}$ precision):
+	$$x^*=(2.0005, 1.086, 117.3737, 117.5026),\quad u^*=(15.2094, 111.7617)$$
+	Nonetheless, when decreasing the barrier parameter $\epsilon$, we can produce convergence at the expense of more constraint violation due to the fact that the constraints are somehow less enforced.
+	The corresponding closed loop trajectories can be found in figure \ref{fig:closedloop_traj_rrlb_1_1_25}.
 
-	\begin{figure}[h]
-		\centering
-		\includegraphics[width=15cm]{images/closedloop_traj_rrlb_1_3.png}
-		\caption{Closed-loop trajectories for the RRLB MPC with initial state n°1 and reference point n°3}
-		\label{fig:closedloop_traj_rrlb_1_3}
-	\end{figure}
-
-    Nonetheless, more tuning on the parameters $\epsilon,\delta$ could maybe help convergence in such cases where the initial state is far away from the desired reference point (on state $c_B$ in this case).
-
-	\item In most cases it converged, and when it did, it converged in fewer iterations that Regular MPC and with smaller performance measure as we verified by checking each situation individually with our script \verb|exp_analysis.py|.
-	Some close-loop trajectories that were successful can be found in the appendix.
-
-	\item In general, we can see that augmenting the horizon size always improves the number of iterations needed to converge and the performance measure.
-	In the case of RRLB, there was little to no difference between the performance measures attained by the different horizon sizes.
-	In particular, the number of iterations needed to converge for the RRLB MPC was always approximately bigger than the horizon size, and we could suppose that this determines the horizon size needed to converge.
-	Unfortunately, there is no way to know the necessary number of iterations beforehand.
-
-	\item In some cases, as in the case of initial state n°3 and reference point n°1, the maximum number of 350 iterations was reached for RRLB MPC with both 25 and 50 horizon size.
-	Nevertheless, the performance measure in the case of 50 was much closer to the performance measure in the case of 100 (when convergence was achieved).
-	We could suppose that this is due to the fact that the new steady state found by the RRLB MPC is closer to the desired reference state.
-    This can be verified in the figure \ref{fig:closedloop_traj_rrlb_3_1}, where we can see the corresponding closed-loop trajectories.
-
-	\begin{figure}[h]
+	\begin{figure}[!hp]
 		\centering
 		\begin{subfigure}{15cm}
 			\centering
-			\includegraphics[width=1.0\textwidth]{images/closedloop_traj_rrlb_3_1_25.png}
-			\caption{Horizon size of 25 time steps}
-		\end{subfigure}\newline
-		\begin{subfigure}{15cm}
-			\centering
-			\includegraphics[width=1.0\textwidth]{images/closedloop_traj_rrlb_3_1_50.png}
-			\caption{Horizon size of 50 time steps}
+			\includegraphics[width=15cm]{images/closedloop_traj_rrlb_1_1_25_not_converge.png}
+			\caption{$\epsilon=1.0e-3$}
 		\end{subfigure}
-		\caption{Closed-loop trajectories for the RRLB MPC with initial state n°3 and reference point n°1}
-		\label{fig:closedloop_traj_rrlb_3_1}
+		\begin{subfigure}{15cm}
+			\centering
+			\includegraphics[width=15cm]{images/closedloop_traj_rrlb_1_1_25_converge.png}
+			\caption{$\epsilon=1.0e-8$}
+		\end{subfigure}
+		\caption{Closed-loop trajectories for the RRLB MPC with initial state n°1, reference point n°1 and horizon size 25}
+		\label{fig:closedloop_traj_rrlb_1_1_25}
 	\end{figure}
 
-	\item In some cases such as initial state 3, ref point 1, we can observe that the RRLB MPC actually reaches a better performance measure than the infinite horizon, which is theoretically absurd (see \ref{sec:what-is-MPC}).
-	This is due to the case that constraints are violated, and that MPC can in some sense find an illegal shortcut to the reference point.
+	\item In every situation, whe the horizon size was 50, the RRLB MPC did not converge before the 350 iterations either, however we see in the results that the performance measure is much closer to the one achieved with horizon sizes 100 and 250 (when convergence was observed).
+	This could indicate that the system actually stabilizes to the desired reference point, but just slower, and has not yet reached the desired tolerance at the 350th iteration.
+	By inspecting the closed-loop trajectory in figure \ref{fig:closedloop_traj_rrlb_1_1_50} we can see that this is indeed the case.
+	The final (relative) discrepancy on the state is actually $6.71e-3$, which is quite close to the $1.0e-3$ tolerance.
 
-	\item Computationally, RRLB is a bit more demanding but not by much (see plots 3.1.1 to 3.3.2).
-	The main difference appears to be in the sensitivity computation time, which is normal since the sensitivities of RRLB involve the gradients and hessians of RRLB functions and are more complex than the ones of regular MPC (see appendix \ref{sec:osqp-condensation}).
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[width=15cm]{images/closedloop_traj_rrlb_1_1_50.png}
+		\caption{Closed-loop trajectory for the RRLB MPC with initial state n°1, reference point n°1 and horizon size 50}
+		\label{fig:closedloop_traj_rrlb_1_1_50}
+	\end{figure}
+
+	\item For horizon sizes 100 and 250, the RRLB MPC always converged to the desired objective and what ca be observed is that it always converged faster than regular MPC, in fewer iterations, and with smaller performance measure.
+	In half of the situations this is caused by some constraint violation that allows the MPC to take "shortcuts", i.e. some trajectories that might be have a lower cost, but that are do not verify all the constraints.
+	We used our script \verb|exp_analysis.py| to check case by case that this was indeed the case.
+	In the other half, the improvements are quite substantial and their average (aggregated along the situations) can be found in figure \ref{fig:improvement-percentages}.
+
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[width=7cm]{images/exp_all_improvement_percentages.png}
+		\caption{Average improvement in percentage of the Number of iterations to convergence and the Performance measure of RRLB MPC compared to regular MPC}
+		\label{fig:improvement-percentages}
+	\end{figure}
+
+	\item In general, we can see that augmenting the horizon size always improves the number of iterations needed to converge and the performance measure, for RRLB as for regular MPC.
+	This general property of MPC is linked to the Bellman principle of optimality cited in \ref{sec:what-is-MPC}, which suggests that the infinite horizon MPC is optimal, and that this optimum is better and better approximated as $N\to\infty$\,.
+
+	\item The fact that the RRLB MPC only converges for a big enough horizon could be explained by the proof of theorem \ref{thm:nominal-stability} in which the actual condition we needed to prove the descent property was that $\tilde{x}_N$ had to belong to the neighborhood given by the paragraph 2.5.5 of \cite{MPC-book}, let's call it $\calN_0$.
+	Consequently, we could suppose the existence of a larger neighborhood $\calN_N$ such that $x\in\calN_N\implies \tilde{x}_N(x)\in\calN_1$, and imagine that $\calN_N$ gets monotonically larger as $N\to\infty$.
+	Intuitively, this last property could be motivated by the fact that as the horizon size increases, the MPC has more time to reach $\calN_0$.
+	However, these properties are out of the scope of this paper and could be the object of further research on the subject of RRLB MPC.
+
+	\item As suggested by the figure \ref{fig:runtimes}, RRLB seems i average a bit more computationally demanding.
+	The main difference appears to be in the sensitivity computation time, which is understandable given their more complex form involving the gradients and hessians of RRLB functions (see appendix \ref{sec:osqp-condensation}).
+
+	\begin{figure}[!h]
+		\centering
+		\begin{subfigure}{.5\linewidth}
+			\centering
+			\includegraphics[width=1.0\textwidth]{images/exp_all_plot_runtimes_1.png}
+			\caption{Average sensitivities computation times \\(in log scale) throughout the experiments}
+			\label{fig:sensitivity-times}
+		\end{subfigure}\,%
+		\begin{subfigure}{.5\linewidth}
+			\centering
+			\includegraphics[width=1.0\textwidth]{images/exp_all_plot_runtimes_2.png}
+			\caption{Average condensation times (in log \\ scale) throughout the experiments}
+			\label{fig:condensation-times}
+		\end{subfigure}\newline
+		\begin{subfigure}{.5\linewidth}
+			\centering
+			\includegraphics[width=1.0\textwidth]{images/exp_all_plot_runtimes_3.png}
+			\caption{Average solving times (in log scale) throughout the experiments}
+			\label{fig:solving-times}
+		\end{subfigure}
+
+		\caption{Boxplots of runtimes for different phases of RTI, averaged by scheme and horizon length}
+		\label{fig:runtimes}
+	\end{figure}
+
 \end{itemize}
 
-\begin{figure}
-	\centering
-	\begin{subfigure}{.5\linewidth}
-		\centering
-		\includegraphics[width=1.1\textwidth]{images/exp_all_plot_3_1.png}
-		\caption{Sensitivities computation times (in log scale)}
-		\label{fig:sensitivity-times}
-	\end{subfigure}%
-	\begin{subfigure}{.5\linewidth}
-		\centering
-		\includegraphics[width=1.1\textwidth]{images/exp_all_plot_3_2.png}
-		\caption{Condensation times (in log scale)}
-		\label{fig:condensation-times}
-	\end{subfigure}\newline
-	\begin{subfigure}{.5\linewidth}
-		\centering
-		\includegraphics[width=1.1\textwidth]{images/exp_all_plot_3_3.png}
-		\caption{Solving times (in log scale)}
-		\label{fig:solving-times}
-	\end{subfigure}
+\section{Conclusion and outlook}
 
-	\caption{Boxplots of runtimes for different phases of RTI, averaged by scheme and horizon length}
-\end{figure}
-
-
-
-
-% \begin{enumerate}[label=Exp\arabic*]
-% 	\item \underline{Verify the theoretical results}
-
-% 	We can see in the figures \ref{fig:closed-loop-traj-rrlb-1}, \ref{fig:closed-loop-traj-rrlb-2} and \ref{fig:closed-loop-traj-rrlb-3} in the annex that the system is indeed LAS for every reference point we have chosen.
-% 	The initial point was the same in the 3 experiments
-
-% 	\item \underline{Number of iterations to convergence}
-
-% 	The exact closed-loop trajectories are qualitatively similar between regular MPC and RRLB MPC and can be found in the annex section \ref{sec:closed-loop-traj}.
-
-% 	\begin{table}[H]
-% 		\centering
-% 		\csvreader[
-% 			tabular				= |c|c|c|,
-% 			table head			= \hline Ref & Scheme & Iterations to convergence \\\hline,
-% 			late after line 	= \\\hline,
-% 			table foot			=  \hline,
-% 			filter not strcmp	= {\scheme}{infhorz}
-% 		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,NbrIterationsToConvergence=\iter}{
-% 			\refpoint & \scheme & \iter
-% 		}
-
-% 		\caption{Number of iterations needed for convergence (within $10^{-3}$ tolerance) of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-% 		\label{tab:iterations-to-convergence}
-% 	\end{table}
-
-% 	\item \underline{Compute closed-loop performance measure and compare with infinite horizon MPC}
-
-% 	\begin{table}[H]
-% 		\centering
-% 		\csvreader[
-% 			tabular			= |c|c|c|,
-% 			table head		= \hline Ref & Scheme & Perf \\\hline,
-% 			late after line = \\\hline,
-% 			table foot		=  \hline
-% 		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,PerformanceMeasure=\perf}{
-% 			\refpoint & \scheme & \perf
-% 		}
-
-% 		\caption{Performance Measure of RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-% 		\label{tab:performance-measure}
-% 	\end{table}
-
-% 	\item \underline{Compute the runtime of each step of RTI}
-
-% 	\begin{table}[H]
-% 		\centering
-% 		\csvreader[
-% 			tabular			= |c|c|c|c|c|c|c|c|,
-% 			table head		= \hline Ref & Scheme & ASCT & SESCT & ACT & SECT & AST & SEST \\\hline,
-% 			late after line = \\\hline,
-% 			table foot		=  \hline,
-% 			filter not strcmp	= {\scheme}{infhorz}
-% 		]{cstr_closed_loop_simulation_results.csv}{RefPoint=\refpoint,Scheme=\scheme,AverageSensitivitiesComputationTime=\asct,StdErrSensitivitiesComputationTime=\sesct,AverageCondensationTime=\act,StdErrCondensationTime=\sect,AverageSolvingTime=\ast,StdErrSolvingTime=\sest}{
-% 			\refpoint & \scheme & \asct & \sesct & \act & \sect & \ast & \sest
-% 		}
-
-% 		\caption{Runtimes of different phases of RTI for RRLB MPC compared to regular MPC and (approximate) infinite horizon MPC}
-% 		\subcaption*{where ASCT : Average Sensitivity Computation Time, SESCT : Standard Error of Sensitivity Computation Time, ACT : Average Condensation Time, SECT : Standard Error of Condensation Time, AST : Average Solving Time, SEST : Standard Error of Solving Time}
-% 		\label{tab:RTI-runtimes}
-% 	\end{table}
-
-% \end{enumerate}
-
-% From the previous tables, we can notice several things :
-% \begin{itemize}[label=\textbullet]
-% 	\item First of all, the system stabilizes around the reference state, as hoped after the proof of theorem \ref{thm:nominal-stability}.
-% 	We did not try to estimate the neighborhood of the reference state starting form which this should be true because it is theoretically nearly impossible, and computationally a real burden since the only reliable method would be a naive grid
-% 	search.
-
-% 	\item We see there is indeed a violation of constraints
-
-% 	\item Contrary to our initial hypothesis, the solve times are not shorter for RRLB MPC, which would indicate that the optimization problem is not necessarily easier to solve than for Regular MPC.
-
-% 	\item The convergence to the objective is always taking fewer iterations with RRLB than with Regular MPC. In particular, for reference points n°2 and 3, there is no convergence for Regular MPC at the end of the $5000s$ of simulation.
-% \end{itemize}
+In this project we have done amazing work. No really I promise you.
+I am proud of us and of what we have accomplished.
 
 
 \newpage
@@ -980,8 +917,7 @@ $$Q=\begin{pmatrix}
 	0 & 5.0e-7\,kJ^{-2}h^2
 \end{pmatrix}$$
 
-\subsection*{Misc}
-
+\subsection*{Successful RRLB closed-loop trajectories}
 
 
 \end{document}

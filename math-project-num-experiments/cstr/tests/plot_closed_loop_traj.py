@@ -27,7 +27,6 @@ print("Running RRLB MPC --------------------------------------------------")
 
 plt.figure(figsize=(15, 9))
 
-global_epsilon = 1.0e-3
 (
     total_cost,
     nbr_iterations_to_convergence,
@@ -38,7 +37,7 @@ global_epsilon = 1.0e-3
 ) = run_closed_loop_simulation(
     custom_x_init=initial_states[:, 0],
     scheme=Scheme.RRLB,
-    N=25,
+    N=50,
     max_nbr_feedbacks=350,
     xr=xr1,
     ur=ur1,
@@ -48,7 +47,7 @@ print("RRLB MPC:")
 print("Total cost: {}".format(total_cost))
 print("Nbr iterations to convergence: {}".format(nbr_iterations_to_convergence))
 print("Constraints violated: {}".format(constraints_violated))
-# plt.savefig("closedloop_traj_rrlb_1_3.png", dpi=300)
+plt.savefig("closedloop_traj_rrlb_1_1_50.png", dpi=300)
 
 # print("Running regular MPC --------------------------------------------------")
 #
@@ -75,4 +74,4 @@ print("Constraints violated: {}".format(constraints_violated))
 # print("Nbr iterations to convergence: {}".format(nbr_iterations_to_convergence))
 # print("Constraints violated: {}".format(constraints_violated))
 
-plt.show()
+# plt.show()
