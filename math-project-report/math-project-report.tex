@@ -36,18 +36,18 @@
 \maketitle
 
 \begin{abstract}
-	In this project, we investigate the use of relaxed recentered logarithmic barrier functions in the context of nonlinear Model Predictive Control (MPC).
-	These functions are a variation on regular log-barrier functions that are introduced in the objective function of the optimization problem as a penalty of the deviation from the constraints set.
-	The resulting new MPC scheme has been studied in the case of linear dynamics, and several interesting results on the global nominal asymptotic stability of the corresponding closed-loop system and the constraint satisfaction guarantees have been obtained.
+	In this project, we investigate the use of relaxed recentered logarithmic barrier functions in the context of Nonlinear Model Predictive Control (Nonlinear MPC or NMPC).
+	These functions are a variation of the regular log-barrier functions that are introduced in the objective function of an optimization problem as a penalty on the deviation from the constraints set.
+	The resulting new MPC scheme has been studied in the case of linear dynamics, and several interesting results on the global nominal asymptotic stability of the corresponding closed-loop system and on constraint satisfaction guarantees have been obtained.
 	Extending them to the case of nonlinear dynamics is a non trivial task and we show in this project that these properties can still hold, but only locally.
 	The theoretical results are complemented by numerical illustrations based on the Real Time Iteration method.
 \end{abstract}
 
 \section{Introduction}
 \textit{Control theory} can simply be defined as the study of a dynamical system whose state evolution can be influenced by the means of external parameters called \textit{controls}, or \textit{inputs}.
-This theory is a very important one in numerous fields of engineering such as robotics, mechanical or chemical engineering where problems such as stabilizing a chemical reaction at a certain temperature or making an autonomous car follow the road are common.
+This theory is of major importance in numerous fields of engineering such as robotics, mechanical or chemical engineering where problems such as stabilizing a chemical reaction at a certain temperature or making an autonomous car follow the road are common.
 
-An important subfield of control theory is \textit{optimal control} (OC), which aims at finding a \textit{control law}, i.e. a way to control a system in order to attain a certain goal, by formulating and solving an optimization problem.
+An important subfield of control theory is \textit{optimal control} (OC), which attempts to find a \textit{control law}, i.e. a policy used to control a system in order to accomplish a certain goal, by formulating and solving an optimization problem.
 For example, if one wants to stabilize the state around a certain target, or reference point that is constant in time, one will want to choose a control law that will minimize the distance between the future state (that depends on the current state and the chosen control) and the target state.
 This problem of \textit{stabilization} will be the one we will consider in this paper, but it is interesting to know there are other problems for which OC is applicable, such as path tracking or optimal trajectory generation.
 
@@ -63,7 +63,7 @@ In section \ref{sec:RRLB-MPC} we will introduce a different formulation in which
 These functions have several drawbacks, such as the fact that they are only defined in the interior of the feasible set.
 In this paper we will introduce a relaxed version of these functions called \textit{Relaxed Recentered Log-Barrier functions}, or \textit{RRLB functions}.
 They extend regular log-barrier functions to the whole space and yield an equality-only-constrained optimization problem, which should in general be easier to solve.
-More details on the upsides of RRLB functions can be found in the Introduction of \cite{RRLB-linear-MPC}.
+% More details on the upsides of RRLB functions can be found in the Introduction of \cite{RRLB-linear-MPC}.
 
 In the theoretical study of this new formulation that we will call \textit{RRLB MPC}, we will prove two major results :
 
@@ -136,23 +136,46 @@ These are very common in real-world applications.
 		&\quad u_k\in\cal{U},~k=0,\dots,N-1
 	\end{align*}
 	In real life applications, we consider that the duration of the experiment is virtually infinite, so this variant may seem more natural.
-	However this optimization problem becomes infinite-dimensional, which is in general computationally intractable.
-	The terminal costs in regular MPC can actually be interpreted as a proxy for the part of the infinite horizon that is not considered, and they are usually constructed this way.
+	It is usually not used in practice as the optimization problem becomes infinite-dimensional, which is in general computationally intractable.
+
+	However, it enjoys several theoretical properties such as \textit{Bellman's principle of optimality}(see \cite{Bellman:DynamicProgramming}) that can be defined in the following way :
+	\begin{quotation}
+		\textit{An optimal policy has the property that whatever the initial state and initial decision are, the remaining decisions must constitute an optimal policy with regard to the state resulting from the first decision.}
+	\end{quotation}
+	or in mathematical terms :
+
+	\begin{equation}
+		\label{eq:inf-bellman}
+		V_\infty(x)=l(x,u_0^*(x))+V_\infty(x,f(x,u_0^*(x)))=\min_{u\in\cal{U}}~l(x,u)+V_\infty(x,f(x,u))
+	\end{equation}
+
+	\noindent This recursive minimization problem forms the basis of what we call \textit{Dynamic Programming}, and relies on the fact that the horizon is infinite.
+	In the finite horizon case (without terminal costs) a weaker version reads :
+
+	$$V_N(x)=\min_{u\in\cal{U}}~l(x,u)+V_{N-1}(x,f(x,u))$$
+
+	The terminal costs in regular MPC can actually be interpreted as a proxy for the part of the infinite horizon that is not considered and are present to bridge the gap between finite horizon performance and infinite horizon optimality.
+	In some cases (such as the one in the following point), $V_\infty$ can actually be computed exactly.
+
 
 	\item\underline{the \textit{(infinite-horizon) Linear Quadratic Regulator}, or \textit{LQR}}:\newline
-	it is basically an MPC with linear dynamics ($x^+=Ax+Bu$) and without state and control constraints.
-	These problems are the most basic one can find and are deeply linked to \textit{(Discrete) Algebraic Riccati Equations}, or \textit{DARE}:
+	which is basically an MPC with linear dynamics ($x^+=Ax+Bu$) and without state and control constraints.
+	These problem is the most basic one we can find and is deeply linked to the  \textit{(Discrete) Algebraic Riccati Equations}, or \textit{DARE}:
 	\begin{equation}
 		\label{eq:DARE-LQR}
 		P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA
 	\end{equation}
-	The unique positive definite solution of this equation actually verifies $V_\infty(x)=x^TPx$ so it can be used to define the terminal costs of the finite horizon LQR problem.
-	This equation also provides the stabilizing state-feedback control law of the infinite horizon LQR : $\mu_{LQR}(x)=Kx$ where $K=-(R+B^TPB)^{-1}B^TPA$\,.
+	This equation derived from the Bellman's principle of optimality evoked above allows us to solve the dynamic programming problem \ref{eq:inf-bellman} explicitly : the unique positive definite solution $P$ of this equation verifies $V_\infty(x)=x^TPx$.
+	The existence of this unique solution can be guaranteed if the pair $(A,B)$ is stabilizable \footnote{see \ref{sec:controllability-stabilizability} for definition} but the proof is a part of the classical control theory that is not explicitly needed to understand this project and is therefore omitted.
+
+	This equation also provides the stabilizing \footnote{See \ref{sec:controllability-stabilizability} for more details.} state-feedback control law of the infinite horizon LQR : $\mu_{LQR}(x)=Kx$ where $K=-(R+B^TPB)^{-1}B^TPA$\,.
 	It is interesting to notice that in this case, the solution $P$ to the DARE also verifies the following equation called \textit{Lyapunov equation} :
 	$$P=A_K^TPA_K+Q_K$$
 	where $A_K:=A+BK$ corresponds the evolution of the controlled system since $x^+=Ax+B\mu(x)=(A+BK)x$, and $Q_K:=Q+K^TRK$ corresponds to cost of a stage $(x,Kx)$ since $l(x,Kx)=x^TQ+(Kx)^TR(Kx)=x^TQ_Kx$\,.
 
-	More details on the properties of the DARE can be found in the appendix \ref{sec:DARE}.
+	All the derivation of the previous facts can be found in the appendix \ref{sec:DARE}.
+	In most cases, the terminal costs of a finite horizon MPC are constructed by solving a variation of the DARE that stems from a LQR approximating the original M¨PC.
+	More details on this kind of procedures can be found in classical books on MPC such as \cite{MPC-book}.
 \end{itemize}
 
 
@@ -179,7 +202,9 @@ Such a function is called a \textit{Lyapunov function}, and the last equation is
 
 \vspace{12pt}
 
-In our case, the candidate function we are going to be interested in is the objective value function $V_N$ defined in \ref{eq:NMPC}.
+When considering a system controlled by MPC as described in section \ref{sec:what-is-MPC}, the candidate function of choice will be the objective value function $V_N$ defined in \ref{eq:NMPC}.
+General conditions that ensure this property can be found in any classical reference on MPC such as \cite{MPC-book} or \cite{MPC-book-2}.
+
 
 
 \section{The RRLB MPC}\label{sec:RRLB-MPC}
@@ -187,9 +212,17 @@ In our case, the candidate function we are going to be interested in is the obje
 In this section we will introduce the RRLB functions, formulate the RRLB MPC and recall the results proved in the linear case in \cite{RRLB-linear-MPC}.
 As mentioned in the last section, we will suppose that $x^*=0\in\cal{X}^\circ$ and $u^*=0\in\cal{U}^\circ$.
 
+Before introducing the RRLB MPC, let's first state the principal problem it solves.
+In practice, it might happen than the constraints are violated because of external disturbances or of the presence of \textit{model mismatch}, i.e. the system's evolution is not perfectly described by the dynamics used in the MPC.
+In this case, the NLP defining the MPC \ref{eq:NMPC} becomes unfeasible and the algorithm implementing it will either crash or return solutions that are not optimal at all.
+A common way to fix this problem was to use soft constraints on the state and control constraints, by introducing slack parameters that are penalized in the objective function.
+Such approaches were reported for example in \cite{soft-constrained-MPC}.
+The problem with this soft-constrained formulation is the incapacity of providing closed-loop properties like asymptotic stability or constraints satisfaction, unless nonsmooth penalty functions are used, which dramatically impacts the algorithms in charge of solving the NLP.
+RRLB functions are designed to overcome this limitations while still preserving the recursive feasibility properties.
+
 \vspace{12pt}
 
-First let's take a step back and recall what regular log-barrier functions are.
+Let's first take a step back and recall what regular log-barrier functions are.
 We will only give the definitions for the states $x\in\R^{n_x}$, since they only depend on the constraint set and not on the actual quantity represented.
 
 For a simple constraint of the form $c^Tx\leq d$, the associated \textit{log-barrier function} is defined as $-\log(d-c^Tx)$.
@@ -248,7 +281,7 @@ However, we will here consider it as fixed for simplicity.
 
 \begin{theorem}[Theorem 5 in \cite{RRLB-linear-MPC}]
 	\label{nominal-stability-linear-case}
-	Suppose that the pair $(A,B)$ is stabilizable \footnote{We did not discuss the notion of controllability and stabilizability in \ref{sec:what-is-MPC} because they do not play a direct role in our proofs. They are however very important in standard control theory and they are needed in the proofs of existence of DAREs. More on them in the appendix \ref{sec:controllability-stabilizability}}
+	Suppose that the pair $(A,B)$ is stabilizable \footnote{We did not discuss the notion of controllability and stabilizability in \ref{sec:what-is-MPC} because they do not play a direct role in our proofs. They are however very important in standard control theory and their definitions can be found in \ref{sec:controllability-stabilizability}}
 	and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE :
 	$$P=A^TPA-A^TPB(R+\epsilon M_u+B^TPB)^{-1}B^TPA+Q+\epsilon M_x$$
 	where $M_x=\nabla^2 B_x(0)$ and $M_u=\nabla^2 B_u(0)$\, are the hessian of the RRLB functions at the origin.
@@ -302,7 +335,7 @@ When no confusion is possible we will drop the "$(x)$".
 	\begin{enumerate}
 		\item If we denote the objective function as $J(x,\bf{u})$ as in Lemma \ref{thm:Lipchitzianity}, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$
 
-		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),$ $B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable.
+		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),$ $B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable \footnote{See \ref{sec:controllability-stabilizability} for more details.}.
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
 
 		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following Lyapunov equation :
@@ -514,7 +547,7 @@ These two particular cases make up the MPC we have been studying in this whole p
 
 \subsubsection{SQP for RRLB MPC}
 
-Using the same notations as above, the only things that change are how the sensitivities are computed :
+Using the same notations as above, the only things that change are the fact that the inequality constraints are ignore and that the sensitivities are computed in the following way :
 
 \begin{align*}
 	&H_{i,k}=2\begin{pmatrix}Q&0\\0&R\end{pmatrix}+\epsilon\begin{pmatrix}\nabla^2B_x(x_{i,k})&0\\0&\nabla^2B_u(u_{i,k})\end{pmatrix},\quad H_{i,N}=P+\epsilon\nabla B_x(x_{i,N})\\
@@ -616,6 +649,9 @@ This is the scope of next subsection, in which we will not worry about this dist
 \subsection{Numerical experiments}\label{sec:RRLB-numerical-experiments}
 
 In this section, we experimentally verify the stability properties of the RRLB MPC using a concrete system that is often used to benchmark different MPC schemes or solvers : the Continuously Stirred Tank Reactor (CSTR).
+We will not however determine explicitly the neighborhood given by theorem \ref{thm:nominal-stability} because of the lack of theoretical description.
+For the same reason, we will not compute the neighborhood given by theorem \ref{thm:RRLB-bounds-guarantees}, and just see if the constraints are satisfied or not along the closed-loop trajectories.
+When they are, this will allow us to explicitly compare RRLB to regular MPC.
 
 \subsubsection{Experimental setup}
 
@@ -677,7 +713,7 @@ We generated a list of 5 random initial states (that can be found in the columns
 $$0.0\leq c_A,c_B\leq 5.0,~98.0\leq\vartheta\leq 110.0,~92.0\leq \vartheta_K\leq 110.0$$
 and with the 3 reference points in table \ref{tab:CSTR-ref-points}, this generated 15 different situations in which we ran the following experiment :
 
-We first ran an open loop simulation of the infinite horizon MPC (approximated by a regular MPC with horizon length of 5000) to determine an 'optimal' behavior, and then ran closed-loop simulations with RRLB MPC and regular MPC and variable horizon lengths for both of them (in the list $\left\{ 25, 50, 100, 250 \right\}$).
+We first ran an open loop simulation of the infinite horizon MPC (approximated by a regular MPC with horizon length of 5000) to determine an 'optimal' behavior\footnote{As described in section \ref{sec:what-is-MPC}}, and then ran closed-loop simulations with RRLB MPC and regular MPC and variable horizon lengths for both of them (in the list $\left\{ 25, 50, 100, 250 \right\}$).
 For all of them we measured :
 \begin{itemize}[label=\textbullet]
 	\item the \textit{performance measure}, i.e. the sum of the stage costs over all the time steps up until convergence, or the maximum number of time feedbacks, is reached.
@@ -796,66 +832,110 @@ I am proud of us and of what we have accomplished.
 
 \subsection*{Controllable vs. Stabilizable}\label{sec:controllability-stabilizability}
 
-\subsection*{More on the DARE}\label{sec:DARE}
+The notions of controllability and stabilizability are central in control theory and are the first hypothesis one should plan to verify on a concrete system.
+They are intrinsic properties of the equation describing the evolution of the system (either an ODE for a continuous-time system or a map for a discrete-time system) and could roughly be defined as follows:
+\begin{itemize}[label=\textbullet]
+	\item A system is \textit{controllable} if it can be steered from any feasible state to any other reference state in a finite time.
+	\item A system is \textit{stabilizable} if it can be steered from any feasible state to any other feasible state in an infinite time, or equivalently that it asymptotically approaches this reference state.
+\end{itemize}
+
+These definitions can be made formal in the case of linear time invariant (or LTI) dynamics of the form $\dot{x}=Ax+Bu$ in the continuous-time case, and $x^+=Ax+Bu$ in the discrete-time case :
+\begin{definition}[Controllability]~
+	\begin{itemize}[label=\textbullet]
+		\item A continuous LTI dynamical system $\dot{x}=Ax+Bu$ is controllable if $\forall\lambda\in\rm{eig}(A),~\rank(A-\lambda I_{n_x},B)=n_x$ or equivalently if
+		$$\rank\underbrace{\begin{pmatrix}B&\vline& AB&\vline&\dots&\vline&A^{n_x-1}B\end{pmatrix}}_{:=C}=n_x$$
+		where $C$ is called the \textit{controllability matrix}.
+
+		\item A discrete LTI system $x^+=Ax+Bu$ is controllable if any of the conditions above holds for $(A,B)$.
+	\end{itemize}
+\end{definition}
+\begin{definition}[Stabilizability]~
+	\begin{itemize}[label=\textbullet]
+		\item A continuous LTI dynamical system $\dot{x}=Ax+Bu$ is stabilizable if $\forall\lambda\in\R,~\rank(A-\lambda I_{n_x},B)\leq n_x\implies \Re(\lambda)< 0$ or equivalently if $\exists K\in\R^{n_x\times n_u}~:~A+BK$ is Hurwitz, i.e. only has eigenvalues with negative real part.
+
+		\item A discrete LTI system $x^+=Ax+Bu$ is stabilizable if any of the conditions above holds for $(A,B)$.
+	\end{itemize}
+\end{definition}
+
+\begin{remark}
+	The stabilizable matrix $K$ can be explicitly constructed in the case of LQR as mentioned in section \ref{sec:what-is-MPC}.
+\end{remark}
+
+\subsection*{Derivation of the classical DARE}\label{sec:DARE}
+
+If we consider the LQR problem presented in \ref{sec:what-is-MPC}, then Bellman's principle of optimality reads :
+
+$$V_\infty(x)=\min_{u\in\R^{n_u}}~\underbrace{x^TQx+u^TRu+V_\infty(Ax+Bu)}_{=:\phi(x,u)}$$
+
+If we suppose that $V_\infty$ is itself a quadratic function, i.e. $V_\infty(x)=x^TPx$, then the first order optimality conditions at a minimizer $u^*$ are :
+$$\nabla_u\phi(x,u^*)=2Ru^*+2B^TP(Ax+Bu^*)=0\implies u^*=\underbrace{-\inv{R+B^TPB}B^TPA}_{=:K}x$$
+and by plugging this value back into the minimization problem and developing the form of $K$, we can obtain the DARE :
+\begin{align*}
+	V_\infty(x)=x^TPx&=x^TQx+u^{*~T}Ru^*+V_\infty(Ax+Bu^*)\\
+	&=x^TPx=x^TQx +x^TK^TRKx+V_\infty((A+BK)x)\\
+	&=\dots=x^T(Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA)x\\
+	\implies&\boxed{P=Q+A^TPA-A^TPB(R+B^TPB)^{-1}B^TPA}
+\end{align*}
+
 
 \subsection*{OSQP condensation}\label{sec:osqp-condensation}
 
 If we consider the optimization variable of the QP subproblem (as described in \ref{sec:RTI-scheme}) to be $z=(\Delta x_0,\dots,\Delta x_N,\Delta u_0, \dots,\Delta u_{N-1})$, and we write $x$ for the system's current state and  $(x_0^{init},\dots,x_{N}^{init},u_0^{init},\dots,u_{N-1}^{init})$ for the initial guess (obtained by shift), then the matrices and vectors in the OSQP formulation will be:
 \scriptsize
 \begin{align*}
-	\begin{split}
-		q_{OSQP}&=2\begin{pmatrix}
-			Q&&&&&&\\
-			&\ddots&&&&&\\
-			&&Q&&&&\\
-			&&&P&&&\\
-			&&&&R&&\\
-			&&&&&\ddots&\\
-			&&&&&&R
-		\end{pmatrix}\begin{pmatrix}
-			x_0^{init}\\\vdots\\x_N^{init}\\u_0^{init}\\\vdots\\u_{N-1}^{init}
-		\end{pmatrix}+\color{blue}\epsilon\begin{pmatrix}
-			\nabla B_x(x_0^{init})\\\vdots\\\nabla 0\\\nabla B_u(u_0^{init})\\\vdots\\\nabla B_u(u_{N-1}^{init})
-		\end{pmatrix}\color{black}\\
-		P_{OSQP}&=4\begin{pmatrix}
-			Q&&&&&&\\
-			&\ddots&&&&&\\
-			&&Q&&&&\\
-			&&&P&&&\\
-			&&&&R&&\\
-			&&&&&\ddots&\\
-			&&&&&&R
-		\end{pmatrix}+\color{blue}2\epsilon\begin{pmatrix}
-			\nabla^2B_x(x_0^{init})&&&&&\\
-			&\ddots&&&&\\
-			&&0&&&\\
-			&&&\nabla^2B_u(u_0^{init})&&\\
-			&&&&\ddots&\\
-			&&&&&\nabla^2B_u(u_{N-1}^{init})
-		\end{pmatrix}\color{black}\\
-		A_{OSQP}&=\begin{pmatrix}
-			I_{n_x}&&&&&0&&&&\\
-			A_{0}^{init}&-I_{n_x}&&&&B_{0}^{init}&\ddots&&\\
-			&A_{1}^{init}&-I_{n_x}&&&&\ddots&&\\
-			&&\ddots&\ddots&&&&&\\
-			&&&A_{N-1}^{init}&-I_{n_x}&&&B_{N-1}^{init}&0\\
-			\color{red}C_x&&&&&&&&\\
-			&\color{red}C_x&&&&&&&\\
-			&&\color{red}\ddots&&&&&&\\
-			&&&\color{red}C_x&&&&&\\
-			&&&&\color{red}C_x&&&&\\
-			&&&&&\color{red}C_u&&&\\
-			&&&&&&\color{red}\ddots&&\\
-			&&&&&&&\color{red}\ddots&\\
-			&&&&&&&&\color{red}C_u
-		\end{pmatrix}\\
-		l_{OSQP}&=\begin{pmatrix}
-			x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}-\infty\\\color{red}\vdots\\\color{red}-\infty
-		\end{pmatrix}\qquad u_{OSQP}=\begin{pmatrix}
-			x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}d_x-C_xx_0^{init}\\\color{red}\vdots\\\color{red}d_x-C_xx_N^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{0}^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{N-1}^{init}
-		\end{pmatrix}
-	\end{split}
+	q_{OSQP}&=2\begin{pmatrix}
+		Q&&&&&&\\
+		&\ddots&&&&&\\
+		&&Q&&&&\\
+		&&&P&&&\\
+		&&&&R&&\\
+		&&&&&\ddots&\\
+		&&&&&&R
+	\end{pmatrix}\begin{pmatrix}
+		x_0^{init}\\\vdots\\x_N^{init}\\u_0^{init}\\\vdots\\u_{N-1}^{init}
+	\end{pmatrix}+\color{blue}\epsilon\begin{pmatrix}
+		\nabla B_x(x_0^{init})\\\vdots\\\nabla 0\\\nabla B_u(u_0^{init})\\\vdots\\\nabla B_u(u_{N-1}^{init})
+	\end{pmatrix}\color{black}\\
+	P_{OSQP}&=4\begin{pmatrix}
+		Q&&&&&&\\
+		&\ddots&&&&&\\
+		&&Q&&&&\\
+		&&&P&&&\\
+		&&&&R&&\\
+		&&&&&\ddots&\\
+		&&&&&&R
+	\end{pmatrix}+\color{blue}2\epsilon\begin{pmatrix}
+		\nabla^2B_x(x_0^{init})&&&&&\\
+		&\ddots&&&&\\
+		&&0&&&\\
+		&&&\nabla^2B_u(u_0^{init})&&\\
+		&&&&\ddots&\\
+		&&&&&\nabla^2B_u(u_{N-1}^{init})
+	\end{pmatrix}\color{black}
 \end{align*}
+
+$$A_{OSQP}=\begin{pmatrix}
+	I_{n_x}&&&&&0&&&&\\
+	A_{0}^{init}&-I_{n_x}&&&&B_{0}^{init}&\ddots&&\\
+	&A_{1}^{init}&-I_{n_x}&&&&\ddots&&\\
+	&&\ddots&\ddots&&&&&\\
+	&&&A_{N-1}^{init}&-I_{n_x}&&&B_{N-1}^{init}&0\\
+	\color{red}C_x&&&&&&&&\\
+	&\color{red}C_x&&&&&&&\\
+	&&\color{red}\ddots&&&&&&\\
+	&&&\color{red}C_x&&&&&\\
+	&&&&\color{red}C_x&&&&\\
+	&&&&&\color{red}C_u&&&\\
+	&&&&&&\color{red}\ddots&&\\
+	&&&&&&&\color{red}\ddots&\\
+	&&&&&&&&\color{red}C_u
+\end{pmatrix}$$
+
+$$l_{OSQP}=\begin{pmatrix}
+	x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}-\infty\\\color{red}\vdots\\\color{red}-\infty
+\end{pmatrix}\qquad u_{OSQP}=\begin{pmatrix}
+	x-x_0^{init}\\x_{1}^{init}-f(x_0^{init},u_0^{init})\\\vdots\\x_{N}^{init}-f(x_{N-1}^{init},u_{N-1}^{init})\\\color{red}d_x-C_xx_0^{init}\\\color{red}\vdots\\\color{red}d_x-C_xx_N^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{0}^{init}\\\color{red}\vdots\\\color{red}d_u-C_uu_{N-1}^{init}
+\end{pmatrix}$$
 \normalsize
 In the above, all the red terms only appear for regular MPC, and the blue terms only for RRLB MPC.
 
@@ -916,8 +996,6 @@ $$Q=\begin{pmatrix}
 	0.5\,h^{2} & 0\\
 	0 & 5.0e-7\,kJ^{-2}h^2
 \end{pmatrix}$$
-
-\subsection*{Successful RRLB closed-loop trajectories}
 
 
 \end{document}
