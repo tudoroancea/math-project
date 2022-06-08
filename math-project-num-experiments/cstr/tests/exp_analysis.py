@@ -102,9 +102,6 @@ for i in range(nbr_initial_states):
                 break
 
 
-# plot 2 : N on x axis, performance measure on y axis
-
-
 # plot 3 : N on x axis, runtime on y axis
 boxplot_across_exps(
     val="AverageSolvingTime",
@@ -123,5 +120,5 @@ boxplot_across_exps(
     id="plot_3_3",
 )
 
-plt.close("all")
+# plt.close("all")
 plt.show()

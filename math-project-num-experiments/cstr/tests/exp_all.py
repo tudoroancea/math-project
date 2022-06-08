@@ -22,7 +22,14 @@ initial_states[2, :] = (
 initial_states[3, :] = (
     np.random.random_sample(nbr_initial_states) * (110.0 - 92.0) + 92.0
 )
-np.savetxt("exp_all_initial_states.csv", initial_states, delimiter=",")
+np.savetxt(
+    "exp_all_initial_states.csv",
+    initial_states,
+    delimiter=",",
+    header=str(list(range(1, nbr_initial_states + 1)))
+    .removeprefix("[")
+    .removesuffix("]"),
+)
 
 # setting the reference points we are going to use
 ref_points = [(xr1, ur1), (xr2, ur2), (xr3, ur3)]

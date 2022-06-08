@@ -90,7 +90,7 @@ class CSTRAnimation:
             elif i == 3:
                 plt.plot([0.0, np.sum(times) + model.T], [92.0, 92.0], "r:")
                 plt.plot([0.0, np.sum(times) + model.T], [150.0, 150.0], "r:")
-                plt.ylim([95.0, 155.0])
+                plt.ylim([90.0, 155.0])
             elif i == 4:
                 plt.plot([0.0, np.sum(times) + model.T], [3.0, 3.0], "r:")
                 plt.plot([0.0, np.sum(times) + model.T], [35.0, 35.0], "r:")

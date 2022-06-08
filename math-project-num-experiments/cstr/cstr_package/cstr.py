@@ -8,6 +8,8 @@ import numpy as np
 import scipy.linalg as la
 from scipy import sparse
 
+global_epsilon = 1e-3
+
 
 class Scheme(Enum):
     RRLB = 1
@@ -113,7 +115,7 @@ class CSTR:
         self,
         xr: np.ndarray = xr1,
         ur: np.ndarray = ur1,
-        epsilon: float = 0.01,
+        epsilon: float = global_epsilon,
         scheme: Scheme = Scheme.RRLB,
         N: int = 100,
     ) -> None:
@@ -210,7 +212,7 @@ class CSTR:
             d_u_tilde = self.d_u - self.C_u @ self.ur
             delta_u = np.min(np.abs(d_u_tilde))
             # choose delta
-            self.delta = np.min([delta_u, delta_x])
+            self.delta = 0.5 * np.min([delta_u, delta_x])
             # define the function beta
             z = ca.SX.sym("z")
             beta = ca.Function(
@@ -226,7 +228,7 @@ class CSTR:
             tpr = []
             full_C_x = self.C_x.toarray()
             for i in range(self.q_x):
-                z_i = d_x_tilde[i] - ca.dot(full_C_x[i, :], x)
+                z_i = self.d_x[i] - ca.dot(full_C_x[i, :], x)
                 tpr.append(
                     ca.if_else(
                         z_i > self.delta, ca.log(d_x_tilde[i]) - ca.log(z_i), beta(z_i)
@@ -235,8 +237,10 @@ class CSTR:
             tpr2 = d_x_tilde[1::2]
             tpr3 = d_x_tilde[0::2]
             # compute the weight vector w_x
-            w_x = np.zeros(self.q_x)
-            w_x[0::2] = 1.0
+            w_x = np.ones(self.q_x)
+            # for i in range(1,self.q_x, 2):
+            #     tpr[]
+            # w_x[0::2] = 1.0
             w_x[1::2] = tpr2 / tpr3
             # assemble the RRLB function B_x
             self.B_x = ca.Function("B_x", [x], [ca.dot(w_x, ca.vertcat(*tpr))])
@@ -251,7 +255,7 @@ class CSTR:
             tpr = []
             full_C_u = self.C_u.toarray()
             for i in range(self.q_u):
-                z_i = d_u_tilde[i] - ca.dot(full_C_u[i, :], u)
+                z_i = self.d_u[i] - ca.dot(full_C_u[i, :], u)
                 tpr.append(
                     ca.if_else(
                         z_i > self.delta, ca.log(d_u_tilde[i]) - ca.log(z_i), beta(z_i)
@@ -260,8 +264,8 @@ class CSTR:
             tpr2 = d_u_tilde[1::2]
             tpr3 = d_u_tilde[0::2]
             # compute the weight vector w_u
-            w_u = np.zeros(self.q_u)
-            w_u[0::2] = 1.0
+            w_u = np.ones(self.q_u)
+            # w_u[0::2] = 1.0
             w_u[1::2] = tpr2 / tpr3
             # assemble the RRLB function B_u
             self.B_u = ca.Function("B_u", [u], [ca.dot(w_u, ca.vertcat(*tpr))])
@@ -332,11 +336,12 @@ class CSTR:
         self.F = ca.Function("F", [x], [ca.bilin(self.P, (x - self.xr), (x - self.xr))])
 
         # Verify all assumptions ============================================================
-        # assumptions_verified, err_msg = self.check_stability_assumptions()
-        # assert assumptions_verified, err_msg
+        if self.N != INF_HORIZON_SIZE:
+            assumptions_verified, err_msg = self.check_stability_assumptions()
+            assert assumptions_verified, err_msg
 
     def check_stability_assumptions(self):
-        err = (False,)
+        err = False
         err_msg = ""
         # ====================================================================================================
         # Check that the given reference is indeed a steady state
@@ -348,19 +353,55 @@ class CSTR:
             )
 
         # ====================================================================================================
-        # Check that gradients of barrier functions are 0 at target state/control
+        # Check recentering of B_x and B_u, i.e. that they are 0 at xr and ur resp. and
+        # that their gradients 0 at xr and ur resp.
         # ====================================================================================================
         if self.is_RRLB:
-            if ca.norm_2(self.grad_B_x(self.xr)) >= 1e-6:
+            if ca.fabs(self.B_x(self.xr)) >= 1e-6:
+                err = True
+                err_msg += "ERROR : |B_x(xr)| = {}\n".format(ca.fabs(self.B_x(self.xr)))
+
+            if ca.fabs(self.B_u(self.ur)) >= 1e-6:
+                err = True
+                err_msg += "ERROR : |B_u(ur)| = {}\n".format(ca.fabs(self.B_u(self.ur)))
+
+            if ca.norm_inf(self.grad_B_x(self.xr)) >= 1e-6:
                 err = True
                 err_msg += "ERROR : grad_B_x(xr) = {}, norm = {}\n".format(
-                    self.grad_B_x(self.xr), ca.norm_2(self.grad_B_x(self.xr))
+                    self.grad_B_x(self.xr), ca.norm_inf(self.grad_B_x(self.xr))
                 )
 
-            if ca.norm_2(self.grad_B_u(self.ur)) >= 1e-6:
+            if (
+                ca.norm_inf(self.grad_B_u(self.ur)) >= 1e-6
+                or ca.fabs(self.B_u(self.ur)) >= 1e-6
+            ):
                 err = True
                 err_msg += "ERROR : grad_B_u(ur) = {}, norm = {}\n".format(
-                    self.grad_B_u(self.ur), ca.norm_2(self.grad_B_u(self.ur))
+                    self.grad_B_u(self.ur), ca.norm_inf(self.grad_B_u(self.ur))
+                )
+
+        # ====================================================================================================
+        # Check positive definiteness of hessian of B_u at the target controls
+        # ====================================================================================================
+        if self.is_RRLB:
+            eigvalues = np.linalg.eigvalsh(
+                np.array(self.hess_B_u(ca.DM.zeros(self.nu)))
+            )
+            if np.any(eigvalues <= 0):
+                err = True
+                err_msg += "ERROR: hessian of B_u wrt controls at the origin is not \
+                    positive definite. Eigen values are : {}\n".format(
+                    eigvalues
+                )
+
+            eigvalues = np.linalg.eigvalsh(
+                np.array(self.hess_B_x(ca.DM.zeros(self.nx)))
+            )
+            if np.any(eigvalues <= 0):
+                err = True
+                err_msg += "ERROR: hessian of B_x wrt controls at the origin is not \
+                                positive definite. Eigen values are : {}\n".format(
+                    eigvalues
                 )
 
         # ====================================================================================================
@@ -452,45 +493,32 @@ class CSTR:
         # Check the positive definiteness of the hessian of the objective at the target state/control
         # (for Lipschitzianity)
         # ====================================================================================================
-        x_0 = ca.MX.sym("x_0", self.nx)
-        x_k = x_0
-        u = []
+        if self.N != INF_HORIZON_SIZE:
+            x_0 = ca.MX.sym("x_0", self.nx)
+            x_k = x_0
+            u = []
 
-        objective = 0
-        for k in range(self.N):
-            u_k = ca.MX.sym("u_" + str(k), self.nu)
-            u.append(u_k)
-            x_k = self.f(x_k, u_k)
-            objective += self.l(x_k, u_k)
+            objective = 0
+            for k in range(self.N):
+                u_k = ca.MX.sym("u_" + str(k), self.nu)
+                u.append(u_k)
+                x_k = self.f(x_k, u_k)
+                objective += self.l(x_k, u_k)
 
-        objective += self.F(x_k)
-        u = ca.vertcat(*u)
-        hess_at = ca.Function("hess_at", [x_0, u], [ca.hessian(objective, u)[0]])
-        eigvalues = np.linalg.eigvalsh(
-            np.array(hess_at(self.xr, ca.vertcat(*([self.ur] * self.N))))
-        )
-        if np.any(eigvalues <= 0):
-            err = True
-            err_msg += "ERROR : hessian of the objective wrt controls at the origin is \
-                not positive definite. Eigen values are : {}\n".format(
-                eigvalues
-            )
-
-        # ====================================================================================================
-        # Check positive definiteness of hessian of B_u at the target controls
-        # ====================================================================================================
-        if self.is_RRLB:
+            objective += self.F(x_k)
+            u = ca.vertcat(*u)
+            hess_at = ca.Function("hess_at", [x_0, u], [ca.hessian(objective, u)[0]])
             eigvalues = np.linalg.eigvalsh(
-                np.array(self.hess_B_u(ca.DM.zeros(self.nu)))
+                np.array(hess_at(self.xr, ca.vertcat(*([self.ur] * self.N))))
             )
             if np.any(eigvalues <= 0):
                 err = True
-                err_msg += "ERROR: hessian of B_u wrt controls at the origin is not \
-                    positive definite. Eigen values are : {}\n".format(
+                err_msg += "ERROR : hessian of the objective wrt controls at the origin is \
+                    not positive definite. Eigen values are : {}\n".format(
                     eigvalues
                 )
 
-        return err, err_msg
+        return not err, err_msg
 
     def initial_prediction(self, initial_state: np.ndarray) -> np.ndarray:
         """
