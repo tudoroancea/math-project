@@ -1,39 +1,22 @@
 \documentclass[12pt]{article}
-\usepackage[utf8]{inputenc} % pour le format de sortie
-\usepackage[a4paper]{geometry}
-\usepackage[T1]{fontenc}
-\usepackage[english]{babel} % pour les accents
-\usepackage{csquotes}
-\usepackage{enumitem}
-\usepackage{amssymb,amsmath,amsthm, amsfonts} % math libraries (amsthm : unumbered theorems)
-\usepackage{mathtools} % for psmallmatrix
-\usepackage{fancyhdr,multicol,accents, bbm,subcaption,caption,float,verbatim}
-\usepackage[all]{xy} % for diagrams with arrows
-\usepackage{tikz-cd} % for diagrams with arrows
-\usepackage{graphicx} % to manage images
-\usepackage{titlesec}
-\usepackage{hyperref} % for hyperlinks to refs or bibliography
-\usepackage{indentfirst} % for indenting the first line of a paragraph
-\usepackage{optidef}
-\usepackage[backend=bibtex, style=alphabetic]{biblatex} % for bibliography
-\usepackage{bookmark}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
-\usepackage{chronosys}
-\usepackage{csvsimple}
-\usepackage{longtable}
-\usepackage{caption}
-% \usepackage[dvipsnames]{xcolor}
-\addbibresource{refs.bib}
-
 \include{predefs}
 
-\title{Study of Relaxed Recentered Log-Barrier function based Nonlinear Model Predictive Control}
-\author{Tudor Oancea}
-\date{June 2022}
 
 \begin{document}
-\maketitle
+
+\include{Titlepage}
+
+\clearpage
+\thispagestyle{empty}
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% \maketitle
+\pagenumbering{arabic}
+\setcounter{page}{1}
 
 \begin{abstract}
 	In this project, we investigate the use of relaxed recentered logarithmic barrier functions in the context of Nonlinear Model Predictive Control (Nonlinear MPC or NMPC).
@@ -313,7 +296,7 @@ When no confusion is possible we will drop the "$(x)$".
 \subsection{Nominal asymptotic stability}\label{sec:RRLB-nominal-stability}
 
 \begin{lemma}
-	\label{thm:Lipchitzianity}
+	\label{thm:Lipschitzianity}
 	Consider the RRLB MPC \ref{eq:RRLB-NMPC} and re-write it in a simpler way as
 	$$\tilde{V}_N(x)=\underset{\bf{u}}{\min} \quad J(x,\bf{u})$$
 	where $J(x,\bf{u})=\tilde{l}(x,u_0)+\tilde{l}(f(x,u_0),u_1)+\dots+\tilde{F}(f(f(...),u_{N-1}))$\,.
@@ -325,7 +308,7 @@ When no confusion is possible we will drop the "$(x)$".
 \end{lemma}
 \begin{proof}
 	We can use the proof of the Theorem 4.2 in \cite{lectures-parametric-optimization} to argue that each $\tilde{x}_k$ and $\tilde{u}_k$ is continuously differentiable in a closed neighborhood of the origin.
-	Therefore, by continuity their gradient is bounded on this neighborhood and they are Lipchitz.
+	Therefore, by continuity their gradient is bounded on this neighborhood and they are Lipschitz.
 \end{proof}
 
 \noindent Now our main result :
@@ -333,7 +316,7 @@ When no confusion is possible we will drop the "$(x)$".
 \begin{theorem}\label{thm:nominal-stability}
 	Let's consider the problem \ref{eq:RRLB-NMPC} and assume the following :
 	\begin{enumerate}
-		\item If we denote the objective function as $J(x,\bf{u})$ as in Lemma \ref{thm:Lipchitzianity}, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$
+		\item If we denote the objective function as $J(x,\bf{u})$ as in Lemma \ref{thm:Lipschitzianity}, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$
 
 		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),$ $B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable \footnote{See \ref{sec:controllability-stabilizability} for more details.}.
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
@@ -760,7 +743,7 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 	By inspecting the closed-loop trajectory in figure \ref{fig:closedloop_traj_rrlb_1_1_50} we can see that this is indeed the case.
 	The final (relative) discrepancy on the state is actually $6.71e-3$, which is quite close to the $1.0e-3$ tolerance.
 
-	\begin{figure}[!h]
+	\begin{figure}[!ht]
 		\centering
 		\includegraphics[width=15cm]{images/closedloop_traj_rrlb_1_1_50.png}
 		\caption{Closed-loop trajectory for the RRLB MPC with initial state n°1, reference point n°1 and horizon size 50}
@@ -772,7 +755,7 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 	We used our script \verb|exp_analysis.py| to check case by case that this was indeed the case.
 	In the other half, the improvements are quite substantial and their average (aggregated along the situations) can be found in figure \ref{fig:improvement-percentages}.
 
-	\begin{figure}[!h]
+	\begin{figure}[!ht]
 		\centering
 		\includegraphics[width=7cm]{images/exp_all_improvement_percentages.png}
 		\caption{Average improvement in percentage of the Number of iterations to convergence and the Performance measure of RRLB MPC compared to regular MPC}
@@ -790,7 +773,7 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 	\item As suggested by the figure \ref{fig:runtimes}, RRLB seems i average a bit more computationally demanding.
 	The main difference appears to be in the sensitivity computation time, which is understandable given their more complex form involving the gradients and hessians of RRLB functions (see appendix \ref{sec:osqp-condensation}).
 
-	\begin{figure}[!h]
+	\begin{figure}[!ht]
 		\centering
 		\begin{subfigure}{.5\linewidth}
 			\centering
@@ -819,8 +802,7 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 
 \section{Conclusion and outlook}
 
-In this project we have done amazing work. No really I promise you.
-I am proud of us and of what we have accomplished.
+Throughout this report, we have explored the theory of MPC and RRLB MPC, and we have managed to show two remarkable results.
 
 
 \newpage
