@@ -34,6 +34,7 @@ np.savetxt(
 # setting the reference points we are going to use
 ref_points = [(xr1, ur1), (xr2, ur2), (xr3, ur3)]
 
+# split the data frame of experiments situations for the different processes
 input_values = []
 for i in range(initial_states.shape[1]):
     for j in range(len(ref_points)):
@@ -51,9 +52,8 @@ splitted_input_values = np.array_split(input_values, num_processes)
 N = [25, 50, 100, 250]
 
 
-# declare big function that does stuff
+# declare big function that does one experiment
 def do_stuff(partial_input_values: np.ndarray) -> pd.DataFrame:
-    """TODO : rename it"""
     all_dfs = []
 
     for k in range(partial_input_values.shape[0]):

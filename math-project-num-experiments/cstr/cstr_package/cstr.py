@@ -59,7 +59,6 @@ class CSTR:
     controls_idx = list(
         range(nx, nx + nu)
     )  # indices of controls in a stage vector (x_k, u_k)
-    # nz: int  # dimension of the vector with all states and control variables concatenated
     T: float  # time horizon
     N: int  # number of control intervals
     M = 6  # RK4 integration steps
@@ -67,14 +66,12 @@ class CSTR:
     is_RRLB: bool  # whether to compute the RRLB functions or not
 
     # constraints (see the paper for notations)
-    # C_x = sparse.hstack([sparse.csc_matrix((2, 2)), -sparse.eye(2)])
     C_x = sparse.kron(sparse.eye(nx), sparse.csc_matrix([[1.0], [-1.0]]), format="csc")
     q_x: int = 8
     C_u = sparse.csc_matrix(
         np.array([[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]])
     )
     q_u: int = 4
-    # d_x = np.array([-98.0, -92.0])
     d_x = np.array([10.0, 0.0, 10.0, 0.0, 150.0, -98.0, 150.0, -92.0])
     d_u = np.array([35.0, -3.0, 0.0, 9000.0])
 
@@ -126,7 +123,7 @@ class CSTR:
         else:
             self.N = INF_HORIZON_SIZE
             self.T = INF_HORIZON_SIZE * 20.0
-        # self.nz = self.nx * (self.N + 1) + self.nu * self.N
+
         self.epsilon = epsilon
         if scheme == Scheme.RRLB:
             self.is_RRLB = True
@@ -238,9 +235,6 @@ class CSTR:
             tpr3 = d_x_tilde[0::2]
             # compute the weight vector w_x
             w_x = np.ones(self.q_x)
-            # for i in range(1,self.q_x, 2):
-            #     tpr[]
-            # w_x[0::2] = 1.0
             w_x[1::2] = tpr2 / tpr3
             # assemble the RRLB function B_x
             self.B_x = ca.Function("B_x", [x], [ca.dot(w_x, ca.vertcat(*tpr))])
@@ -265,7 +259,6 @@ class CSTR:
             tpr3 = d_u_tilde[0::2]
             # compute the weight vector w_u
             w_u = np.ones(self.q_u)
-            # w_u[0::2] = 1.0
             w_u[1::2] = tpr2 / tpr3
             # assemble the RRLB function B_u
             self.B_u = ca.Function("B_u", [u], [ca.dot(w_u, ca.vertcat(*tpr))])
@@ -281,8 +274,6 @@ class CSTR:
             "l",
             [x, u],
             [
-                # ca.bilin(self.Q, x - self.xr, x - self.xr)
-                # + ca.bilin(self.R, u - self.ur, u - self.ur)
                 0.2 * (x[0] - self.xr[0]) ** 2
                 + 1.0 * (x[1] - self.xr[1]) ** 2
                 + 0.5 * (x[2] - self.xr[2]) ** 2
@@ -836,34 +827,6 @@ class CSTR:
 
     def get_state_idx(self, k: int) -> range:
         return range(self.nx * k, self.nx * (k + 1))
-
-    def gencode(self):
-        """
-        Generates C-code for grad_B_x, grad_B_u, hess_B_x, hess_B_u, f, jac_f_x, jac_f_u and loads back
-        these functions into the class.
-
-        Please note that this disables the symbolic nature of these Functions, so it should not be
-        called before calling initial_prediction()
-        """
-        print("Generating C-code for the functions...")
-        codegen = ca.CodeGenerator("gen.c")
-        codegen.add(self.f)
-        codegen.add(self.jac_f_x)
-        codegen.add(self.jac_f_u)
-        codegen.add(self.grad_B_x)
-        codegen.add(self.grad_B_u)
-        codegen.add(self.hess_B_x)
-        codegen.add(self.hess_B_u)
-        codegen.generate()
-        os.system("gcc -fPIC -O3 -shared -o gen.so gen.c")
-        self.f = ca.external("f", "./gen.so")
-        self.jac_f_x = ca.external("jac_f_x", "./gen.so")
-        self.jac_f_u = ca.external("jac_f_u", "./gen.so")
-        self.grad_B_x = ca.external("grad_B_x", "./gen.so")
-        self.grad_B_u = ca.external("grad_B_u", "./gen.so")
-        self.hess_B_x = ca.external("hess_B_x", "./gen.so")
-        self.hess_B_u = ca.external("hess_B_u", "./gen.so")
-        print("C-code generated.")
 
     def constraints_violated(self, x: np.ndarray, u: np.ndarray):
         assert x.shape == (self.nx,) and u.shape == (self.nu,)

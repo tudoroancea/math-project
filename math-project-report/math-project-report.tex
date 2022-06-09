@@ -813,23 +813,22 @@ You can find below a non-exhaustive list of potential research questions that ca
 \begin{itemize}[label=\textbullet]
 	\item Could we improve the description of the neighborhood provided by theorem~\ref{thm:nominal-stability} by proving the kind of monotonicity property evoked in section~\ref{sec:results-discussion}?
 
-	\item How do the parameters $\epsilon$ and $\delta$ really influence the behavior of the scheme? In particular, are there ways to determine values for those parameters that always ensure asymptotic stability and/or constraint satisfaction?
-	% These questions are not trivial since our current work does not give enough insight on the
+	\item How do the barrier and relaxation parameters $\epsilon$ and $\delta$ really influence the behavior of the scheme? In particular, are there ways to determine values for those parameters that always ensure asymptotic stability and/or constraint satisfaction?
 
 	\item If we move the initial state away from the reference point, will the regular MPC scheme yield divergent trajectories before RRLB MPC (for suitable horizon lengths)?
 
 	\item Could we improve our numerical results by using 2 or more iterations of SQP in our RTI scheme?
 \end{itemize}
 
-Our numerical illustrations showed a case where the system succeeded in stabilizing, but it might be due to the simplicity of the dynamics of CSTR.
+Furthermore, the numerical illustrations showed a case where the system succeeded in stabilizing, but it might be due to the simplicity of the dynamics of CSTR.
 We could think of more complex systems governed by stiff ODEs, where the linearization would find a reduced accuracy.
-One such example is the nonlinear hanging chain problem introduced in \cite{hanging-chain}.
+One such example is the nonlinear hanging chain problem introduced in \cite{hanging-chain} that has the advantage of having a variable degree of complexity given by the number of masses composing the chain.
+We can take this number to be as large as we want to make the problem as hard as necessary.
 
-All in all, there are numerous extensions to our work that could be either
 
 \section*{Acknowledgement}
 
-I would like to thank Yuning Jiang, whose valuable insight on MPC helped me a lot in the development of the theoretical results as well as the implementation of RTI.
+I would like to thank Yuning Jiang, whose valuable insight on control theory helped me a lot in the development of my proofs as well as the implementation of RTI, as well as my supervisors Nicolas Boumal and Colin Jones who accepted to oversee this irregular multidisciplinary Bachelor project at the interface between the Mathematics and Mechanical Engineering sections.
 
 \newpage
 

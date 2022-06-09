@@ -87,7 +87,7 @@ boxplot_across_exps(
     # title="Sensitivity Computation Time as a function of horizon size",
 )
 
-# see if RRLB is indeed always better in nbr of iterations to convergece ad performance
+# see if RRLB is indeed always better in nbr of iterations to convergence ad performance
 # measure (when it does converge)
 # ======================================================================================
 for i in range(nbr_initial_states):

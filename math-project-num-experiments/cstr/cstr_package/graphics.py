@@ -7,6 +7,8 @@ from . import CSTR
 
 
 class CSTRAnimation:
+    """ """
+
     titles = [
         "c_A",
         "c_B",
@@ -34,12 +36,6 @@ class CSTRAnimation:
         initial_prediction: np.ndarray,
         times: np.ndarray,
     ):
-        """
-        params
-        -------
-        - reference_points : each row corresponds to a physical value (either state or \
-            control) and each column to one reference point
-        """
         # transform the initial prediction (in the form of a long vector with all the states and
         # controls concatenated) into a matrix
         self.model = model
@@ -74,8 +70,6 @@ class CSTRAnimation:
         for i in range(model.nx + model.nu):
             self.axes[i] = fig.add_subplot(gs[i, 0])
             plt.title(self.titles[i])
-            # plt.xlabel(self.xlabel)
-            # plt.ylabel(self.ylabels[i])
             plt.grid("both")
             plt.xlim([0.0, np.sum(times) + model.T])
 

@@ -136,9 +136,6 @@ def run_closed_loop_simulation(
         (np.tile(xr, cstr.N + 1), np.tile(ur, cstr.N))
     )
 
-    # generate C-code since now we don't need the symbolic expressions anymore
-    # cstr.gencode()
-
     # first preparation phase =================================================================
     (
         P,
