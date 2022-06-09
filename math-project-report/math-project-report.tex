@@ -804,20 +804,26 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 
 \section{Conclusion and outlook}
 
-Throughout this report, we have explored the theory of MPC and RRLB MPC, and we have managed to show two remarkable results.
-Nevertheless, several questions on the subject remain open.
-Here is a non-exhaustive list of the ones that came up during the semester:
+Throughout this report, we have explored the theory of MPC and RRLB MPC, and we have managed to show two important results.
+However, because of the generality of the considered dynamics, they are not as powerful as the ones in the linear case that were recalled in Theorems \ref{nominal-stability-linear-case} and \ref{constraint-satisfaction-guarantee-linear-case}.
+In particular, their lack of precise description of the neighborhoods of convergence and of constraint satisfaction makes them of little interest in real-life applications.
+They are nevertheless essential theoretical building blocks and should serve as motivation for further research.
+
+You can find below a non-exhaustive list of potential research questions that came up during the semester:
 \begin{itemize}[label=\textbullet]
+	\item Could we improve the description of the neighborhood provided by theorem~\ref{thm:nominal-stability} by proving the kind of monotonicity property evoked in section~\ref{sec:results-discussion}?
+
 	\item How do the parameters $\epsilon$ and $\delta$ really influence the behavior of the scheme? In particular, are there ways to determine values for those parameters that always ensure asymptotic stability and/or constraint satisfaction?
 	% These questions are not trivial since our current work does not give enough insight on the
 
-	\item Could we improve our numerical results by using 2 or more iterations of SQP in our RTI scheme?
-
 	\item If we move the initial state away from the reference point, will the regular MPC scheme yield divergent trajectories before RRLB MPC (for suitable horizon lengths)?
 
-	\item Could we improve the description of the neighborhood provided by theorem~\ref{thm:nominal-stability} by proving the kind of monotonicity property evoked in section~\ref{sec:results-discussion}?
+	\item Could we improve our numerical results by using 2 or more iterations of SQP in our RTI scheme?
 \end{itemize}
 
+Our numerical illustrations showed a case where the system succeeded in stabilizing, but it might be due to the simplicity of the dynamics of CSTR.
+We could think of more complex systems governed by stiff ODEs, where the linearization would find a reduced accuracy.
+One such example is the nonlinear hanging chain problem introduced in \cite{hanging-chain}.
 
 \newpage
 
