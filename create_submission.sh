@@ -18,4 +18,4 @@ cp -r math-project-report/images/*.png submission/results/
 cp math-project-report/math-project-report.pdf submission
 
 # create a zip archive with everything
-zip -r submission.zip submission
+zip -r tudor_oancea_bachelor_project.zip submission

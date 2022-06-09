@@ -85,6 +85,7 @@ def run_closed_loop_simulation(
     ur: np.ndarray = ur1,
     N: int = 100,
     scheme: Scheme = Scheme.RRLB,
+    epsilon: float = global_epsilon,
     stop_tol: float = 1.0e-3,
     max_nbr_feedbacks: int = 250,
     graphics: bool = True,
@@ -107,6 +108,7 @@ def run_closed_loop_simulation(
         xr=xr,
         ur=ur,
         scheme=scheme,
+        epsilon=epsilon,
         N=N,
     )
 

@@ -68,9 +68,12 @@ class CSTRAnimation:
 
         self.axes = list(range(model.nx + model.nu))
         for i in range(model.nx + model.nu):
+            font = {"fontname": "Computer Modern"}
             self.axes[i] = fig.add_subplot(gs[i, 0])
-            plt.title(self.titles[i])
+            plt.title(self.titles[i], **font)
             plt.grid("both")
+            plt.xlabel(self.xlabel, **font)
+            plt.ylabel(self.ylabels[i], **font)
             plt.xlim([0.0, np.sum(times) + model.T])
 
             plt.plot([0.0, 7000.0], [reference_points[i], reference_points[i]], "r-")
