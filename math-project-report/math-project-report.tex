@@ -458,9 +458,8 @@ In subsection~\ref{sec:RTI-scheme} we formally introduce the RTI scheme for gene
 
 \subsection{The RTI scheme}\label{sec:RTI-scheme}
 
-We assume in this section familiarity with the SQP framework for general NLPs, as described for example in \cite{nocedal-wright}, and describe it in the context of MPC.
-We don't explicitly deal with the assumptions necessary for SQP to converge.
-% TODO: do we really ignore them ?
+We assume in this section familiarity with the SQP framework for general NLPs, as described for example in \cite{nocedal-wright}, and specialize it in the context of MPC.
+We son't mention here the necessary assumptions necessary for SQP convergence and just assume them to be satisfied to better focus on our object of study : MPC.
 
 \subsubsection{SQP for regular MPC}
 
@@ -665,6 +664,8 @@ By a simple steady state analysis procedure \footnote{This procedure was applied
 \begin{itemize}[label=\textbullet]
 	\item None of the reference points in table~\ref{tab:CSTR-ref-points} are 0, therefore we had to translate everything as briefly described at the beginning of section~\ref{sec:what-is-MPC}.
 
+	\item We numerically checked the assumptions of theorem~\ref{thm:nominal-stability} for each reference point.
+
 	\item The discrete-time dynamics have been obtained from the model's ODE by using a 6-step RK4 scheme.
 
 	\item We chose a sampling time of $20.0s$, and variable horizon lengths between 25 and 250 time steps.
@@ -807,14 +808,14 @@ Throughout this report, we have explored the theory of MPC and RRLB MPC, and we 
 Nevertheless, several questions on the subject remain open.
 Here is a non-exhaustive list of the ones that came up during the semester:
 \begin{itemize}[label=\textbullet]
-	\item How do the parameters $\epsilon$ and $\delta$ really influence the behavior of the scheme ? In particular, are there ways to determine values for those parameters that always ensure asymptotic stability and/or constraint satisfaction ?
+	\item How do the parameters $\epsilon$ and $\delta$ really influence the behavior of the scheme? In particular, are there ways to determine values for those parameters that always ensure asymptotic stability and/or constraint satisfaction?
 	% These questions are not trivial since our current work does not give enough insight on the
 
-	\item Could we improve our numerical results by using 2 or more iterations of SQP in our RTI scheme ?
+	\item Could we improve our numerical results by using 2 or more iterations of SQP in our RTI scheme?
 
-	\item If we move the initial state away from the reference point, will the regular MPC scheme yield divergent trajectories before RRLB MPC (for suitable horizon lengths) ?
+	\item If we move the initial state away from the reference point, will the regular MPC scheme yield divergent trajectories before RRLB MPC (for suitable horizon lengths)?
 
-	\item Could we improve the description of the neighborhood provided by theorem~\ref{thm:nominal-stability} by proving the kind of monotonicity property evoked in section~\ref{sec:results-discussion} ?
+	\item Could we improve the description of the neighborhood provided by theorem~\ref{thm:nominal-stability} by proving the kind of monotonicity property evoked in section~\ref{sec:results-discussion}?
 \end{itemize}
 
 
