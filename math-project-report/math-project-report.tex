@@ -8,16 +8,6 @@
 
 \clearpage
 \thispagestyle{empty}
-\tableofcontents
-
-\clearpage
-\pagenumbering{arabic}
-\setcounter{page}{1}
-
-% \maketitle
-\pagenumbering{arabic}
-\setcounter{page}{1}
-
 \begin{abstract}
 	In this project, we investigate the use of relaxed recentered logarithmic barrier functions in the context of Nonlinear Model Predictive Control (Nonlinear MPC or NMPC).
 	These functions are a variation of the regular log-barrier functions that are introduced in the objective function of an optimization problem as a penalty on the deviation from the constraints set.
@@ -25,6 +15,15 @@
 	Extending them to the case of nonlinear dynamics is a non trivial task and we show in this project that these properties can still hold, but only locally.
 	The theoretical results are complemented by numerical illustrations based on the Real Time Iteration method.
 \end{abstract}
+
+\clearpage
+\thispagestyle{empty}
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
 
 \section{Introduction}
 \textit{Control theory} can simply be defined as the study of a dynamical system whose state evolution can be influenced by the means of external parameters called \textit{controls}, or \textit{inputs}.
@@ -266,7 +265,7 @@ However, we will here consider it as fixed for simplicity.
 
 \begin{theorem}[Theorem 5 in \cite{RRLB-linear-MPC}]
 	\label{nominal-stability-linear-case}
-	Suppose that the pair $(A,B)$ is stabilizable (the definition can be found in~\ref{sec:controllability-stabilizability})
+	Suppose that the pair $(A,B)$ is stabilizable (the definition can be found in appendix~\ref{sec:controllability-stabilizability})
 	and that the matrix $P$ is chosen as the unique positive definite solution to the following modified DARE:
 	$$P=A^TPA-A^TPB(R+\epsilon M_u+B^TPB)^{-1}B^TPA+Q+\epsilon M_x$$
 	where $M_x=\nabla^2 B_x(0)$ and $M_u=\nabla^2 B_u(0)$\, are the hessian of the RRLB functions at the origin.
@@ -320,7 +319,7 @@ When no confusion is possible we will drop the "$(x)$".
 	\begin{enumerate}
 		\item If we denote the objective function as $J(x,\bf{u})$ as in Lemma~\ref{thm:Lipschitzianity}, we have $D_\bf{u}J(0,\bf{u}(0))=D_\bf{u}J(0,0)=0$ and $\nabla^2_{\bf{u}\bf{u}}J(0,\bf{u}(0))=\nabla^2_{\bf{u}\bf{u}}J(0,0)\succ 0$
 
-		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),$ $B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable (the definition can be found in~\ref{sec:controllability-stabilizability}).
+		\item When linearizing the system dynamics around the equilibrium and letting $A=D_xf(0,0),$ $B=D_uf(0,0)$, we suppose that the pair $(A,B)$ is stabilizable (the definition can be found in appendix~\ref{sec:controllability-stabilizability}).
 		This implies in particular that there exists a stabilizing cost $K$, i.e. a matrix such that $A_K:=A+BK$ only has eigenvalues in the unit disk.
 
 		\item The matrix $P$ defining the terminal costs is the unique positive definite solution to the following Lyapunov equation:
@@ -773,7 +772,7 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 	However, these properties are out of the scope of this paper and could be the object of further research on the subject of RRLB MPC.
 
 	\item As suggested by the figure~\ref{fig:runtimes}, RRLB seems i average a bit more computationally demanding.
-	The main difference appears to be in the sensitivity computation time, which is understandable given their more complex form involving the gradients and hessians of RRLB functions (see appendix~\ref{sec:osqp-condensation}).
+	The main difference appears to be in the sensitivity computation time, which is understandable given their more complex form involving the gradients and hessians of RRLB functions shown in appendix~\ref{sec:osqp-condensation}.
 
 	\begin{figure}[!ht]
 		\centering
@@ -805,7 +804,7 @@ All these measures can be found in the file \verb|exp_all_results.csv| in the fo
 \section{Conclusion and outlook}
 
 Throughout this report, we have explored the theory of MPC and RRLB MPC, and we have managed to show two remarkable results.
-Several questions remain open on the subject of RRLB MPC.
+Nevertheless, several questions on the subject remain open.
 Here is a non-exhaustive list of the ones that came up during the semester:
 \begin{itemize}[label=\textbullet]
 	\item How do the parameters $\epsilon$ and $\delta$ really influence the behavior of the scheme ? In particular, are there ways to determine values for those parameters that always ensure asymptotic stability and/or constraint satisfaction ?
@@ -822,11 +821,8 @@ Here is a non-exhaustive list of the ones that came up during the semester:
 \newpage
 
 \section{Appendix}
-\printbibliography
 
-\newpage
-
-\subsection*{Controllable vs. Stabilizable}\label{sec:controllability-stabilizability}
+\subsection{Controllable vs. Stabilizable}\label{sec:controllability-stabilizability}
 
 The notions of controllability and stabilizability are central in control theory and are the first hypothesis one should plan to verify on a concrete system.
 They are intrinsic properties of the equation describing the evolution of the system (either an ODE for a continuous-time system or a map for a discrete-time system) and could roughly be defined as follows:
@@ -857,7 +853,7 @@ These definitions can be made formal in the case of linear time invariant (or LT
 	The stabilizable matrix $K$ can be explicitly constructed in the case of LQR as mentioned in section~\ref{sec:what-is-MPC}.
 \end{remark}
 
-\subsection*{Derivation of the classical DARE}\label{sec:DARE}
+\subsection{Derivation of the classical DARE}\label{sec:DARE}
 
 If we consider the LQR problem presented in~\ref{sec:what-is-MPC}, then Bellman's principle of optimality reads:
 
@@ -874,7 +870,7 @@ and by plugging this value back into the minimization problem and developing the
 \end{align*}
 
 
-\subsection*{OSQP condensation}\label{sec:osqp-condensation}
+\subsection{OSQP condensation}\label{sec:osqp-condensation}
 
 If we consider the optimization variable of the QP subproblem (as described in section~\ref{sec:RTI-scheme}) to be $z=(\Delta x_0,\ldots,\Delta x_N,\Delta u_0, \ldots,\Delta u_{N-1})$, and we write $x$ for the system's current state and  $(x_0^{init},\ldots,x_{N}^{init},u_0^{init},\ldots,u_{N-1}^{init})$ for the initial guess (obtained by shift), then the matrices and vectors in the OSQP formulation will be:
 \scriptsize
@@ -935,7 +931,7 @@ $$l_{OSQP}=\begin{pmatrix}
 \normalsize
 In the above, all the red terms only appear for regular MPC, and the blue terms only for RRLB MPC.
 
-\subsection*{CSTR model, constraints and MPC costs}\label{sec:cstr-model}
+\subsection{CSTR model, constraints and MPC costs}\label{sec:cstr-model}
 \noindent The evolution of the system is described by the following system of ODEs:
 \begin{align*}
 	\dot{c}_A(t)&=u_1(t)(c_{A0}-c_A(t))-k_1(\vartheta(t))c_A(t)-k_3(\vartheta(t))c_A(t)^2\\
@@ -992,6 +988,12 @@ $$Q=\begin{pmatrix}
 	0.5\,h^{2} & 0\\
 	0 & 5.0e-7\,kJ^{-2}h^2
 \end{pmatrix}$$
+
+\newpage
+
+\section{Bibliography}
+
+\printbibliography
 
 
 \end{document}
